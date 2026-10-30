@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -20,6 +21,15 @@ type Config struct {
 	LogLevel        slog.Level    // LOG_LEVEL
 	ShutdownDrain   time.Duration // SHUTDOWN_DRAIN
 	ShutdownTimeout time.Duration // SHUTDOWN_TIMEOUT
+
+	DatabaseURL    string // DATABASE_URL (secret: may hold a password)
+	MigrateOnStart bool   // MIGRATE_ON_START
+	// kickstart:begin db=postgres
+	DatabaseReadURL   string        // DATABASE_READ_URL (secret)
+	DBMaxOpenConns    int           // DB_MAX_OPEN_CONNS
+	DBConnMaxIdleTime time.Duration // DB_CONN_MAX_IDLE_TIME
+	DBConnMaxLifetime time.Duration // DB_CONN_MAX_LIFETIME
+	// kickstart:end
 }
 
 // Dev reports whether the application runs in development mode.
@@ -35,6 +45,13 @@ func (c Config) LogValue() slog.Value {
 		slog.String("log_level", c.LogLevel.String()),
 		slog.Duration("shutdown_drain", c.ShutdownDrain),
 		slog.Duration("shutdown_timeout", c.ShutdownTimeout),
+		slog.Bool("migrate_on_start", c.MigrateOnStart),
+		// kickstart:begin db=postgres
+		slog.Bool("read_replica", c.DatabaseReadURL != ""),
+		slog.Int("db_max_open_conns", c.DBMaxOpenConns),
+		slog.Duration("db_conn_max_idle_time", c.DBConnMaxIdleTime),
+		slog.Duration("db_conn_max_lifetime", c.DBConnMaxLifetime),
+		// kickstart:end
 	)
 }
 
@@ -54,6 +71,18 @@ func Load(getenv func(string) string) (Config, error) {
 	c.LogLevel = l.level("LOG_LEVEL", slog.LevelInfo)
 	c.ShutdownDrain = l.duration("SHUTDOWN_DRAIN", 0)
 	c.ShutdownTimeout = l.duration("SHUTDOWN_TIMEOUT", 25*time.Second)
+
+	c.DatabaseURL = l.required("DATABASE_URL")
+	c.MigrateOnStart = l.boolean("MIGRATE_ON_START", true)
+	// kickstart:begin db=postgres
+	c.DatabaseReadURL = l.str("DATABASE_READ_URL", "")
+	c.DBMaxOpenConns = l.integer("DB_MAX_OPEN_CONNS", 25)
+	c.DBConnMaxIdleTime = l.duration("DB_CONN_MAX_IDLE_TIME", 5*time.Minute)
+	c.DBConnMaxLifetime = l.duration("DB_CONN_MAX_LIFETIME", 30*time.Minute)
+	if c.DBMaxOpenConns < 1 {
+		l.fail("DB_MAX_OPEN_CONNS", "must be at least 1")
+	}
+	// kickstart:end
 
 	if c.ShutdownDrain < 0 {
 		l.fail("SHUTDOWN_DRAIN", "must not be negative")
@@ -86,6 +115,14 @@ func (l *loader) str(key, def string) string {
 	return def
 }
 
+func (l *loader) required(key string) string {
+	v := l.getenv(key)
+	if v == "" {
+		l.fail(key, "is required")
+	}
+	return v
+}
+
 func (l *loader) oneOf(key, def string, allowed ...string) string {
 	v := l.str(key, def)
 	switch {
@@ -96,6 +133,35 @@ func (l *loader) oneOf(key, def string, allowed ...string) string {
 	}
 	return v
 }
+
+func (l *loader) boolean(key string, def bool) bool {
+	v := l.getenv(key)
+	if v == "" {
+		return def
+	}
+	b, err := strconv.ParseBool(v)
+	if err != nil {
+		l.fail(key, fmt.Sprintf("must be true or false (got %q)", v))
+		return def
+	}
+	return b
+}
+
+// kickstart:begin db=postgres
+func (l *loader) integer(key string, def int) int {
+	v := l.getenv(key)
+	if v == "" {
+		return def
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil {
+		l.fail(key, fmt.Sprintf("must be a whole number (got %q)", v))
+		return def
+	}
+	return n
+}
+
+// kickstart:end
 
 func (l *loader) duration(key string, def time.Duration) time.Duration {
 	v := l.getenv(key)

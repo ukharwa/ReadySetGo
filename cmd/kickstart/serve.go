@@ -6,34 +6,44 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log/slog"
 	"net"
 	"net/http"
 	"time"
 
-	"github.com/ukharwa/kickstart/internal/config"
 	"github.com/ukharwa/kickstart/internal/httpx"
-	"github.com/ukharwa/kickstart/internal/logging"
 )
 
 // serve runs the HTTP server until ctx is cancelled, then shuts down in
-// order: readiness fails, the drain period passes, and in-flight requests
-// get up to SHUTDOWN_TIMEOUT to finish.
+// order: readiness fails, the drain period passes, in-flight requests get up
+// to SHUTDOWN_TIMEOUT to finish, and the database closes.
 func serve(ctx context.Context, args []string, getenv func(string) string, stdout io.Writer) error {
 	fs := flag.NewFlagSet("serve", flag.ContinueOnError)
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 
-	cfg, err := config.Load(getenv)
+	cfg, logger, err := setup(getenv, stdout)
 	if err != nil {
 		return err
 	}
-	logger := logging.New(stdout, cfg.LogFormat, cfg.LogLevel)
-	slog.SetDefault(logger)
 	logger.Info("starting", "config", cfg)
 
-	health := &httpx.Health{}
+	database, err := openDB(ctx, cfg)
+	if err != nil {
+		return err
+	}
+	defer closeDB(database, logger)
+
+	if cfg.MigrateOnStart {
+		migrateCtx, cancel := context.WithTimeout(ctx, migrateTimeout)
+		err := database.MigrateUp(migrateCtx, logger)
+		cancel()
+		if err != nil {
+			return err
+		}
+	}
+
+	health := &httpx.Health{Check: database.Ping}
 	srv := httpx.NewServer(routes(health), logger)
 
 	ln, err := net.Listen("tcp", cfg.HTTPAddr)
@@ -62,6 +72,6 @@ func serve(ctx context.Context, args []string, getenv func(string) string, stdou
 	if err := <-serveErr; !errors.Is(err, http.ErrServerClosed) {
 		return fmt.Errorf("http server: %w", err)
 	}
-	logger.Info("stopped")
+	logger.Info("http server stopped")
 	return nil
 }

@@ -1,13 +1,20 @@
 package httpx
 
 import (
+	"context"
+	"log/slog"
 	"net/http"
 	"sync/atomic"
+	"time"
 )
 
 // Health serves the liveness (/healthz) and readiness (/readyz) endpoints.
 // Responses are plain text with no details, so both are safe to expose.
 type Health struct {
+	// Check, if set, must succeed for the app to count as ready. It gets a
+	// context with a 2-second timeout.
+	Check func(context.Context) error
+
 	shuttingDown atomic.Bool
 }
 
@@ -18,11 +25,21 @@ func (h *Health) Live(w http.ResponseWriter, _ *http.Request) {
 }
 
 // Ready reports whether the app can serve traffic. Load balancers use it to
-// stop sending requests to an instance that is shutting down.
-func (h *Health) Ready(w http.ResponseWriter, _ *http.Request) {
+// stop sending requests to an instance that is shutting down or can't reach
+// its database.
+func (h *Health) Ready(w http.ResponseWriter, r *http.Request) {
 	if h.shuttingDown.Load() {
 		writeText(w, http.StatusServiceUnavailable, "unavailable")
 		return
+	}
+	if h.Check != nil {
+		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+		defer cancel()
+		if err := h.Check(ctx); err != nil {
+			slog.WarnContext(ctx, "readiness check failed", "err", err)
+			writeText(w, http.StatusServiceUnavailable, "unavailable")
+			return
+		}
 	}
 	writeText(w, http.StatusOK, "ok")
 }

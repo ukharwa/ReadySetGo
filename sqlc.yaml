@@ -1,0 +1,41 @@
+# sqlc turns the SQL queries listed below into typed Go code in
+# internal/store. Regenerate with `make generate` after changing a query or a
+# migration; never edit internal/store by hand.
+#
+# Queries live next to their feature: internal/<feature>/<feature>.sql.
+# Write parameters as @name.
+# kickstart:begin template
+# (Shared query files are read by both engines, which both accept @name.)
+# kickstart:end
+version: "2"
+sql:
+  # kickstart:begin db=sqlite
+  - engine: sqlite
+    schema: migrations/sqlite
+    queries:
+      - internal/auth/auth.sql
+    gen:
+      go:
+        package: store
+        out: internal/store
+        # SQLite has no UUID type: UUID columns are TEXT, mapped to uuid.UUID
+        # here. Name UUID columns `id` or `<thing>_id`.
+        # kickstart:begin template
+        # (This keeps the generated Go identical to the Postgres version.)
+        # kickstart:end
+        overrides:
+          - column: "*.id"
+            go_type: github.com/google/uuid.UUID
+          - column: "*.*_id"
+            go_type: github.com/google/uuid.UUID
+  # kickstart:end
+  # kickstart:begin db=postgres
+  - engine: postgresql
+    schema: migrations/postgres
+    queries:
+      - internal/auth/auth.sql
+    gen:
+      go:
+        package: store
+        out: internal/store/postgres
+  # kickstart:end

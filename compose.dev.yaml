@@ -1,0 +1,27 @@
+# Services for local development. The app itself runs on your machine with
+# `make run`; these are what it talks to. Start them with `make services`.
+name: kickstart-dev
+
+services:
+  # kickstart:begin db=postgres
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: kickstart
+      POSTGRES_PASSWORD: kickstart
+      POSTGRES_DB: kickstart
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kickstart -d kickstart"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+  # kickstart:end
+
+# kickstart:begin db=postgres
+volumes:
+  postgres:
+# kickstart:end

@@ -1,12 +1,18 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/ukharwa/kickstart/internal/db/dbtest"
 )
 
 func TestRunUnknownCommand(t *testing.T) {
@@ -18,12 +24,30 @@ func TestRunUnknownCommand(t *testing.T) {
 	}
 }
 
-// TestServe starts the real server, waits until it answers, then cancels
-// its context and checks that it shuts down cleanly.
+func TestUsageListsCommands(t *testing.T) {
+	t.Parallel()
+	var out bytes.Buffer
+	if err := run(t.Context(), []string{"-h"}, func(string) string { return "" }, &out); err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range commands() {
+		if !strings.Contains(out.String(), c.name) {
+			t.Errorf("usage does not list %q:\n%s", c.name, out.String())
+		}
+	}
+}
+
+// TestServe starts the real server against a fresh database, waits until it
+// is ready, then cancels its context and checks that it shuts down cleanly.
 func TestServe(t *testing.T) {
 	t.Parallel()
 	addr := freeAddr(t)
-	env := map[string]string{"APP_ENV": "dev", "HTTP_ADDR": addr, "LOG_LEVEL": "error"}
+	env := map[string]string{
+		"APP_ENV":      "dev",
+		"HTTP_ADDR":    addr,
+		"LOG_LEVEL":    "error",
+		"DATABASE_URL": dbtest.URL(t),
+	}
 
 	ctx, cancel := context.WithCancel(t.Context())
 	done := make(chan error, 1)
@@ -38,8 +62,45 @@ func TestServe(t *testing.T) {
 		if err != nil {
 			t.Fatalf("serve returned %v, want nil", err)
 		}
-	case <-time.After(5 * time.Second):
+	case <-time.After(10 * time.Second):
 		t.Fatal("serve did not shut down")
+	}
+}
+
+func TestMigrateStatus(t *testing.T) {
+	t.Parallel()
+	env := map[string]string{"APP_ENV": "dev", "LOG_LEVEL": "error", "DATABASE_URL": dbtest.URL(t)}
+	getenv := func(k string) string { return env[k] }
+
+	if err := run(t.Context(), []string{"migrate", "up"}, getenv, io.Discard); err != nil {
+		t.Fatalf("migrate up: %v", err)
+	}
+	var out bytes.Buffer
+	if err := run(t.Context(), []string{"migrate", "status"}, getenv, &out); err != nil {
+		t.Fatalf("migrate status: %v", err)
+	}
+	if !strings.Contains(out.String(), "00001_users.sql") || strings.Contains(out.String(), "pending") {
+		t.Errorf("status after up should list 00001_users.sql as applied:\n%s", out.String())
+	}
+}
+
+func TestCreateMigration(t *testing.T) {
+	t.Parallel()
+	dirs := []string{t.TempDir(), t.TempDir()}
+	if err := os.WriteFile(filepath.Join(dirs[0], "00007_existing.sql"), nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := createMigration(dirs, "add_notes", io.Discard); err != nil {
+		t.Fatalf("createMigration: %v", err)
+	}
+	for _, dir := range dirs {
+		if _, err := os.Stat(filepath.Join(dir, "00008_add_notes.sql")); err != nil {
+			t.Errorf("expected 00008_add_notes.sql in every folder: %v", err)
+		}
+	}
+	if err := createMigration(dirs, "Bad Name", io.Discard); err == nil {
+		t.Error("createMigration accepted an invalid name")
 	}
 }
 
@@ -61,7 +122,7 @@ func freeAddr(t *testing.T) string {
 func waitFor(t *testing.T, url string, status int) {
 	t.Helper()
 	client := &http.Client{Transport: &http.Transport{DisableKeepAlives: true}}
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(10 * time.Second)
 	for time.Now().Before(deadline) {
 		req, _ := http.NewRequestWithContext(t.Context(), http.MethodGet, url, nil)
 		if resp, err := client.Do(req); err == nil {
@@ -72,5 +133,5 @@ func waitFor(t *testing.T, url string, status int) {
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
-	t.Fatalf("%s did not return %d within 5s", url, status)
+	t.Fatalf("%s did not return %d within 10s", url, status)
 }

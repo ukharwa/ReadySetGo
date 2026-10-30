@@ -1,0 +1,139 @@
+package main
+
+import (
+	"strings"
+	"testing"
+)
+
+var sqliteHTML = options{name: "myapp", module: "github.com/me/myapp", db: "sqlite", ui: "html"}
+var postgresAPI = options{name: "myapp", module: "github.com/me/myapp", db: "postgres", ui: "api", modules: []string{"uploads"}}
+
+func TestApplyMarkers(t *testing.T) {
+	t.Parallel()
+	in := `a
+// kickstart:begin db=sqlite
+sqlite
+// kickstart:end
+# kickstart:begin db=postgres
+postgres
+  # kickstart:begin module=uploads
+nested uploads
+  # kickstart:end
+# kickstart:end
+<!-- kickstart:begin template -->
+template only
+<!-- kickstart:end -->
+-- kickstart:begin ui=api
+api
+-- kickstart:end
+prose mentioning kickstart:begin is not a marker
+b
+`
+	tests := []struct {
+		o    options
+		want string
+	}{
+		{sqliteHTML, "a\nsqlite\nprose mentioning kickstart:begin is not a marker\nb\n"},
+		{postgresAPI, "a\npostgres\nnested uploads\napi\nprose mentioning kickstart:begin is not a marker\nb\n"},
+	}
+	for _, tt := range tests {
+		got, err := applyMarkers(in, tt.o)
+		if err != nil {
+			t.Fatalf("db=%s: %v", tt.o.db, err)
+		}
+		if got != tt.want {
+			t.Errorf("db=%s:\ngot  %q\nwant %q", tt.o.db, got, tt.want)
+		}
+	}
+}
+
+func TestApplyMarkersErrors(t *testing.T) {
+	t.Parallel()
+	for name, in := range map[string]string{
+		"unclosed":          "// kickstart:begin db=sqlite\nx\n",
+		"unopened":          "x\n// kickstart:end\n",
+		"unknown condition": "// kickstart:begin db=oracle\n// kickstart:end\n",
+		"end with argument": "// kickstart:begin db=sqlite\n// kickstart:end db=sqlite\n",
+	} {
+		if _, err := applyMarkers(in, sqliteHTML); err == nil {
+			t.Errorf("%s: no error", name)
+		}
+	}
+}
+
+func TestApplyBuildConstraint(t *testing.T) {
+	t.Parallel()
+	pg := "//go:build postgres\n\npackage db\n"
+	notPG := "//go:build !postgres\n\npackage db\n"
+	other := "//go:build linux\n\npackage db\n"
+
+	if keep, _ := applyBuildConstraint(pg, sqliteHTML); keep {
+		t.Error("postgres file kept in a sqlite project")
+	}
+	if keep, rest := applyBuildConstraint(pg, postgresAPI); !keep || rest != "package db\n" {
+		t.Errorf("postgres file in postgres project: keep=%v rest=%q", keep, rest)
+	}
+	if keep, rest := applyBuildConstraint(notPG, sqliteHTML); !keep || rest != "package db\n" {
+		t.Errorf("sqlite file in sqlite project: keep=%v rest=%q", keep, rest)
+	}
+	if keep, _ := applyBuildConstraint(notPG, postgresAPI); keep {
+		t.Error("sqlite file kept in a postgres project")
+	}
+	if keep, rest := applyBuildConstraint(other, sqliteHTML); !keep || rest != other {
+		t.Errorf("unrelated constraint changed: keep=%v rest=%q", keep, rest)
+	}
+}
+
+func TestPaths(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		rel  string
+		o    options
+		want string // "" means removed
+	}{
+		{"tools/kickstart/main.go", sqliteHTML, ""},
+		{".github/workflows/template.yml", sqliteHTML, ""},
+		{"migrations/sqlite/00001_users.sql", sqliteHTML, "migrations/00001_users.sql"},
+		{"migrations/postgres/00001_users.sql", sqliteHTML, ""},
+		{"migrations/postgres/00001_users.sql", postgresAPI, "migrations/00001_users.sql"},
+		{"internal/store/models.go", sqliteHTML, "internal/store/models.go"},
+		{"internal/store/models.go", postgresAPI, ""},
+		{"internal/store/postgres/models.go", sqliteHTML, ""},
+		{"internal/store/postgres/models.go", postgresAPI, "internal/store/models.go"},
+		{"cmd/kickstart/main.go", sqliteHTML, "cmd/myapp/main.go"},
+		{"internal/db/db.go", postgresAPI, "internal/db/db.go"},
+	}
+	for _, tt := range tests {
+		got := ""
+		if keepPath(tt.rel, tt.o) {
+			got = movePath(tt.rel, tt.o)
+		}
+		if got != tt.want {
+			t.Errorf("%s (db=%s) → %q, want %q", tt.rel, tt.o.db, got, tt.want)
+		}
+	}
+}
+
+func TestRewrite(t *testing.T) {
+	t.Parallel()
+	in := `import "github.com/ukharwa/kickstart/migrations/postgres"
+out: internal/store/postgres
+BIN := bin/kickstart
+name: kickstart-dev
+kickstarter stays`
+	got := rewrite("Makefile", in, postgresAPI)
+	for _, want := range []string{
+		`import "github.com/me/myapp/migrations"`,
+		"out: internal/store\n",
+		"BIN := bin/myapp",
+		"name: myapp-dev",
+		"kickstarter stays",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("rewrite result lacks %q:\n%s", want, got)
+		}
+	}
+	if got := rewrite("DECISIONS.md", "the kickstart template", postgresAPI); got != "the kickstart template" {
+		t.Errorf("DECISIONS.md was renamed: %q", got)
+	}
+}

@@ -1,28 +1,46 @@
 package httpx
 
 import (
+	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 )
 
+func status(h http.HandlerFunc) int {
+	rec := httptest.NewRecorder()
+	h(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+	return rec.Code
+}
+
 func TestHealth(t *testing.T) {
 	t.Parallel()
 	h := &Health{}
 
-	check := func(name string, handler http.HandlerFunc, want int) {
-		t.Helper()
-		rec := httptest.NewRecorder()
-		handler(rec, httptest.NewRequest(http.MethodGet, "/", nil))
-		if rec.Code != want {
-			t.Errorf("%s: status %d, want %d", name, rec.Code, want)
-		}
+	if got := status(h.Live); got != http.StatusOK {
+		t.Errorf("live: %d, want 200", got)
+	}
+	if got := status(h.Ready); got != http.StatusOK {
+		t.Errorf("ready: %d, want 200", got)
 	}
 
-	check("live", h.Live, http.StatusOK)
-	check("ready", h.Ready, http.StatusOK)
-
 	h.SetShuttingDown()
-	check("live while shutting down", h.Live, http.StatusOK)
-	check("ready while shutting down", h.Ready, http.StatusServiceUnavailable)
+	if got := status(h.Live); got != http.StatusOK {
+		t.Errorf("live while shutting down: %d, want 200", got)
+	}
+	if got := status(h.Ready); got != http.StatusServiceUnavailable {
+		t.Errorf("ready while shutting down: %d, want 503", got)
+	}
+}
+
+func TestReadyCheckFails(t *testing.T) {
+	t.Parallel()
+	h := &Health{Check: func(context.Context) error { return errors.New("database down") }}
+	if got := status(h.Ready); got != http.StatusServiceUnavailable {
+		t.Errorf("ready with failing check: %d, want 503", got)
+	}
+	if got := status(h.Live); got != http.StatusOK {
+		t.Errorf("live with failing check: %d, want 200", got)
+	}
 }

@@ -87,6 +87,14 @@ several connections. This avoids `SQLITE_BUSY` errors between concurrent
 writers. **Considered:** a single one-connection pool, which is simpler but
 lets one slow read block every write.
 
+### Shutdown
+
+`Close` refreshes the query planner's statistics (`PRAGMA optimize`) and
+relies on SQLite folding the write-ahead log back into the database file
+when the last connection closes. **Considered:** an explicit
+`wal_checkpoint(TRUNCATE)`, which would briefly block the server's writers
+every time another process (such as `app backup`) exits.
+
 ### Backups
 
 `app backup` writes a consistent, timestamped copy with `VACUUM INTO` and
@@ -152,7 +160,10 @@ and easier to read but would later need a second "public ID" column.
 Plain SQL migrations embedded in the binary; Go migrations are available for
 data backfills. Migrations run on startup (`MIGRATE_ON_START=true`) and
 through `app migrate`. On Postgres an advisory lock makes concurrent
-instances safe; a failed migration stops the app starting. Migrations follow
+instances safe: waiting instances retry every second for up to 10 minutes,
+matching the migration timeout (goose's default, every 5 seconds for 5
+minutes, could give up behind a long migration). A failed migration stops
+the app starting. Migrations follow
 expand/contract (add first, switch code, remove later) for zero-downtime
 deploys. Files use goose's sequential numbering, one per feature or module.
 **Considered:** golang-migrate (a failed migration leaves a "dirty" state to
@@ -482,7 +493,16 @@ tool everywhere) and Go's `tool` directive (pulls sqlc's dependencies into
 
 Shell scripts that rewrite files behave differently on Linux and macOS; a Go
 program can be tested. It moves pre-generated sqlc code into place, so
-running init needs nothing but Go.
+running init needs nothing but Go, then runs `go mod tidy`.
+
+Before init, the template is a runnable SQLite app. Postgres-only Go files
+carry `//go:build postgres` (SQLite-only ones `//go:build !postgres`), so
+they stay out of the template's own build; init deletes one set and strips
+the constraint from the other. Postgres is therefore tested through
+`make template-check DB=postgres`, which runs init on a temporary copy of
+the working tree and then the full test suite. **Considered:** building
+both databases in place with build tags, which would need build-tagged
+generated code and every shared file to compile both ways.
 <!-- kickstart:end -->
 
 ### Linting: golangci-lint v2
