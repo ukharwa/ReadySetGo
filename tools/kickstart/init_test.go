@@ -100,6 +100,9 @@ func TestPaths(t *testing.T) {
 		{"internal/store/models.go", postgresAPI, ""},
 		{"internal/store/postgres/models.go", sqliteHTML, ""},
 		{"internal/store/postgres/models.go", postgresAPI, "internal/store/models.go"},
+		{"internal/jobs/sqlite/claim.sql", sqliteHTML, "internal/jobs/claim.sql"},
+		{"internal/jobs/postgres/claim.sql", sqliteHTML, ""},
+		{"internal/jobs/jobs.sql", postgresAPI, "internal/jobs/jobs.sql"},
 		{"cmd/kickstart/main.go", sqliteHTML, "cmd/myapp/main.go"},
 		{"internal/db/db.go", postgresAPI, "internal/db/db.go"},
 	}
@@ -114,16 +117,32 @@ func TestPaths(t *testing.T) {
 	}
 }
 
+func TestDialectDirs(t *testing.T) {
+	t.Parallel()
+	files := []string{"migrations/postgres/1.sql", "internal/store/postgres/db.go", "internal/store/db.go", "internal/jobs/postgres/claim.sql", "internal/jobs/sqlite/claim.sql"}
+	got := dialectDirs(files, "postgres")
+	want := []string{"internal/store/postgres", "internal/jobs/postgres", "migrations/postgres"}
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Errorf("dialectDirs = %v, want %v", got, want)
+	}
+}
+
 func TestRewrite(t *testing.T) {
 	t.Parallel()
+	o := postgresAPI
+	o.dialectDirs = []string{"internal/store/postgres", "internal/jobs/postgres", "migrations/postgres"}
 	in := `import "github.com/ukharwa/kickstart/migrations/postgres"
+- internal/jobs/postgres/claim.sql
+image: postgres:18-alpine
 out: internal/store/postgres
 BIN := bin/kickstart
 name: kickstart-dev
 kickstarter stays`
-	got := rewrite("Makefile", in, postgresAPI)
+	got := rewrite("Makefile", in, o)
 	for _, want := range []string{
 		`import "github.com/me/myapp/migrations"`,
+		"- internal/jobs/claim.sql",
+		"image: postgres:18-alpine",
 		"out: internal/store\n",
 		"BIN := bin/myapp",
 		"name: myapp-dev",

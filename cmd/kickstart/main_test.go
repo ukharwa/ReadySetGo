@@ -67,6 +67,26 @@ func TestServe(t *testing.T) {
 	}
 }
 
+// TestWorker starts the standalone worker and checks that it stops cleanly
+// on cancellation.
+func TestWorker(t *testing.T) {
+	t.Parallel()
+	env := map[string]string{"APP_ENV": "dev", "LOG_LEVEL": "error", "DATABASE_URL": dbtest.URL(t)}
+	ctx, cancel := context.WithCancel(t.Context())
+	done := make(chan error, 1)
+	go func() { done <- run(ctx, []string{"worker"}, func(k string) string { return env[k] }, io.Discard) }()
+	time.Sleep(300 * time.Millisecond)
+	cancel()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("worker returned %v, want nil", err)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("worker did not stop")
+	}
+}
+
 func TestMigrateStatus(t *testing.T) {
 	t.Parallel()
 	env := map[string]string{"APP_ENV": "dev", "LOG_LEVEL": "error", "DATABASE_URL": dbtest.URL(t)}

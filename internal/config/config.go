@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/mail"
 	"net/netip"
 	"slices"
 	"strconv"
@@ -32,6 +33,16 @@ type Config struct {
 	DBConnMaxIdleTime time.Duration // DB_CONN_MAX_IDLE_TIME
 	DBConnMaxLifetime time.Duration // DB_CONN_MAX_LIFETIME
 	// kickstart:end
+
+	SMTPHost     string // SMTP_HOST: empty in dev means emails are logged, not sent
+	SMTPPort     int    // SMTP_PORT
+	SMTPUsername string // SMTP_USERNAME
+	SMTPPassword string // SMTP_PASSWORD (secret)
+	SMTPFrom     string // SMTP_FROM
+	SMTPTLS      string // SMTP_TLS: "starttls", "tls" or "none"
+
+	WorkerEnabled     bool // WORKER_ENABLED: run the job worker inside `serve`
+	WorkerConcurrency int  // WORKER_CONCURRENCY
 }
 
 // Dev reports whether the application runs in development mode.
@@ -55,6 +66,11 @@ func (c Config) LogValue() slog.Value {
 		slog.Duration("db_conn_max_idle_time", c.DBConnMaxIdleTime),
 		slog.Duration("db_conn_max_lifetime", c.DBConnMaxLifetime),
 		// kickstart:end
+		slog.String("smtp_host", c.SMTPHost),
+		slog.Int("smtp_port", c.SMTPPort),
+		slog.String("smtp_tls", c.SMTPTLS),
+		slog.Bool("worker_enabled", c.WorkerEnabled),
+		slog.Int("worker_concurrency", c.WorkerConcurrency),
 	)
 }
 
@@ -87,6 +103,33 @@ func Load(getenv func(string) string) (Config, error) {
 		l.fail("DB_MAX_OPEN_CONNS", "must be at least 1")
 	}
 	// kickstart:end
+
+	c.SMTPHost = l.str("SMTP_HOST", "")
+	c.SMTPPort = l.integer("SMTP_PORT", 587)
+	c.SMTPUsername = l.str("SMTP_USERNAME", "")
+	c.SMTPPassword = l.str("SMTP_PASSWORD", "")
+	c.SMTPFrom = l.str("SMTP_FROM", "")
+	c.SMTPTLS = l.oneOf("SMTP_TLS", "starttls", "starttls", "tls", "none")
+	switch {
+	case c.SMTPHost == "" && !c.Dev():
+		l.fail("SMTP_HOST", "is required in prod (only dev may log emails instead of sending them)")
+	case c.SMTPHost != "":
+		if _, err := mail.ParseAddress(c.SMTPFrom); err != nil {
+			l.fail("SMTP_FROM", fmt.Sprintf("must be an address such as App <noreply@example.com> (got %q)", c.SMTPFrom))
+		}
+		if c.SMTPPort < 1 || c.SMTPPort > 65535 {
+			l.fail("SMTP_PORT", "must be between 1 and 65535")
+		}
+		if c.SMTPTLS == "none" && !c.Dev() && !isLoopback(c.SMTPHost) {
+			l.fail("SMTP_TLS", "may only be none in prod for a relay on this machine (localhost)")
+		}
+	}
+
+	c.WorkerEnabled = l.boolean("WORKER_ENABLED", true)
+	c.WorkerConcurrency = l.integer("WORKER_CONCURRENCY", 4)
+	if c.WorkerConcurrency < 1 {
+		l.fail("WORKER_CONCURRENCY", "must be at least 1")
+	}
 
 	if c.ShutdownDrain < 0 {
 		l.fail("SHUTDOWN_DRAIN", "must not be negative")
@@ -151,7 +194,6 @@ func (l *loader) boolean(key string, def bool) bool {
 	return b
 }
 
-// kickstart:begin db=postgres
 func (l *loader) integer(key string, def int) int {
 	v := l.getenv(key)
 	if v == "" {
@@ -164,8 +206,6 @@ func (l *loader) integer(key string, def int) int {
 	}
 	return n
 }
-
-// kickstart:end
 
 func (l *loader) duration(key string, def time.Duration) time.Duration {
 	v := l.getenv(key)
@@ -210,4 +250,12 @@ func (l *loader) level(key string, def slog.Level) slog.Level {
 		return def
 	}
 	return lvl
+}
+
+func isLoopback(host string) bool {
+	if host == "localhost" {
+		return true
+	}
+	ip, err := netip.ParseAddr(host)
+	return err == nil && ip.IsLoopback()
 }

@@ -1,8 +1,17 @@
 # Services for local development. The app itself runs on your machine with
 # `make run`; these are what it talks to. Start them with `make services`.
+# Host ports can be changed in .env when another project's services already
+# use them.
 name: kickstart-dev
 
 services:
+  # Catches every email the app sends; read them at http://localhost:8025.
+  mailpit:
+    image: axllent/mailpit:v1.31.6
+    ports:
+      - "127.0.0.1:${MAILPIT_SMTP_PORT:-1025}:1025" # SMTP
+      - "127.0.0.1:${MAILPIT_PORT:-8025}:8025" # web inbox
+
   # kickstart:begin db=postgres
   postgres:
     image: postgres:18-alpine
@@ -11,7 +20,7 @@ services:
       POSTGRES_PASSWORD: kickstart
       POSTGRES_DB: kickstart
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres:/var/lib/postgresql
     healthcheck:

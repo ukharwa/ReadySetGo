@@ -13,8 +13,9 @@ import (
 	"github.com/ukharwa/kickstart/internal/httpx"
 )
 
-// serve runs the HTTP server until ctx is cancelled, then shuts down in
-// order: readiness fails, the drain period passes, in-flight requests get up
+// serve runs the HTTP server, and the job worker unless WORKER_ENABLED is
+// false, until ctx is cancelled. It then shuts down in order: readiness
+// fails, the drain period passes, in-flight requests and running jobs get up
 // to SHUTDOWN_TIMEOUT to finish, and the database closes.
 func serve(ctx context.Context, args []string, getenv func(string) string, stdout io.Writer) error {
 	fs := flag.NewFlagSet("serve", flag.ContinueOnError)
@@ -33,12 +34,16 @@ func serve(ctx context.Context, args []string, getenv func(string) string, stdou
 		return err
 	}
 	defer closeDB(database, logger)
+	if err := migrateOnStart(ctx, cfg, database, logger); err != nil {
+		return err
+	}
 
-	if cfg.MigrateOnStart {
-		migrateCtx, cancel := context.WithTimeout(ctx, migrateTimeout)
-		err := database.MigrateUp(migrateCtx, logger)
-		cancel()
-		if err != nil {
+	// The worker stops taking jobs on a signal, or if serve fails to start.
+	jobsCtx, stopJobs := context.WithCancel(ctx)
+	defer stopJobs()
+	var jobsDone <-chan struct{}
+	if cfg.WorkerEnabled {
+		if jobsDone, err = startJobs(jobsCtx, cfg, database, logger); err != nil {
 			return err
 		}
 	}
@@ -73,5 +78,8 @@ func serve(ctx context.Context, args []string, getenv func(string) string, stdou
 		return fmt.Errorf("http server: %w", err)
 	}
 	logger.Info("http server stopped")
+	if jobsDone != nil {
+		waitForJobs(jobsDone, shutdownCtx, logger)
+	}
 	return nil
 }

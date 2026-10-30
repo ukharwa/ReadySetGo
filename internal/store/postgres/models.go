@@ -11,6 +11,21 @@ import (
 	"github.com/google/uuid"
 )
 
+type Job struct {
+	ID          uuid.UUID
+	Kind        string
+	Payload     string
+	UniqueKey   sql.NullString
+	RunAt       time.Time
+	Attempts    int64
+	MaxAttempts int64
+	LockedUntil sql.NullTime
+	LastError   sql.NullString
+	CompletedAt sql.NullTime
+	FailedAt    sql.NullTime
+	CreatedAt   time.Time
+}
+
 type User struct {
 	ID              uuid.UUID
 	Email           string

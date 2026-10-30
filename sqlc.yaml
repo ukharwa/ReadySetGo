@@ -5,7 +5,9 @@
 # Queries live next to their feature: internal/<feature>/<feature>.sql.
 # Write parameters as @name.
 # kickstart:begin template
-# (Shared query files are read by both engines, which both accept @name.)
+# (Shared query files are read by both engines, which both accept @name.
+# Queries that must differ live in internal/<feature>/<db>/; init flattens
+# the chosen database's folder into its feature folder.)
 # kickstart:end
 version: "2"
 sql:
@@ -14,6 +16,8 @@ sql:
     schema: migrations/sqlite
     queries:
       - internal/auth/auth.sql
+      - internal/jobs/jobs.sql
+      - internal/jobs/sqlite/claim.sql
     gen:
       go:
         package: store
@@ -34,6 +38,8 @@ sql:
     schema: migrations/postgres
     queries:
       - internal/auth/auth.sql
+      - internal/jobs/jobs.sql
+      - internal/jobs/postgres/claim.sql
     gen:
       go:
         package: store

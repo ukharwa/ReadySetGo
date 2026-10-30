@@ -2,6 +2,7 @@ package config
 
 import (
 	"log/slog"
+	"maps"
 	"net/netip"
 	"reflect"
 	"strings"
@@ -25,7 +26,12 @@ func TestLoadDefaults(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.env, func(t *testing.T) {
 			t.Parallel()
-			c, err := Load(env(map[string]string{"APP_ENV": tt.env, "DATABASE_URL": "db"}))
+			vars := map[string]string{"APP_ENV": tt.env, "DATABASE_URL": "db"}
+			if tt.env == "prod" {
+				vars["SMTP_HOST"] = "smtp.example.com"
+				vars["SMTP_FROM"] = "noreply@example.com"
+			}
+			c, err := Load(env(vars))
 			if err != nil {
 				t.Fatalf("Load: %v", err)
 			}
@@ -43,6 +49,14 @@ func TestLoadDefaults(t *testing.T) {
 				DBConnMaxIdleTime: 5 * time.Minute,
 				DBConnMaxLifetime: 30 * time.Minute,
 				// kickstart:end
+				SMTPPort:          587,
+				SMTPTLS:           "starttls",
+				WorkerEnabled:     true,
+				WorkerConcurrency: 4,
+			}
+			if tt.env == "prod" {
+				want.SMTPHost = "smtp.example.com"
+				want.SMTPFrom = "noreply@example.com"
 			}
 			if !reflect.DeepEqual(c, want) {
 				t.Errorf("Load = %+v, want %+v", c, want)
@@ -69,6 +83,14 @@ func TestLoadOverrides(t *testing.T) {
 		"DB_CONN_MAX_IDLE_TIME": "1m",
 		"DB_CONN_MAX_LIFETIME":  "1h",
 		// kickstart:end
+		"SMTP_HOST":          "smtp.example.com",
+		"SMTP_PORT":          "465",
+		"SMTP_USERNAME":      "user",
+		"SMTP_PASSWORD":      "pass",
+		"SMTP_FROM":          "App <noreply@example.com>",
+		"SMTP_TLS":           "tls",
+		"WORKER_ENABLED":     "false",
+		"WORKER_CONCURRENCY": "2",
 	}))
 	if err != nil {
 		t.Fatalf("Load: %v", err)
@@ -92,6 +114,14 @@ func TestLoadOverrides(t *testing.T) {
 		DBConnMaxIdleTime: time.Minute,
 		DBConnMaxLifetime: time.Hour,
 		// kickstart:end
+		SMTPHost:          "smtp.example.com",
+		SMTPPort:          465,
+		SMTPUsername:      "user",
+		SMTPPassword:      "pass",
+		SMTPFrom:          "App <noreply@example.com>",
+		SMTPTLS:           "tls",
+		WorkerEnabled:     false,
+		WorkerConcurrency: 2,
 	}
 	if !reflect.DeepEqual(c, want) {
 		t.Errorf("Load = %+v, want %+v", c, want)
@@ -103,19 +133,20 @@ func TestLoadOverrides(t *testing.T) {
 func TestLoadReportsAllErrors(t *testing.T) {
 	t.Parallel()
 	_, err := Load(env(map[string]string{
-		"LOG_FORMAT":       "xml",
-		"LOG_LEVEL":        "loud",
-		"SHUTDOWN_DRAIN":   "soon",
-		"SHUTDOWN_TIMEOUT": "0s",
-		"MIGRATE_ON_START": "maybe",
-		"TRUSTED_PROXIES":  "10.0.0.0/8,caddy",
+		"LOG_FORMAT":         "xml",
+		"LOG_LEVEL":          "loud",
+		"SHUTDOWN_DRAIN":     "soon",
+		"SHUTDOWN_TIMEOUT":   "0s",
+		"MIGRATE_ON_START":   "maybe",
+		"TRUSTED_PROXIES":    "10.0.0.0/8,caddy",
+		"WORKER_CONCURRENCY": "0",
 	}))
 	if err == nil {
 		t.Fatal("Load succeeded, want error")
 	}
 	for _, key := range []string{
 		"APP_ENV", "LOG_FORMAT", "LOG_LEVEL", "SHUTDOWN_DRAIN", "SHUTDOWN_TIMEOUT",
-		"DATABASE_URL", "MIGRATE_ON_START", "TRUSTED_PROXIES",
+		"DATABASE_URL", "MIGRATE_ON_START", "TRUSTED_PROXIES", "SMTP_HOST", "WORKER_CONCURRENCY",
 	} {
 		if !strings.Contains(err.Error(), key) {
 			t.Errorf("error does not mention %s:\n%v", key, err)
@@ -133,5 +164,30 @@ func TestLogValueHidesSecrets(t *testing.T) {
 	// kickstart:end
 	if s := c.LogValue().String(); strings.Contains(s, "s3cret") {
 		t.Errorf("LogValue leaks a secret: %s", s)
+	}
+}
+
+func TestSMTPRules(t *testing.T) {
+	t.Parallel()
+	base := map[string]string{"APP_ENV": "prod", "DATABASE_URL": "db", "SMTP_FROM": "noreply@example.com"}
+	tests := []struct {
+		name    string
+		vars    map[string]string
+		wantErr string
+	}{
+		{"plain SMTP to a remote host in prod", map[string]string{"SMTP_HOST": "smtp.example.com", "SMTP_TLS": "none"}, "SMTP_TLS"},
+		{"plain SMTP to a local relay in prod", map[string]string{"SMTP_HOST": "localhost", "SMTP_TLS": "none"}, ""},
+		{"bad from address", map[string]string{"SMTP_HOST": "smtp.example.com", "SMTP_FROM": "nope"}, "SMTP_FROM"},
+	}
+	for _, tt := range tests {
+		vars := maps.Clone(base)
+		maps.Copy(vars, tt.vars)
+		_, err := Load(env(vars))
+		switch {
+		case tt.wantErr == "" && err != nil:
+			t.Errorf("%s: %v", tt.name, err)
+		case tt.wantErr != "" && (err == nil || !strings.Contains(err.Error(), tt.wantErr)):
+			t.Errorf("%s: err = %v, want one mentioning %s", tt.name, err, tt.wantErr)
+		}
 	}
 }

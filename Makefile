@@ -17,6 +17,10 @@ help: ## list targets
 run: ## run the HTTP server
 	go run ./cmd/kickstart serve
 
+.PHONY: worker
+worker: ## run the job worker on its own (serve already runs one)
+	go run ./cmd/kickstart worker
+
 .PHONY: build
 build: ## build a static binary into bin/
 	CGO_ENABLED=0 go build -o $(BIN) ./cmd/kickstart

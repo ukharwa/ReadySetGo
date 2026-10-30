@@ -68,6 +68,7 @@ func initProject(root string, o options) error {
 	if err != nil {
 		return err
 	}
+	o.dialectDirs = dialectDirs(files, o.db)
 
 	type output struct {
 		path string
@@ -207,15 +208,18 @@ func transform(rel string, data []byte, o options) (string, []byte, bool, error)
 	return newRel, []byte(text), true, nil
 }
 
+// A dialect folder is a folder named after a database, holding what only
+// that database needs (migrations/postgres/, internal/jobs/sqlite/). Init
+// deletes the other database's folders and flattens the chosen one's into
+// their parents.
+
 // keepPath reports whether rel survives init, judged by its path alone.
 func keepPath(rel string, o options) bool {
-	under := func(dir string) bool { return strings.HasPrefix(rel, dir+"/") }
+	dirs := strings.Split(path.Dir(rel), "/")
 	switch {
-	case under("tools"), rel == ".github/workflows/template.yml":
+	case dirs[0] == "tools", rel == ".github/workflows/template.yml":
 		return false // template-only
-	case under("migrations/" + otherDB(o.db)):
-		return false
-	case o.db == "sqlite" && under("internal/store/postgres"):
+	case slices.Contains(dirs, otherDB(o.db)):
 		return false
 	case o.db == "postgres" && path.Dir(rel) == "internal/store" && strings.HasSuffix(rel, ".go"):
 		return false // SQLite's generated code; Postgres's moves up to replace it
@@ -225,16 +229,27 @@ func keepPath(rel string, o options) bool {
 
 // movePath flattens the chosen database's folders and renames the command.
 func movePath(rel string, o options) string {
-	for _, m := range [][2]string{
-		{"migrations/" + o.db + "/", "migrations/"},
-		{"internal/store/postgres/", "internal/store/"},
-		{"cmd/kickstart/", "cmd/" + o.name + "/"},
-	} {
-		if after, ok := strings.CutPrefix(rel, m[0]); ok {
-			return m[1] + after
+	dirs := strings.Split(path.Dir(rel), "/")
+	dirs = slices.DeleteFunc(dirs, func(d string) bool { return d == o.db })
+	if len(dirs) >= 2 && dirs[0] == "cmd" && dirs[1] == "kickstart" {
+		dirs[1] = o.name
+	}
+	return path.Join(append(dirs, path.Base(rel))...)
+}
+
+// dialectDirs lists the chosen database's folders found in files, deepest
+// first, so references to them can be rewritten.
+func dialectDirs(files []string, db string) []string {
+	var dirs []string
+	for _, f := range files {
+		for d := path.Dir(f); d != "."; d = path.Dir(d) {
+			if path.Base(d) == db && !slices.Contains(dirs, d) {
+				dirs = append(dirs, d)
+			}
 		}
 	}
-	return rel
+	slices.SortFunc(dirs, func(a, b string) int { return len(b) - len(a) })
+	return dirs
 }
 
 // applyBuildConstraint handles the build tags that keep each database's Go
@@ -338,9 +353,8 @@ var templateName = regexp.MustCompile(`\bkickstart\b`)
 // rewrite updates references to paths that moved and to the template's name.
 // DECISIONS.md keeps "kickstart": there it names the template itself.
 func rewrite(rel, text string, o options) string {
-	text = strings.ReplaceAll(text, "migrations/"+o.db, "migrations")
-	if o.db == "postgres" {
-		text = strings.ReplaceAll(text, "internal/store/postgres", "internal/store")
+	for _, d := range o.dialectDirs {
+		text = regexp.MustCompile(regexp.QuoteMeta(d)+`\b`).ReplaceAllLiteralString(text, path.Dir(d))
 	}
 	text = strings.ReplaceAll(text, templateModule, o.module)
 	if rel != "DECISIONS.md" {

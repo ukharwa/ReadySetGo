@@ -34,6 +34,8 @@ type options struct {
 	db      string
 	ui      string
 	modules []string
+
+	dialectDirs []string // the chosen database's folders; set by initProject
 }
 
 func main() {

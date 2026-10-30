@@ -37,6 +37,7 @@ type command struct {
 func commands() []command {
 	return []command{
 		{"serve", "run the HTTP server", serve},
+		{"worker", "run the job worker and scheduler without the HTTP server", worker},
 		{"migrate", "manage the database schema: up, down, status, or create NAME", migrate},
 		// kickstart:begin db=sqlite
 		{"backup", "write a snapshot of the database (-dir, -keep)", backup},

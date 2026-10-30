@@ -17,14 +17,19 @@ Requires Go 1.27 or newer.
 cp .env.example .env
 ```
 
-<!-- kickstart:begin db=postgres -->
 ```bash
 make services
 ```
 
-<!-- kickstart:end -->
 ```bash
 make run
 ```
 
 Then open <http://localhost:8080/readyz>. `make help` lists every command.
+
+`make services` starts:
+
+- Mailpit, which catches the app's email: read it at <http://localhost:8025>
+<!-- kickstart:begin db=postgres -->
+- Postgres
+<!-- kickstart:end -->

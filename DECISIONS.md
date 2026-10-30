@@ -395,12 +395,17 @@ store. **Considered:** database-backed counters from the start.
 
 An email-sender seam with a standard-library SMTP implementation and
 plain-text templates; header injection is blocked. Mailpit catches mail in
-dev; a log sender prints emails when no SMTP server is configured in dev;
-production refuses to start without SMTP. Emails are sent by the background
-job queue, which removes a timing leak (an unknown email would otherwise
-answer faster), keeps slow SMTP out of requests, and retries failures.
+dev. Without `SMTP_HOST`, dev logs emails instead of sending them;
+production refuses to start without it, and refuses unencrypted SMTP
+(`SMTP_TLS=none`) except to a relay on the same machine. Emails are sent by
+the background job queue, which removes a timing leak (an unknown email
+would otherwise answer faster), keeps slow SMTP out of requests, and
+retries failures. A queued email holds the whole message, so a link with a
+token sits in the jobs table until it is sent, usually seconds.
 **Considered:** `wneessen/go-mail` (for attachments or complex multipart
-mail) and sending during the request (timing leak, lost mail on failure).
+mail), sending during the request (timing leak, lost mail on failure), and
+an `EMAIL_DRIVER` setting (redundant: whether `SMTP_HOST` is set already
+says which sender to use).
 
 ## Infrastructure
 
@@ -457,27 +462,41 @@ shorter limits, which risk cutting off slow requests.
 
 Built now: session store (database), rate limiter (memory), background jobs
 (database), email (SMTP and log). File storage exists only with the uploads
-module. No cache seam until a feature needs one. A seam gets a selecting
-environment variable only when it ships with two implementations.
-**Considered:** a setting for every seam now, accepting a single value.
+module. No cache seam until a feature needs one. Each seam is an interface
+with one implementation built in `main`, except jobs (below), and gets a
+selecting setting only when it ships with two implementations; for email,
+`SMTP_HOST` being set or not is that setting. **Considered:** a setting for
+every seam now, accepting a single value.
 
 ### Job queue: hand-written, database-backed, core
 
 One `jobs` table. Postgres claims jobs with `FOR UPDATE SKIP LOCKED`; SQLite
-with a single `UPDATE … RETURNING`. Leases let another worker retry a job
-whose instance died; failures retry with growing delays up to a maximum.
-Jobs can occasionally run twice, so handlers must be safe to repeat. The
-worker polls every second and runs inside `serve` by default
-(`WORKER_ENABLED`). **Considered:** River (excellent, Postgres-only) and a
-dedicated queue such as NATS or RabbitMQ (a later step behind the same
-seam).
+with a single `UPDATE … RETURNING`. A claimed job is leased for 5 minutes
+and its handler gets 4, so a handler that respects its context finishes
+before another worker could claim it again; if the instance dies, the job
+is retried once the lease runs out. Failures retry with doubling delays,
+10 attempts over about 17 minutes, then the job is marked failed. Jobs can
+occasionally run twice, so handlers must be safe to repeat. The worker
+polls every second with `WORKER_CONCURRENCY` goroutines (default 4) and
+runs inside `serve` by default (`WORKER_ENABLED`), or alone as
+`app worker`.
+
+The seam is the package API (`Enqueue`, `Worker`, `Scheduler`) rather than
+a Go interface, because `Enqueue` joins the caller's database transaction
+(a job exists only if the change that caused it commits), which only a
+database-backed queue can do. **Considered:** River (excellent,
+Postgres-only) and a dedicated queue such as NATS or RabbitMQ (a later
+step, behind the same package API).
 
 ### Scheduled tasks: core, deduplicated by a unique key
 
-Tasks are declared in code (`sched.Every(time.Hour, "cleanup.sessions")`).
+Tasks are declared in code (`scheduler.Every(24*time.Hour, "jobs.cleanup")`).
 Every instance tries to enqueue each run, and a unique index on task name
-plus scheduled time means only one succeeds. **Considered:** a cron library
-plus an advisory lock, which needs a different lock per database.
+plus scheduled time means only one succeeds. Completed scheduled jobs are
+kept for 7 days, which keeps their key taken so a run can't repeat, so
+intervals up to 7 days are supported; other jobs are deleted on success.
+**Considered:** a cron library plus an advisory lock, which needs a
+different lock per database.
 
 ### `SCALING.md`
 

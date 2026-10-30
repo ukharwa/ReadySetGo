@@ -45,16 +45,23 @@ goes. The init program lives in `tools/kickstart/`; its unit tests run with
 After changing a query or migration, run `make generate`: sqlc writes the
 SQLite code to `internal/store/` and the Postgres code to
 `internal/store/postgres/`, and the two must have identical Go signatures.
-Keep migrations for both databases in step (same numbers and names).
+Keep migrations for both databases in step (same numbers and names). A
+query that can't be shared goes in `internal/<feature>/sqlite/` and
+`internal/<feature>/postgres/` under the same file name, both listed in
+`sqlc.yaml`; init flattens the chosen one into the feature folder.
 <!-- kickstart:end -->
 
 ## Commands
 
-- `make run`: run the HTTP server (reads `.env`; copy `.env.example` first)
+- `make services`: start the dev services. Mailpit's inbox at
+  <http://localhost:8025> catches every email the app sends.
+  <!-- kickstart:begin db=postgres -->
+  Postgres is needed by `run` and `test`.
+  <!-- kickstart:end -->
+- `make run`: run the HTTP server and job worker (reads `.env`; copy
+  `.env.example` first)
+- `make worker`: run only the job worker
 - `make test`: all tests, with the race detector
-<!-- kickstart:begin db=postgres -->
-- `make services`: start the local Postgres (needed by `run` and `test`)
-<!-- kickstart:end -->
 - `make migrate`: apply pending migrations; `make migration NAME=add_x`
   creates a new one
 - `make generate`: regenerate `internal/store` after changing SQL
@@ -79,6 +86,10 @@ Keep migrations for both databases in step (same numbers and names).
   stack, and helpers shared by every feature's handlers.
 - `internal/ratelimit/`: the rate-limiter seam (`Limiter`), its in-memory
   default, and `PerIP` middleware.
+- `internal/jobs/`: the database job queue (`Enqueue`), the `Worker` that
+  runs jobs and the `Scheduler` that enqueues recurring ones.
+- `internal/email/`: the email-sender seam (`Sender`, with SMTP and log
+  implementations) and `Enqueue`; `emailtest.Recorder` for tests.
 - `internal/db/`: opens the database (separate `Read` and `Write` handles),
   runs migrations, and provides `InTx`, `NewID`, `Now` and `Err`. The
   database-specific code is in its dialect file.
@@ -108,8 +119,14 @@ Keep migrations for both databases in step (same numbers and names).
   database defaults.
 - **Emails and usernames:** trim and lowercase in Go before saving or
   looking up, with a unique index on the cleaned value.
-- **Other types:** strings are `TEXT`, money is whole cents in an integer,
-  and every foreign key has an explicit `ON DELETE` rule and an index.
+- **Other types:** strings are `TEXT`; money is whole cents in an integer;
+  every foreign key has an explicit `ON DELETE` rule and an index.
+  <!-- kickstart:begin db=sqlite -->
+  Integers are `INTEGER` (`int64` in Go).
+  <!-- kickstart:end -->
+  <!-- kickstart:begin db=postgres -->
+  Integers are `bigint` (`int64` in Go; `integer` would be `int32`).
+  <!-- kickstart:end -->
 - **Database-specific SQL** goes only in migrations and in queries that
   can't be shared; everything else stays portable.
 
@@ -130,6 +147,15 @@ Keep migrations for both databases in step (same numbers and names).
   cookies, emails, query strings or database URLs.
 - **State:** no package-level mutable state; dependencies are built in
   `main` and passed explicitly. Nothing may assume a single instance.
+- **Background work:**
+  - Enqueue jobs with `jobs.Enqueue(ctx, store.New(tx), kind, payload)`
+    inside the same `db.InTx` as the change that caused them.
+  - Register a job's handler, and any recurring task
+    (`scheduler.Every`), in `startJobs` in `cmd/kickstart/app.go`.
+  - Handlers must be safe to run twice and must respect their context.
+  - Never send email during a request: build an `email.Message` and
+    `email.Enqueue` it. Tests use `emailtest.Recorder` and run queued jobs
+    with `worker.RunOne`.
 - **Interfaces:** only for the agreed seams (sessions, rate limiting, jobs,
   email, file storage), defined where they're used.
 - **HTTP:**
