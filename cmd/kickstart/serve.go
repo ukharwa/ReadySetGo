@@ -44,7 +44,7 @@ func serve(ctx context.Context, args []string, getenv func(string) string, stdou
 	}
 
 	health := &httpx.Health{Check: database.Ping}
-	srv := httpx.NewServer(routes(health), logger)
+	srv := httpx.NewServer(routes(cfg, logger, health), logger)
 
 	ln, err := net.Listen("tcp", cfg.HTTPAddr)
 	if err != nil {

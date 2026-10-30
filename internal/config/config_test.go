@@ -2,6 +2,8 @@ package config
 
 import (
 	"log/slog"
+	"net/netip"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -42,7 +44,7 @@ func TestLoadDefaults(t *testing.T) {
 				DBConnMaxLifetime: 30 * time.Minute,
 				// kickstart:end
 			}
-			if c != want {
+			if !reflect.DeepEqual(c, want) {
 				t.Errorf("Load = %+v, want %+v", c, want)
 			}
 		})
@@ -58,6 +60,7 @@ func TestLoadOverrides(t *testing.T) {
 		"LOG_LEVEL":        "debug",
 		"SHUTDOWN_DRAIN":   "5s",
 		"SHUTDOWN_TIMEOUT": "1m",
+		"TRUSTED_PROXIES":  "172.16.0.0/12, 10.1.2.3",
 		"DATABASE_URL":     "db",
 		"MIGRATE_ON_START": "false",
 		// kickstart:begin db=postgres
@@ -77,8 +80,12 @@ func TestLoadOverrides(t *testing.T) {
 		LogLevel:        slog.LevelDebug,
 		ShutdownDrain:   5 * time.Second,
 		ShutdownTimeout: time.Minute,
-		DatabaseURL:     "db",
-		MigrateOnStart:  false,
+		TrustedProxies: []netip.Prefix{
+			netip.MustParsePrefix("172.16.0.0/12"),
+			netip.MustParsePrefix("10.1.2.3/32"),
+		},
+		DatabaseURL:    "db",
+		MigrateOnStart: false,
 		// kickstart:begin db=postgres
 		DatabaseReadURL:   "replica",
 		DBMaxOpenConns:    10,
@@ -86,7 +93,7 @@ func TestLoadOverrides(t *testing.T) {
 		DBConnMaxLifetime: time.Hour,
 		// kickstart:end
 	}
-	if c != want {
+	if !reflect.DeepEqual(c, want) {
 		t.Errorf("Load = %+v, want %+v", c, want)
 	}
 }
@@ -101,13 +108,14 @@ func TestLoadReportsAllErrors(t *testing.T) {
 		"SHUTDOWN_DRAIN":   "soon",
 		"SHUTDOWN_TIMEOUT": "0s",
 		"MIGRATE_ON_START": "maybe",
+		"TRUSTED_PROXIES":  "10.0.0.0/8,caddy",
 	}))
 	if err == nil {
 		t.Fatal("Load succeeded, want error")
 	}
 	for _, key := range []string{
 		"APP_ENV", "LOG_FORMAT", "LOG_LEVEL", "SHUTDOWN_DRAIN", "SHUTDOWN_TIMEOUT",
-		"DATABASE_URL", "MIGRATE_ON_START",
+		"DATABASE_URL", "MIGRATE_ON_START", "TRUSTED_PROXIES",
 	} {
 		if !strings.Contains(err.Error(), key) {
 			t.Errorf("error does not mention %s:\n%v", key, err)

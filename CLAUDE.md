@@ -75,8 +75,10 @@ Keep migrations for both databases in step (same numbers and names).
 - `internal/config/`: reads every environment variable. Nothing else calls
   `os.Getenv` (test helpers excepted).
 - `internal/logging/`: builds the slog logger.
-- `internal/httpx/`: HTTP server setup, health endpoints, and helpers shared
-  by every feature's handlers.
+- `internal/httpx/`: HTTP server setup, health endpoints, the middleware
+  stack, and helpers shared by every feature's handlers.
+- `internal/ratelimit/`: the rate-limiter seam (`Limiter`), its in-memory
+  default, and `PerIP` middleware.
 - `internal/db/`: opens the database (separate `Read` and `Write` handles),
   runs migrations, and provides `InTx`, `NewID`, `Now` and `Err`. The
   database-specific code is in its dialect file.
@@ -130,7 +132,20 @@ Keep migrations for both databases in step (same numbers and names).
   `main` and passed explicitly. Nothing may assume a single instance.
 - **Interfaces:** only for the agreed seams (sessions, rate limiting, jobs,
   email, file storage), defined where they're used.
-- **HTTP:** GET requests never change state.
+- **HTTP:**
+  - Register routes in `cmd/kickstart/routes.go` on the `app` mux, which
+    every request reaches through the middleware stack, outermost first:
+    real client IP, request ID, access log, panic recovery, security
+    headers, cross-origin (CSRF) check, 1 MiB body limit, 25-second request
+    timeout.
+  - GET requests never change state: the CSRF check only covers POST, PUT,
+    PATCH and DELETE.
+  - Respond to errors with `httpx.Error(w, r, status)`; it never shows
+    error details and adds the request ID to 5xx responses.
+  - Use `httpx.ClientIP(ctx)` for the client's address, never `RemoteAddr`
+    or `X-Forwarded-For` directly.
+  - Raise one route's body limit by wrapping it in `httpx.MaxBytes(n)`;
+    limit requests with `ratelimit.PerIP` or a `ratelimit.Limiter`.
 - **Tests:** standard `testing` only, table-driven, `t.Parallel()` where
   possible, no assertion libraries. Tests that touch the database use
   `dbtest.New(t)`, which gives each test its own database.

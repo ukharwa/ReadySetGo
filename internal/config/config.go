@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/netip"
 	"slices"
 	"strconv"
 	"strings"
@@ -15,12 +16,13 @@ import (
 // Config holds every setting the application reads from the environment.
 // Each variable is documented in .env.example.
 type Config struct {
-	Env             string        // APP_ENV: "dev" or "prod"
-	HTTPAddr        string        // HTTP_ADDR
-	LogFormat       string        // LOG_FORMAT: "text" or "json"
-	LogLevel        slog.Level    // LOG_LEVEL
-	ShutdownDrain   time.Duration // SHUTDOWN_DRAIN
-	ShutdownTimeout time.Duration // SHUTDOWN_TIMEOUT
+	Env             string         // APP_ENV: "dev" or "prod"
+	HTTPAddr        string         // HTTP_ADDR
+	LogFormat       string         // LOG_FORMAT: "text" or "json"
+	LogLevel        slog.Level     // LOG_LEVEL
+	ShutdownDrain   time.Duration  // SHUTDOWN_DRAIN
+	ShutdownTimeout time.Duration  // SHUTDOWN_TIMEOUT
+	TrustedProxies  []netip.Prefix // TRUSTED_PROXIES
 
 	DatabaseURL    string // DATABASE_URL (secret: may hold a password)
 	MigrateOnStart bool   // MIGRATE_ON_START
@@ -45,6 +47,7 @@ func (c Config) LogValue() slog.Value {
 		slog.String("log_level", c.LogLevel.String()),
 		slog.Duration("shutdown_drain", c.ShutdownDrain),
 		slog.Duration("shutdown_timeout", c.ShutdownTimeout),
+		slog.Any("trusted_proxies", c.TrustedProxies),
 		slog.Bool("migrate_on_start", c.MigrateOnStart),
 		// kickstart:begin db=postgres
 		slog.Bool("read_replica", c.DatabaseReadURL != ""),
@@ -71,6 +74,7 @@ func Load(getenv func(string) string) (Config, error) {
 	c.LogLevel = l.level("LOG_LEVEL", slog.LevelInfo)
 	c.ShutdownDrain = l.duration("SHUTDOWN_DRAIN", 0)
 	c.ShutdownTimeout = l.duration("SHUTDOWN_TIMEOUT", 25*time.Second)
+	c.TrustedProxies = l.prefixes("TRUSTED_PROXIES")
 
 	c.DatabaseURL = l.required("DATABASE_URL")
 	c.MigrateOnStart = l.boolean("MIGRATE_ON_START", true)
@@ -174,6 +178,25 @@ func (l *loader) duration(key string, def time.Duration) time.Duration {
 		return def
 	}
 	return d
+}
+
+// prefixes reads a comma-separated list of IP addresses and CIDR ranges.
+func (l *loader) prefixes(key string) []netip.Prefix {
+	var out []netip.Prefix
+	for item := range strings.SplitSeq(l.getenv(key), ",") {
+		item = strings.TrimSpace(item)
+		if item == "" {
+			continue
+		}
+		if p, err := netip.ParsePrefix(item); err == nil {
+			out = append(out, p.Masked())
+		} else if ip, err := netip.ParseAddr(item); err == nil {
+			out = append(out, netip.PrefixFrom(ip, ip.BitLen()))
+		} else {
+			l.fail(key, fmt.Sprintf("must list IP addresses or CIDR ranges (bad entry %q)", item))
+		}
+	}
+	return out
 }
 
 func (l *loader) level(key string, def slog.Level) slog.Level {

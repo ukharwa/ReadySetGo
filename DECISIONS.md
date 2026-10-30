@@ -368,19 +368,24 @@ makes people arriving from an email link look logged out.
 
 ### Security headers, set by the app
 
-A strict Content-Security-Policy (no inline scripts or styles), HSTS in
-production (no preload, which is hard to undo), `nosniff`,
-`Referrer-Policy: strict-origin-when-cross-origin`,
-`Cross-Origin-Opener-Policy: same-origin`, and `Cache-Control: no-store` on
-private pages. Set in Go middleware so they're tested and survive a change
-of proxy. **Considered:** setting them in the Caddyfile.
+A strict Content-Security-Policy (no inline scripts or styles; JSON under
+`/api/` gets `default-src 'none'`), HSTS in production (no preload, which is
+hard to undo), `nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`,
+`Cross-Origin-Opener-Policy: same-origin`, and `Cache-Control: no-store` by
+default, so private pages never linger in a browser's cache; static files
+override it. Set in Go middleware so they're tested and survive a change of
+proxy. **Considered:** setting them in the Caddyfile, and `no-store` only on
+pages known to be private (easy to forget on a new one).
 
 ### Rate limiting, no hard lockout
 
 Per IP (20 a minute across auth endpoints), per email and IP together (5
 failed logins per 15 minutes), per email alone (50 failed logins an hour),
 and per address emailed (3 an hour), answered with `429` and `Retry-After`.
-No hard lockout, which would let anyone lock out any user. The client IP
+Failed-login counters reset after a successful login, so only consecutive
+failures count. If the counter store fails, requests are refused (`503`)
+rather than let through. No hard lockout, which would let anyone lock out
+any user. The client IP
 comes from `X-Forwarded-For` only when the request arrives from
 `TRUSTED_PROXIES`. The default store is in memory and per instance, so two
 instances allow up to twice the attempts; `SCALING.md` covers a shared
@@ -430,14 +435,17 @@ to trust Caddy's local certificate.
 
 `/healthz` says the process is alive; `/readyz` checks the database (2-second
 timeout) and fails during shutdown. Plain text with no details, so safe to
-leave public. No Docker `HEALTHCHECK`: the image has no shell and Docker
+leave public. They bypass the middleware stack, so the constant polling
+doesn't flood the access log. No Docker `HEALTHCHECK`: the image has no shell and Docker
 doesn't restart unhealthy containers anyway. **Considered:** JSON with each
 dependency's status, which reveals internals.
 
 ### Server timeouts and graceful shutdown
 
 5 seconds for request headers, 15 to read a request, 30 to write a response,
-120 for idle connections; 1 MB body and header limits. On SIGTERM: readiness
+120 for idle connections; 1 MB body and header limits (a route can raise
+its body limit). Every request's context gets a 25-second deadline, so
+database and outbound calls can't outlive the response. On SIGTERM: readiness
 fails, an optional drain period passes (`SHUTDOWN_DRAIN`), in-flight requests
 get up to 25 seconds, the worker finishes or releases its jobs, and the
 database closes. Compose's stop timeout is 30 seconds. **Considered:**
