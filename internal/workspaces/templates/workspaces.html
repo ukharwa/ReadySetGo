@@ -1,0 +1,23 @@
+{{define "title"}}Workspaces{{end}}
+
+{{define "content"}}
+<h1>Your workspaces</h1>
+<ul class="list">
+  {{range .Data.Workspaces}}
+  <li><a href="/w/{{.ID}}">{{.Name}}</a> <span class="muted">· {{.Role}}</span></li>
+  {{else}}
+  <li class="muted">You aren't in any workspace yet.</li>
+  {{end}}
+</ul>
+
+<section class="card">
+  <h2>Create a workspace</h2>
+  <form method="post" action="/workspaces" class="stack">
+    <label>Name
+      <input type="text" name="name" value="{{.Data.Create.Get "name"}}" maxlength="100" required>
+      {{with .Data.Create.Errors.name}}<span class="field-error">{{.}}</span>{{end}}
+    </label>
+    <button type="submit">Create</button>
+  </form>
+</section>
+{{end}}

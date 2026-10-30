@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/ukharwa/kickstart/internal/httpx"
-	"github.com/ukharwa/kickstart/internal/ratelimit"
 )
 
 // serve runs the HTTP server, and the job worker unless WORKER_ENABLED is
@@ -39,8 +38,7 @@ func serve(ctx context.Context, args []string, getenv func(string) string, stdou
 		return err
 	}
 
-	limiter := ratelimit.NewMemory()
-	accounts, err := newAccounts(cfg, database, limiter, logger)
+	svc, err := newServices(cfg, database, logger)
 	if err != nil {
 		return err
 	}
@@ -50,13 +48,13 @@ func serve(ctx context.Context, args []string, getenv func(string) string, stdou
 	defer stopJobs()
 	var jobsDone <-chan struct{}
 	if cfg.WorkerEnabled {
-		if jobsDone, err = startJobs(jobsCtx, cfg, database, accounts, logger); err != nil {
+		if jobsDone, err = startJobs(jobsCtx, cfg, database, svc, logger); err != nil {
 			return err
 		}
 	}
 
 	health := &httpx.Health{Check: database.Ping}
-	handler, err := routes(cfg, logger, health, accounts, limiter)
+	handler, err := routes(cfg, logger, health, svc)
 	if err != nil {
 		return err
 	}

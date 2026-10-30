@@ -3,6 +3,7 @@
 {{define "content"}}
 <h1>Create an account</h1>
 <form method="post" action="/register" class="stack">
+  <input type="hidden" name="next" value="{{.Data.Next}}">
   <label>Email
     <input type="email" name="email" value="{{.Data.Form.Get "email"}}" autocomplete="email" required autofocus>
     {{with .Data.Form.Errors.email}}<span class="field-error">{{.}}</span>{{end}}
@@ -14,5 +15,5 @@
   </label>
   <button type="submit">Sign up</button>
 </form>
-<p>Already have an account? <a href="/login">Log in</a></p>
+<p>Already have an account? <a href="/login{{with .Data.Next}}?next={{.}}{{end}}">Log in</a></p>
 {{end}}

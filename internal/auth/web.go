@@ -83,7 +83,7 @@ type formPage struct {
 
 func (h *Web) form(page string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		h.pages.Render(w, r, http.StatusOK, page, formPage{})
+		h.pages.Render(w, r, http.StatusOK, page, formPage{Next: r.URL.Query().Get("next")})
 	}
 }
 
@@ -124,11 +124,15 @@ func (h *Web) fail(w http.ResponseWriter, r *http.Request, page string, data for
 func (h *Web) register(w http.ResponseWriter, r *http.Request) {
 	form := web.Form{Values: postForm(r)}
 	if err := h.svc.Register(r.Context(), form.Get("email"), form.Get("password")); err != nil {
-		h.fail(w, r, "register.html", formPage{Form: form}, err)
+		h.fail(w, r, "register.html", formPage{Form: form, Next: form.Get("next")}, err)
 		return
 	}
 	web.SetFlash(w, "Check your inbox for a link to confirm your email address. You can log in now.")
-	http.Redirect(w, r, "/login", http.StatusSeeOther)
+	login := "/login"
+	if next := web.SafeRedirect(form.Get("next"), ""); next != "" {
+		login += "?" + url.Values{"next": {next}}.Encode()
+	}
+	http.Redirect(w, r, login, http.StatusSeeOther)
 }
 
 func (h *Web) loginPage(w http.ResponseWriter, r *http.Request) {

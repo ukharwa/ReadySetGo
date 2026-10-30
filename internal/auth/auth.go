@@ -116,6 +116,29 @@ type Service struct {
 	emails    *email.Templates
 	dummyHash string           // compared against when an email is unknown, so timing matches
 	now       func() time.Time // replaced in tests
+	created   []Hook
+	deleting  []Hook
+}
+
+// Hook lets another feature act when an account is created or deleted,
+// inside the same transaction, so its changes commit or roll back with the
+// account. A deletion hook can refuse by returning validate.Errors, whose
+// messages the user sees. Add hooks while setting up, before serving.
+type Hook func(ctx context.Context, tx *sql.Tx, u User) error
+
+// OnUserCreated adds a hook that runs when an account is created.
+func (s *Service) OnUserCreated(h Hook) { s.created = append(s.created, h) }
+
+// OnUserDeleting adds a hook that runs just before an account is deleted.
+func (s *Service) OnUserDeleting(h Hook) { s.deleting = append(s.deleting, h) }
+
+func runHooks(ctx context.Context, tx *sql.Tx, hooks []Hook, u User) error {
+	for _, h := range hooks {
+		if err := h(ctx, tx, u); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // NewService returns a Service. It hashes one dummy password, so it takes a
@@ -252,6 +275,9 @@ func (s *Service) Register(ctx context.Context, address, password string) error 
 		if errors.Is(db.Err(err), db.ErrConflict) {
 			return nil // registered a moment ago by a concurrent request
 		} else if err != nil {
+			return err
+		}
+		if err := runHooks(ctx, tx, s.created, toUser(user)); err != nil {
 			return err
 		}
 		token, err := createToken(ctx, q, user.ID, "verify_email", address, verifyTokenTTL, now)
@@ -565,7 +591,13 @@ func (s *Service) DeleteAccount(ctx context.Context, u User, password string) er
 	if err := s.checkCurrentPassword(ctx, u, "password", password); err != nil {
 		return err
 	}
-	if err := store.New(s.db.Write).DeleteUser(ctx, u.ID); err != nil {
+	err := s.db.InTx(ctx, func(tx *sql.Tx) error {
+		if err := runHooks(ctx, tx, s.deleting, u); err != nil {
+			return err
+		}
+		return store.New(tx).DeleteUser(ctx, u.ID)
+	})
+	if err != nil {
 		return err
 	}
 	// The database deletes them with the user; a shared session store
@@ -587,14 +619,29 @@ func (s *Service) CreateUser(ctx context.Context, address, password, role string
 		return User{}, err
 	}
 	now := s.now()
-	u, err := store.New(s.db.Write).CreateUser(ctx, store.CreateUserParams{
-		ID: db.NewID(), Email: address, PasswordHash: hash, Role: role,
-		EmailVerifiedAt: sql.NullTime{Time: now, Valid: verified}, CreatedAt: now, UpdatedAt: now,
+	var u User
+	err = s.db.InTx(ctx, func(tx *sql.Tx) error {
+		row, err := store.New(tx).CreateUser(ctx, store.CreateUserParams{
+			ID: db.NewID(), Email: address, PasswordHash: hash, Role: role,
+			EmailVerifiedAt: sql.NullTime{Time: now, Valid: verified}, CreatedAt: now, UpdatedAt: now,
+		})
+		if err != nil {
+			return db.Err(err)
+		}
+		u = toUser(row)
+		return runHooks(ctx, tx, s.created, u)
 	})
-	if err != nil {
-		return User{}, db.Err(err)
-	}
-	return toUser(u), nil
+	return u, err
+}
+
+// MarkEmailVerified records, in tx, that userID controls address: another
+// feature's emailed link (an invitation, say) was opened. It does nothing if
+// address is no longer the user's.
+func (s *Service) MarkEmailVerified(ctx context.Context, tx *sql.Tx, userID uuid.UUID, address string) error {
+	_, err := store.New(tx).MarkEmailVerified(ctx, store.MarkEmailVerifiedParams{
+		ID: userID, Email: address, VerifiedAt: sql.NullTime{Time: s.now(), Valid: true},
+	})
+	return err
 }
 
 // SetRole gives the user with address a role.

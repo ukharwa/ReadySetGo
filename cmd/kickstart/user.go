@@ -8,7 +8,6 @@ import (
 	"io"
 
 	"github.com/ukharwa/kickstart/internal/auth"
-	"github.com/ukharwa/kickstart/internal/ratelimit"
 )
 
 const userUsage = "usage: user promote | demote | disable | enable EMAIL"
@@ -35,10 +34,11 @@ func user(ctx context.Context, args []string, getenv func(string) string, stdout
 		return err
 	}
 	defer closeDB(database, logger)
-	accounts, err := newAccounts(cfg, database, ratelimit.NewMemory(), logger)
+	svc, err := newServices(cfg, database, logger)
 	if err != nil {
 		return err
 	}
+	accounts := svc.accounts
 
 	switch action {
 	case "promote":

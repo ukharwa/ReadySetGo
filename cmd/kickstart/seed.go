@@ -8,7 +8,6 @@ import (
 
 	"github.com/ukharwa/kickstart/internal/auth"
 	"github.com/ukharwa/kickstart/internal/db"
-	"github.com/ukharwa/kickstart/internal/ratelimit"
 )
 
 // seedPassword is the password of every seeded user. Seeding refuses to run
@@ -37,7 +36,7 @@ func seed(ctx context.Context, args []string, getenv func(string) string, stdout
 	if err := migrateOnStart(ctx, cfg, database, logger); err != nil {
 		return err
 	}
-	accounts, err := newAccounts(cfg, database, ratelimit.NewMemory(), logger)
+	svc, err := newServices(cfg, database, logger)
 	if err != nil {
 		return err
 	}
@@ -46,7 +45,7 @@ func seed(ctx context.Context, args []string, getenv func(string) string, stdout
 		{"admin@example.com", auth.RoleAdmin},
 		{"user@example.com", auth.RoleUser},
 	} {
-		_, err := accounts.CreateUser(ctx, u.email, seedPassword, u.role, true)
+		_, err := svc.accounts.CreateUser(ctx, u.email, seedPassword, u.role, true)
 		switch {
 		case errors.Is(err, db.ErrConflict):
 			logger.Info("seed user exists", "email", u.email)

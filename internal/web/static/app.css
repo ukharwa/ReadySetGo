@@ -73,7 +73,7 @@ form.stack { display: grid; gap: 1rem; margin: 1rem 0; }
 form.stack button { justify-self: start; }
 label { display: grid; gap: 0.3rem; font-weight: 500; }
 label.check { display: flex; align-items: center; gap: 0.5rem; font-weight: normal; }
-input[type="email"], input[type="password"], input[type="text"], textarea {
+input[type="email"], input[type="password"], input[type="text"], textarea, select {
   font: inherit;
   padding: 0.55rem 0.7rem;
   border: 1px solid var(--border);
@@ -119,6 +119,9 @@ form.inline { display: inline; }
 }
 .flash { background: var(--success-bg); color: var(--success-text); }
 .error-summary { border: 1px solid var(--danger); color: var(--danger); }
+
+ul.list { padding-left: 1.2rem; }
+ul.list li { margin: 0.4rem 0; }
 
 section.card {
   border: 1px solid var(--border);

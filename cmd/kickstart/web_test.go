@@ -15,7 +15,13 @@ import (
 func TestRoutesHomeAndStatic(t *testing.T) {
 	t.Parallel()
 	a := apptest.New(t)
-	h, err := routes(config.Config{Env: "prod", AppName: "Test"}, slog.New(slog.DiscardHandler), &httpx.Health{}, a.Accounts, a.Limiter)
+	cfg := config.Config{Env: "prod", AppName: "Test", AppURL: apptest.BaseURL, PasswordMinLength: 12}
+	logger := slog.New(slog.DiscardHandler)
+	svc, err := newServices(cfg, a.DB, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h, err := routes(cfg, logger, &httpx.Health{}, svc)
 	if err != nil {
 		t.Fatal(err)
 	}

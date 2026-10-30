@@ -1,0 +1,14 @@
+{{define "title"}}Invitation{{end}}
+
+{{define "content"}}
+<h1>Join a workspace</h1>
+{{with .Data.Error}}
+  <p class="error-summary" role="alert">{{.}}</p>
+{{else}}
+  <p>You're invited to join <strong>{{.Data.Invitation.WorkspaceName}}</strong> as {{if eq .Data.Invitation.Role "admin"}}an{{else}}a{{end}} {{.Data.Invitation.Role}}.</p>
+  <form method="post" action="/invitations/accept" class="stack">
+    <input type="hidden" name="token" value="{{.Data.Token}}">
+    <button type="submit">Join</button>
+  </form>
+{{end}}
+{{end}}

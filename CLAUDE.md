@@ -11,9 +11,15 @@ runnable SQLite app containing every option. `make init` keeps the options a
 new project picks and removes the rest:
 
 - Paths belonging to one option are removed whole when that option isn't
-  chosen (`migrations/postgres/`, `internal/store/postgres/`, and later
-  module folders). The chosen database's folders are flattened:
-  `migrations/<db>/` becomes `migrations/`.
+  chosen (`migrations/postgres/`, `internal/store/postgres/`). The chosen
+  database's folders are flattened: `migrations/<db>/` becomes
+  `migrations/`.
+- An optional module lives in `internal/<module>/`, removed whole when it
+  isn't chosen. Its migrations wrap their contents in `module=<name>`
+  markers (so they empty and are dropped), and so do its `sqlc.yaml`
+  entries, mount lines and nav links. Modules depend only on the core,
+  never on each other; they hook into it through seams such as
+  `auth.Service.OnUserCreated`.
 - Files for one UI mode are named for it: `web.go`, `web_test.go`, any
   `templates/` folder and `internal/web/` belong to HTML mode; `api.go` and
   `api_test.go` to API mode. Keep mode-specific code (and its imports) in
@@ -43,7 +49,7 @@ new project picks and removes the rest:
   another database, UI mode or module outside its markers or paths.
 
 Test every combination with `make template-check DB=sqlite|postgres
-UI=html|api`. It copies
+UI=html|api MODULES=none|all|a,b`. It copies
 the working tree (uncommitted changes included) to a temporary folder, runs
 init, then tidy, vet, the tests, lint and sqlc, and fails on leftovers. The
 Postgres check needs `make services`. Set `TMPDIR` to choose where the copy
@@ -106,7 +112,8 @@ query that can't be shared goes in `internal/<feature>/sqlite/` and
   are wired together.
   - `main.go` lists the subcommands; each has its own file, such as
     `serve.go` and `migrate.go`.
-  - `app.go` holds the setup they share (config, logger, database).
+  - `app.go` holds the setup they share: config, logger, database,
+    `newServices` (the services every command uses) and `startJobs`.
   - `routes.go` mounts every feature's routes, one line per feature.
   <!-- kickstart:begin ui=html -->
   - `web.go` sets up the page renderer and mounts the HTML pages.
@@ -138,6 +145,14 @@ query that can't be shared goes in `internal/<feature>/sqlite/` and
   <!-- kickstart:begin ui=api -->
   `api.go` is the JSON API under `/api/auth/`.
   <!-- kickstart:end -->
+  Other features react to accounts through `OnUserCreated` and
+  `OnUserDeleting` hooks, which run inside the same transaction.
+<!-- kickstart:begin module=workspaces -->
+- `internal/workspaces/`: workspaces, their members (owner, admin, member)
+  and email invitations. `middleware.go` resolves `{workspaceID}` and
+  answers 404 to non-members; `workspacestest/` signs people in with their
+  personal workspace for tests.
+<!-- kickstart:end -->
 <!-- kickstart:begin ui=html -->
 - `internal/web/`: the page layout, renderer, stylesheet, HTMX and flash
   messages.
@@ -248,6 +263,32 @@ query that can't be shared goes in `internal/<feature>/sqlite/` and
   `dbtest.New(t)`, which gives each test its own database. End-to-end tests
   use `apptest.New(t)`: register the feature's routes on its `Mux` and drive
   its HTTPS `Server` with `Client()`, reading emails with `TokenFrom`.
+  `SignIn(client, email)` signs a client in as a new verified user.
   <!-- kickstart:begin db=postgres -->
   It needs `make services` running and `TEST_DATABASE_URL` set.
   <!-- kickstart:end -->
+<!-- kickstart:begin module=workspaces -->
+
+## Workspace-owned data
+
+New features belong to a user unless they say otherwise. To make a feature's
+data shared by a workspace instead:
+
+- Give its table a `workspace_id` column referencing `workspaces(id)
+  ON DELETE CASCADE`, with an index, and scope every query by it
+  (`WHERE workspace_id = @workspace_id AND id = @id`), so one workspace can
+  never reach another's rows.
+<!-- kickstart:begin ui=html -->
+- Put its pages under `/w/{workspaceID}/…` and guard each route with
+  `auth.RequireUser(workspacesService.Require(handler))`.
+<!-- kickstart:end -->
+<!-- kickstart:begin ui=api -->
+- Put its endpoints under `/api/workspaces/{workspaceID}/…` and guard each
+  with `auth.RequireUser(workspacesService.Require(handler))`.
+<!-- kickstart:end -->
+- In the handler, `workspaces.From(ctx)` is the workspace with the user's
+  role in it. Outsiders already got 404 from `Require`; answer 403 when a
+  member's role doesn't allow an action (`ws.CanManage()`, `ws.IsOwner()`).
+- Test that someone outside the workspace gets 404 for every route, using
+  `workspacestest.SignIn` for each person.
+<!-- kickstart:end -->

@@ -615,9 +615,9 @@ deploys on tags, and `amd64`-only images.
 <!-- kickstart:begin template -->
 ### Template CI matrix
 
-Every combination of database and UI mode (and, from milestone 8, modules:
-all or none) is created with `make init` in a fresh copy and must pass lint
-and tests, which also tests init. Each run also fails if anything from an unchosen option is left
+Every combination of database, UI mode and modules (all or none) is created
+with `make init` in a fresh copy and must pass lint and tests, which also
+tests init. Each run also fails if anything from an unchosen option is left
 behind.
 <!-- kickstart:end -->
 
@@ -648,13 +648,20 @@ design is settled up front:
 - Roles: `owner` (delete, transfer), `admin` (invite, remove), `member`.
   There is always at least one owner.
 - Invitations are single-use links valid for 7 days, tied to the invited
-  email, which must be verified to accept.
-- The workspace ID is in the URL; middleware checks membership. Every
-  workspace-owned table has a required `workspace_id`, every query filters
-  on it (from the request, never from form input), and other workspaces'
-  records return 404.
+  email: only an account with that address can accept, and accepting
+  verifies the address, since the link arrived there. Invitations don't
+  record who sent them; the email names the sender.
+- The workspace ID is in the URL (`/w/{workspaceID}/…` for pages,
+  `/api/workspaces/{workspaceID}/…` for the API); middleware checks
+  membership. Every workspace-owned table has a required `workspace_id`,
+  every query filters on it (from the request, never from form input), and
+  outsiders get 404 for anything in a workspace. Members whose role doesn't
+  allow an action get 403.
 - Deleting a workspace is for owners only. The only owner of a workspace
   with other members must transfer ownership before deleting their account.
+- The core knows nothing of workspaces: the module registers
+  `OnUserCreated` and `OnUserDeleting` hooks with the account service,
+  which run inside the account's own transaction.
 
 **Considered:** one workspace per user; mixing user-owned and
 workspace-owned data (every query becomes "this user or a workspace they're

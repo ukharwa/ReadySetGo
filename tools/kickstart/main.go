@@ -68,7 +68,7 @@ func parseOptions(fs *flag.FlagSet, args []string) (options, error) {
 	fs.StringVar(&o.module, "module", "", "Go module path (default github.com/ukharwa/NAME)")
 	fs.StringVar(&o.db, "db", "", "database: sqlite or postgres (default sqlite)")
 	fs.StringVar(&o.ui, "ui", "", "UI mode: html or api (default html)")
-	fs.StringVar(&modules, "modules", "", "comma-separated optional modules: "+strings.Join(allModules, ", "))
+	fs.StringVar(&modules, "modules", "", "comma-separated optional modules, or all: "+strings.Join(allModules, ", "))
 	if err := fs.Parse(args); err != nil {
 		return options{}, err
 	}
@@ -78,8 +78,11 @@ func parseOptions(fs *flag.FlagSet, args []string) (options, error) {
 	if o.ui == "" {
 		o.ui = "html"
 	}
+	if strings.TrimSpace(modules) == "all" {
+		modules = strings.Join(allModules, ",")
+	}
 	for m := range strings.SplitSeq(modules, ",") {
-		if m = strings.TrimSpace(m); m != "" && !slices.Contains(o.modules, m) {
+		if m = strings.TrimSpace(m); m != "" && m != "none" && !slices.Contains(o.modules, m) {
 			o.modules = append(o.modules, m)
 		}
 	}

@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 )
@@ -104,10 +105,10 @@ func runCheck(args []string) error {
 		return fmt.Errorf("these files changed after init (run the step yourself to see why):\n%s", out)
 	}
 
-	fmt.Println("==> no leftovers from unchosen options")
 	if problems := leftovers(tmp, o); len(problems) > 0 {
 		return fmt.Errorf("leftovers found:\n  %s", strings.Join(problems, "\n  "))
 	}
+	fmt.Println("==> no leftovers from unchosen options")
 
 	failed = false
 	fmt.Println("==> all checks passed")
@@ -152,6 +153,16 @@ func leftovers(root string, o options) []string {
 	if o.db == "postgres" {
 		otherDB = regexp.MustCompile(`(?i)\bsqlite3?\b|modernc\.org`)
 	}
+	// Words that only appear in a module's own code and docs.
+	moduleWords := map[string]*regexp.Regexp{
+		"workspaces": regexp.MustCompile(`(?i)\bworkspaces?\b`),
+	}
+	var unchosen []*regexp.Regexp
+	for m, re := range moduleWords {
+		if !slices.Contains(o.modules, m) {
+			unchosen = append(unchosen, re)
+		}
+	}
 	var problems []string
 	report := func(where, what string) { problems = append(problems, where+": "+what) }
 
@@ -192,6 +203,8 @@ func leftovers(root string, o options) []string {
 				report(where, "mentions the database that wasn't chosen: "+strings.TrimSpace(line))
 			case !exempt && templateName.MatchString(line):
 				report(where, "mentions the template's name: "+strings.TrimSpace(line))
+			case !exempt && slices.ContainsFunc(unchosen, func(re *regexp.Regexp) bool { return re.MatchString(line) }):
+				report(where, "mentions a module that wasn't chosen: "+strings.TrimSpace(line))
 			}
 		}
 		return nil

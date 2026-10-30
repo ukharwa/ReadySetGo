@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -71,11 +72,19 @@ func TestServe(t *testing.T) {
 // on cancellation.
 func TestWorker(t *testing.T) {
 	t.Parallel()
-	env := map[string]string{"APP_ENV": "dev", "LOG_LEVEL": "error", "DATABASE_URL": dbtest.URL(t)}
+	env := map[string]string{"APP_ENV": "dev", "DATABASE_URL": dbtest.URL(t)}
 	ctx, cancel := context.WithCancel(t.Context())
+	var out syncBuffer
 	done := make(chan error, 1)
-	go func() { done <- run(ctx, []string{"worker"}, func(k string) string { return env[k] }, io.Discard) }()
-	time.Sleep(300 * time.Millisecond)
+	go func() { done <- run(ctx, []string{"worker"}, func(k string) string { return env[k] }, &out) }()
+
+	deadline := time.Now().Add(10 * time.Second)
+	for !strings.Contains(out.String(), "job worker started") {
+		if time.Now().After(deadline) {
+			t.Fatalf("worker didn't start:\n%s", out.String())
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
 	cancel()
 	select {
 	case err := <-done:
@@ -154,4 +163,23 @@ func waitFor(t *testing.T, url string, status int) {
 		time.Sleep(20 * time.Millisecond)
 	}
 	t.Fatalf("%s did not return %d within 10s", url, status)
+}
+
+// syncBuffer is a bytes.Buffer safe to write from one goroutine and read
+// from another.
+type syncBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *syncBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
+
+func (b *syncBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.String()
 }

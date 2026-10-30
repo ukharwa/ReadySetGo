@@ -7,6 +7,7 @@ import (
 
 var sqliteHTML = options{name: "myapp", module: "github.com/me/myapp", db: "sqlite", ui: "html"}
 var postgresAPI = options{name: "myapp", module: "github.com/me/myapp", db: "postgres", ui: "api", modules: []string{"uploads"}}
+var withWorkspaces = options{name: "myapp", module: "github.com/me/myapp", db: "sqlite", ui: "html", modules: []string{"workspaces"}}
 
 func TestApplyMarkers(t *testing.T) {
 	t.Parallel()
@@ -114,6 +115,9 @@ func TestPaths(t *testing.T) {
 		{"internal/auth/web_test.go", sqliteHTML, "internal/auth/web_test.go"},
 		{"internal/auth/api_test.go", sqliteHTML, ""},
 		{"internal/auth/emails/verify_email.txt", sqliteHTML, "internal/auth/emails/verify_email.txt"},
+		{"internal/workspaces/workspaces.go", sqliteHTML, ""},
+		{"internal/workspaces/workspaces.go", postgresAPI, ""},
+		{"internal/workspaces/workspaces.go", withWorkspaces, "internal/workspaces/workspaces.go"},
 	}
 	for _, tt := range tests {
 		tt.o.replacedDirs = replacedDirs([]string{"internal/auth/store/postgres/db.go", "migrations/postgres/migrations.go", "internal/jobs/postgres/claim.sql"}, tt.o.db)
@@ -193,6 +197,15 @@ func TestDropRedundantAliases(t *testing.T) {
 	in := "import (\n\tmigrations \"example.com/app/migrations\"\n\tsqlite3 \"modernc.org/sqlite/lib\"\n)\n"
 	want := "import (\n\t\"example.com/app/migrations\"\n\tsqlite3 \"modernc.org/sqlite/lib\"\n)\n"
 	if got := dropRedundantAliases(in); got != want {
+		t.Errorf("got:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+func TestJoinLocalImports(t *testing.T) {
+	t.Parallel()
+	in := "import (\n\t\"fmt\"\n\n\t\"example.com/app/a\"\n\n\t\"example.com/app/b\"\n\n\t\"example.com/app/c\"\n)\n"
+	want := "import (\n\t\"fmt\"\n\n\t\"example.com/app/a\"\n\t\"example.com/app/b\"\n\t\"example.com/app/c\"\n)\n"
+	if got := joinLocalImports(in, "example.com/app"); got != want {
 		t.Errorf("got:\n%s\nwant:\n%s", got, want)
 	}
 }

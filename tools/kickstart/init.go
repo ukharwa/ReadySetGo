@@ -206,6 +206,7 @@ func transform(rel string, data []byte, o options) (string, []byte, bool, error)
 
 	if strings.HasSuffix(newRel, ".go") {
 		text = dropRedundantAliases(text)
+		text = joinLocalImports(text, o.module)
 		formatted, err := format.Source([]byte(text))
 		if err != nil {
 			return "", nil, false, fmt.Errorf("gofmt after init: %w", err)
@@ -230,6 +231,8 @@ func keepPath(rel string, o options) bool {
 		return false // the other database's folder or file (backup-postgres.sh)
 	case !forUI(rel, o.ui):
 		return false
+	case len(dirs) >= 2 && dirs[0] == "internal" && slices.Contains(allModules, dirs[1]) && !slices.Contains(o.modules, dirs[1]):
+		return false // an optional module that wasn't chosen
 	case strings.HasSuffix(rel, ".go") && slices.Contains(o.replacedDirs, path.Dir(rel)):
 		return false // the other database's version of code the chosen one's replaces
 	}
@@ -389,6 +392,20 @@ var templateName = regexp.MustCompile(`\bkickstart\b`)
 // element, like `migrations ".../migrations"`: needed before init, when the
 // folder was named after a database, and noise after it.
 var redundantAlias = regexp.MustCompile(`(?m)^(\s*)(\w+) ("[^"\n]*/(\w+)")$`)
+
+// joinLocalImports removes blank lines between the project's own imports.
+// goimports wants one before each marker comment in an import block; once
+// init removes the markers, those blank lines would split the group.
+func joinLocalImports(text, module string) string {
+	pattern := regexp.MustCompile(`(\t"` + regexp.QuoteMeta(module) + `/[^"\n]*"\n)\n+(\t"` + regexp.QuoteMeta(module) + `/)`)
+	for {
+		joined := pattern.ReplaceAllString(text, "$1$2")
+		if joined == text {
+			return text
+		}
+		text = joined
+	}
+}
 
 func dropRedundantAliases(text string) string {
 	return redundantAlias.ReplaceAllStringFunc(text, func(line string) string {

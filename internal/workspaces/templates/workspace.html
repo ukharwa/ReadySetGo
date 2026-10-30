@@ -1,0 +1,93 @@
+{{define "title"}}{{.Data.Workspace.Name}}{{end}}
+
+{{define "content"}}
+{{$ws := .Data.Workspace}}{{$me := .Data.Me}}
+<p class="muted"><a href="/workspaces">Workspaces</a></p>
+<h1>{{$ws.Name}}</h1>
+<p>You're {{if eq $ws.Role "member"}}a{{else}}an{{end}} {{$ws.Role}} of this workspace.</p>
+{{with .Data.Error}}<p class="error-summary" role="alert">{{.}}</p>{{end}}
+
+<section class="card">
+  <h2>Members</h2>
+  <ul class="list">
+    {{range .Data.Members}}
+    <li>
+      {{.Email}} <span class="muted">· {{.Role}}{{if eq .UserID $me}} (you){{end}}</span>
+      {{if $ws.IsOwner}}
+      <form method="post" action="/w/{{$ws.ID}}/members/{{.UserID}}/role" class="inline">
+        <select name="role" aria-label="Role for {{.Email}}">
+          <option value="owner" {{if eq .Role "owner"}}selected{{end}}>owner</option>
+          <option value="admin" {{if eq .Role "admin"}}selected{{end}}>admin</option>
+          <option value="member" {{if eq .Role "member"}}selected{{end}}>member</option>
+        </select>
+        <button type="submit" class="link">Change role</button>
+      </form>
+      {{end}}
+      {{if eq .UserID $me}}
+      <form method="post" action="/w/{{$ws.ID}}/members/{{.UserID}}/remove" class="inline">
+        <button type="submit" class="link">Leave</button>
+      </form>
+      {{else if or $ws.IsOwner (and $ws.CanManage (ne .Role "owner"))}}
+      <form method="post" action="/w/{{$ws.ID}}/members/{{.UserID}}/remove" class="inline">
+        <button type="submit" class="link">Remove</button>
+      </form>
+      {{end}}
+    </li>
+    {{end}}
+  </ul>
+</section>
+
+{{if $ws.CanManage}}
+<section class="card">
+  <h2>Invite someone</h2>
+  <form method="post" action="/w/{{$ws.ID}}/invitations" class="stack">
+    <label>Email
+      <input type="email" name="email" value="{{.Data.Invite.Get "email"}}" required>
+      {{with .Data.Invite.Errors.email}}<span class="field-error">{{.}}</span>{{end}}
+    </label>
+    <label>Role
+      <select name="role">
+        <option value="member">member</option>
+        <option value="admin" {{if eq (.Data.Invite.Get "role") "admin"}}selected{{end}}>admin</option>
+      </select>
+      {{with .Data.Invite.Errors.role}}<span class="field-error">{{.}}</span>{{end}}
+    </label>
+    <button type="submit">Send invitation</button>
+  </form>
+  {{with .Data.Invitations}}
+  <h3>Waiting to be accepted</h3>
+  <ul class="list">
+    {{range .}}
+    <li>{{.Email}} <span class="muted">· {{.Role}} · until {{.ExpiresAt.Format "2 Jan 2006"}}</span>
+      <form method="post" action="/w/{{$ws.ID}}/invitations/{{.ID}}/revoke" class="inline">
+        <button type="submit" class="link">Cancel</button>
+      </form>
+    </li>
+    {{end}}
+  </ul>
+  {{end}}
+</section>
+
+<section class="card">
+  <h2>Rename</h2>
+  <form method="post" action="/w/{{$ws.ID}}/name" class="stack">
+    <label>Name
+      <input type="text" name="name" value="{{or (.Data.Rename.Get "name") $ws.Name}}" maxlength="100" required>
+      {{with .Data.Rename.Errors.name}}<span class="field-error">{{.}}</span>{{end}}
+    </label>
+    <button type="submit" class="secondary">Rename</button>
+  </form>
+</section>
+{{end}}
+
+{{if $ws.IsOwner}}
+<section class="card">
+  <h2>Delete this workspace</h2>
+  <p>This deletes the workspace and everything in it for every member, straight away. It can't be undone.</p>
+  <form method="post" action="/w/{{$ws.ID}}/delete" class="stack">
+    <label class="check"><input type="checkbox" required> I understand this can't be undone</label>
+    <button type="submit" class="danger">Delete “{{$ws.Name}}”</button>
+  </form>
+</section>
+{{end}}
+{{end}}

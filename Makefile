@@ -122,10 +122,10 @@ backup: ## write a database snapshot into backups/
 
 # kickstart:begin template
 .PHONY: init
-init: ## turn this template into a new project: make init NAME=myapp [MODULE=…] [DB=sqlite|postgres] [UI=html|api]
-	go run ./tools/kickstart init -name "$(NAME)" -module "$(MODULE)" -db "$(DB)" -ui "$(UI)"
+init: ## turn this template into a new project: make init NAME=myapp [MODULE=…] [DB=sqlite|postgres] [UI=html|api] [MODULES=a,b|all]
+	go run ./tools/kickstart init -name "$(NAME)" -module "$(MODULE)" -db "$(DB)" -ui "$(UI)" -modules "$(MODULES)"
 
 .PHONY: template-check
-template-check: ## init a temporary copy and run every check on it: make template-check [DB=…] [UI=…]
-	go run ./tools/kickstart check -db "$(DB)" -ui "$(UI)"
+template-check: ## init a temporary copy and run every check on it: make template-check [DB=…] [UI=…] [MODULES=…]
+	go run ./tools/kickstart check -db "$(DB)" -ui "$(UI)" -modules "$(MODULES)"
 # kickstart:end

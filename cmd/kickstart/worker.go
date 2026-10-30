@@ -4,8 +4,6 @@ import (
 	"context"
 	"flag"
 	"io"
-
-	"github.com/ukharwa/kickstart/internal/ratelimit"
 )
 
 // worker runs the job worker and scheduler without the HTTP server, so they
@@ -33,11 +31,11 @@ func worker(ctx context.Context, args []string, getenv func(string) string, stdo
 		return err
 	}
 
-	accounts, err := newAccounts(cfg, database, ratelimit.NewMemory(), logger)
+	svc, err := newServices(cfg, database, logger)
 	if err != nil {
 		return err
 	}
-	done, err := startJobs(ctx, cfg, database, accounts, logger)
+	done, err := startJobs(ctx, cfg, database, svc, logger)
 	if err != nil {
 		return err
 	}

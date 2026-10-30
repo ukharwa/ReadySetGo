@@ -1,0 +1,13 @@
+Subject: {{.Inviter}} invited you to {{.Workspace}}
+
+Hello,
+
+{{.Inviter}} invited you to join the workspace “{{.Workspace}}” on {{.AppName}}.
+
+Open this link to accept:
+
+{{.Link}}
+
+If you don't have an account yet, create one with this email address first;
+the link takes you there. It works for 7 days. If you weren't expecting
+this, you can ignore it.

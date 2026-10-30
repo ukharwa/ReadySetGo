@@ -9,10 +9,10 @@ import (
 	"github.com/ukharwa/kickstart/internal/httpx"
 )
 
-// cookieName is the session cookie. The __Host- prefix makes browsers
-// require Secure and Path=/ and refuse a Domain, so a subdomain can't set or
-// overwrite it.
-const cookieName = "__Host-session"
+// SessionCookie is the session cookie's name. The __Host- prefix makes
+// browsers require Secure and Path=/ and refuse a Domain, so a subdomain
+// can't set or overwrite it.
+const SessionCookie = "__Host-session"
 
 type contextKey struct{}
 
@@ -44,7 +44,7 @@ func requestToken(r *http.Request) string {
 		return token
 	}
 	// kickstart:end
-	if c, err := r.Cookie(cookieName); err == nil {
+	if c, err := r.Cookie(SessionCookie); err == nil {
 		return c.Value
 	}
 	return ""
@@ -125,7 +125,7 @@ func RequireRole(role string) httpx.Middleware {
 // life's maximum age; otherwise it ends when the browser closes.
 func setSessionCookie(w http.ResponseWriter, token string, life Lifetime, remember bool) {
 	c := &http.Cookie{
-		Name: cookieName, Value: token, Path: "/",
+		Name: SessionCookie, Value: token, Path: "/",
 		Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode,
 	}
 	if remember {
@@ -136,7 +136,7 @@ func setSessionCookie(w http.ResponseWriter, token string, life Lifetime, rememb
 
 func clearSessionCookie(w http.ResponseWriter) {
 	http.SetCookie(w, &http.Cookie{
-		Name: cookieName, Path: "/", MaxAge: -1,
+		Name: SessionCookie, Path: "/", MaxAge: -1,
 		Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode,
 	})
 }

@@ -17,12 +17,13 @@ permissions:
 
 jobs:
   combinations:
-    name: db=${{ matrix.db }} ui=${{ matrix.ui }}
+    name: db=${{ matrix.db }} ui=${{ matrix.ui }} modules=${{ matrix.modules }}
     strategy:
       fail-fast: false
       matrix:
         db: [sqlite, postgres]
         ui: [html, api]
+        modules: [none, all]
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -49,4 +50,4 @@ jobs:
         with:
           sqlc-version: "1.31.1"
       - name: Init and check
-        run: go run ./tools/kickstart check -db ${{ matrix.db }} -ui ${{ matrix.ui }}
+        run: go run ./tools/kickstart check -db ${{ matrix.db }} -ui ${{ matrix.ui }} -modules ${{ matrix.modules }}

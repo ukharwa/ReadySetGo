@@ -28,6 +28,9 @@ import (
 // BaseURL is the address emailed links point at in tests.
 const BaseURL = "https://app.test"
 
+// Password is the password of users made by SignIn.
+const Password = "correct horse battery"
+
 // App is a running test application.
 type App struct {
 	DB       *db.DB
@@ -79,6 +82,26 @@ func (a *App) Client() *http.Client {
 	c.Jar = jar
 	c.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
 	return &c
+}
+
+// SignIn creates a user with a confirmed address (running the account
+// hooks, as signing up would) and logs c in as them.
+func (a *App) SignIn(c *http.Client, address string) auth.User {
+	a.t.Helper()
+	u, err := a.Accounts.CreateUser(a.t.Context(), address, Password, auth.RoleUser, true)
+	if err != nil {
+		a.t.Fatalf("create %s: %v", address, err)
+	}
+	token, err := a.Accounts.Login(a.t.Context(), address, Password, "192.0.2.1", auth.BrowserSession)
+	if err != nil {
+		a.t.Fatalf("log in %s: %v", address, err)
+	}
+	server, _ := url.Parse(a.Server.URL)
+	c.Jar.SetCookies(server, []*http.Cookie{{
+		Name: auth.SessionCookie, Value: token, Path: "/",
+		Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode,
+	}})
+	return u
 }
 
 // SentTo runs the queued jobs and returns the emails sent to address so

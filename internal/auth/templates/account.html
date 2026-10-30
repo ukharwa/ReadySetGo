@@ -47,6 +47,7 @@
 <section class="card">
   <h2>Delete your account</h2>
   <p>This deletes your account and everything in it, straight away. It can't be undone.</p>
+  {{with .Data.Delete.Errors.account}}<p class="error-summary" role="alert">{{.}}</p>{{end}}
   <form method="post" action="/account/delete" class="stack">
     <label>Current password
       <input type="password" name="password" autocomplete="current-password" required>

@@ -15,6 +15,10 @@ import (
 	"github.com/ukharwa/kickstart/internal/jobs"
 	"github.com/ukharwa/kickstart/internal/logging"
 	"github.com/ukharwa/kickstart/internal/ratelimit"
+
+	// kickstart:begin module=workspaces
+	"github.com/ukharwa/kickstart/internal/workspaces"
+	// kickstart:end
 )
 
 // migrateTimeout bounds a migration run. It is generous because adding an
@@ -72,13 +76,39 @@ func closeDB(d *db.DB, logger *slog.Logger) {
 	logger.Info("database closed")
 }
 
-// newAccounts returns the account service, with sessions in the database.
-func newAccounts(cfg config.Config, d *db.DB, limiter ratelimit.Limiter, logger *slog.Logger) (*auth.Service, error) {
-	return auth.NewService(d, auth.DBSessions{DB: d}, limiter, logger, auth.Options{
+// services are the features' services, built once and shared by every
+// subcommand. Optional modules add a field here and hook into accounts in
+// newServices.
+type services struct {
+	limiter  ratelimit.Limiter
+	accounts *auth.Service
+	// kickstart:begin module=workspaces
+	workspaces *workspaces.Service
+	// kickstart:end
+}
+
+// newServices builds the services, with sessions in the database.
+func newServices(cfg config.Config, d *db.DB, logger *slog.Logger) (*services, error) {
+	s := &services{limiter: ratelimit.NewMemory()}
+	var err error
+	s.accounts, err = auth.NewService(d, auth.DBSessions{DB: d}, s.limiter, logger, auth.Options{
 		AppName:           cfg.AppName,
 		BaseURL:           cfg.AppURL,
 		MinPasswordLength: cfg.PasswordMinLength,
 	})
+	if err != nil {
+		return nil, err
+	}
+	// kickstart:begin module=workspaces
+	s.workspaces, err = workspaces.NewService(d, s.accounts, s.limiter, logger, workspaces.Options{
+		AppName: cfg.AppName,
+		BaseURL: cfg.AppURL,
+	})
+	if err != nil {
+		return nil, err
+	}
+	// kickstart:end
+	return s, nil
 }
 
 // newSender returns the email sender cfg describes: SMTP, or, in dev without
@@ -100,7 +130,7 @@ func newSender(cfg config.Config, logger *slog.Logger) (email.Sender, error) {
 // startJobs starts the job worker, with every job handler registered, and
 // the scheduler, with every recurring task. When ctx is cancelled they stop
 // taking work; the returned channel closes once running jobs have finished.
-func startJobs(ctx context.Context, cfg config.Config, d *db.DB, accounts *auth.Service, logger *slog.Logger) (<-chan struct{}, error) {
+func startJobs(ctx context.Context, cfg config.Config, d *db.DB, svc *services, logger *slog.Logger) (<-chan struct{}, error) {
 	sender, err := newSender(cfg, logger)
 	if err != nil {
 		return nil, err
@@ -109,11 +139,17 @@ func startJobs(ctx context.Context, cfg config.Config, d *db.DB, accounts *auth.
 	worker := jobs.NewWorker(d, logger)
 	worker.Handle(email.JobKind, email.Handler(sender))
 	worker.Handle(jobs.CleanupKind, jobs.Cleanup(d, logger))
-	worker.Handle(auth.CleanupKind, accounts.Cleanup())
+	worker.Handle(auth.CleanupKind, svc.accounts.Cleanup())
+	// kickstart:begin module=workspaces
+	worker.Handle(workspaces.CleanupKind, svc.workspaces.Cleanup())
+	// kickstart:end
 
 	scheduler := jobs.NewScheduler(d, logger)
 	scheduler.Every(24*time.Hour, jobs.CleanupKind)
 	scheduler.Every(time.Hour, auth.CleanupKind)
+	// kickstart:begin module=workspaces
+	scheduler.Every(24*time.Hour, workspaces.CleanupKind)
+	// kickstart:end
 
 	var wg sync.WaitGroup
 	wg.Go(func() { scheduler.Run(ctx) })
