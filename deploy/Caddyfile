@@ -1,0 +1,54 @@
+# Caddy in front of the app. It gets and renews HTTPS certificates for
+# APP_DOMAIN by itself, redirects HTTP to HTTPS, and compresses responses.
+# For APP_DOMAIN=localhost it uses its own local certificate authority.
+#
+# Logging: Caddy logs only its own errors; the app writes the access log.
+
+{$APP_DOMAIN} {
+	encode zstd gzip
+
+	reverse_proxy app:8080 {
+		# A request ID for the app's logs; it replaces any the client sent.
+		header_up X-Request-ID {http.request.uuid}
+		# While the app restarts (a deploy), hold requests for up to 10
+		# seconds instead of failing them.
+		lb_try_duration 10s
+		lb_try_interval 250ms
+	}
+
+	# Several app instances (`docker compose up --scale app=3`): replace the
+	# reverse_proxy above with this. Caddy finds every running app container
+	# through Docker's DNS, so scaling needs no edit here.
+	#
+	# reverse_proxy {
+	# 	dynamic a {
+	# 		name app
+	# 		port 8080
+	# 		refresh 5s
+	# 	}
+	# 	lb_policy least_conn
+	# 	health_uri /readyz
+	# 	health_interval 5s
+	# 	lb_try_duration 10s
+	# 	lb_try_interval 250ms
+	# 	header_up X-Request-ID {http.request.uuid}
+	# }
+
+	# kickstart:begin ui=api
+	# A browser frontend on the same domain: put its built files in
+	# ./frontend, mount it in compose.yaml (- ./frontend:/srv:ro under
+	# caddy's volumes), and replace the reverse_proxy above with:
+	#
+	# handle /api/* {
+	# 	reverse_proxy app:8080 {
+	# 		header_up X-Request-ID {http.request.uuid}
+	# 		lb_try_duration 10s
+	# 	}
+	# }
+	# handle {
+	# 	root * /srv
+	# 	try_files {path} /index.html
+	# 	file_server
+	# }
+	# kickstart:end
+}

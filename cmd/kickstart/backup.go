@@ -14,6 +14,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/ukharwa/kickstart/internal/db"
 )
 
 // backup writes a consistent, timestamped snapshot of the SQLite database
@@ -63,6 +65,33 @@ func backup(ctx context.Context, args []string, getenv func(string) string, stdo
 	logger.Info("backup written", "path", path)
 
 	return pruneBackups(*dir, prefix, *keep, logger)
+}
+
+// restore replaces the database with a snapshot written by backup (or by
+// Litestream's restore). Nothing may have the database open, so stop the
+// app first:
+//
+//	docker compose stop app
+//	docker compose run --rm app restore -from /data/backups/FILE.db
+//	docker compose start app
+func restore(ctx context.Context, args []string, getenv func(string) string, stdout io.Writer) error {
+	fs := flag.NewFlagSet("restore", flag.ContinueOnError)
+	from := fs.String("from", "", "the snapshot to restore")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *from == "" {
+		return errors.New("usage: restore -from SNAPSHOT (stop the app first)")
+	}
+	cfg, logger, err := setup(getenv, stdout)
+	if err != nil {
+		return err
+	}
+	if err := db.RestoreFile(ctx, *from, cfg.DatabaseURL); err != nil {
+		return fmt.Errorf("restore: %w", err)
+	}
+	logger.Info("database restored", "from", *from, "to", cfg.DatabaseURL)
+	return nil
 }
 
 // pruneBackups deletes all but the newest keep snapshots. Names sort by time

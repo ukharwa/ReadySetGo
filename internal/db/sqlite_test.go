@@ -75,6 +75,58 @@ func TestCloseCheckpoints(t *testing.T) {
 	}
 }
 
+func TestRestoreFile(t *testing.T) {
+	t.Parallel()
+	ctx := t.Context()
+	path := dbtest.URL(t)
+	d, err := db.Open(ctx, db.Options{URL: path})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := d.MigrateUp(ctx, slog.New(slog.DiscardHandler)); err != nil {
+		t.Fatal(err)
+	}
+	before := newUser("before@example.com")
+	if _, err := store.New(d.Write).CreateUser(ctx, before); err != nil {
+		t.Fatal(err)
+	}
+	snapshot := filepath.Join(t.TempDir(), "snapshot.db")
+	if err := d.Backup(ctx, snapshot); err != nil {
+		t.Fatal(err)
+	}
+	after := newUser("after@example.com")
+	if _, err := store.New(d.Write).CreateUser(ctx, after); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := db.RestoreFile(ctx, snapshot, path); err != nil {
+		t.Fatalf("RestoreFile: %v", err)
+	}
+	d, err = db.Open(ctx, db.Options{URL: path})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = d.Close() }()
+	q := store.New(d.Read)
+	if _, err := q.GetUserByID(ctx, before.ID); err != nil {
+		t.Errorf("user from before the snapshot is missing: %v", err)
+	}
+	if _, err := q.GetUserByID(ctx, after.ID); err == nil {
+		t.Error("user added after the snapshot survived the restore")
+	}
+
+	junk := filepath.Join(t.TempDir(), "junk.db")
+	if err := os.WriteFile(junk, []byte("not a database"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.RestoreFile(ctx, junk, path); err == nil {
+		t.Error("restored a file that isn't a database")
+	}
+}
+
 func TestBackup(t *testing.T) {
 	t.Parallel()
 	d := dbtest.New(t)

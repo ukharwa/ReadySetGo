@@ -1,0 +1,9 @@
+# Only what the build needs goes to Docker: never secrets or local data.
+.git
+.github
+.env
+bin
+data
+backups
+deploy
+compose*.yaml

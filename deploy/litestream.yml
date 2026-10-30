@@ -1,0 +1,19 @@
+# kickstart:begin db=sqlite
+# Litestream streams every change to the SQLite database to another place,
+# within seconds, and can restore the database to any point in time. Turn it
+# on with COMPOSE_PROFILES=litestream in .env.
+#
+# LITESTREAM_REPLICA_URL (in .env) says where the copies go, for example
+#   s3://my-bucket/myapp?endpoint=https://s3.eu-central-003.backblazeb2.com&region=eu-central-003
+# with LITESTREAM_ACCESS_KEY_ID and LITESTREAM_SECRET_ACCESS_KEY for the
+# bucket. Any S3-compatible storage works: Backblaze B2, Cloudflare R2,
+# Hetzner, AWS S3.
+#
+# Restore (the README walks through it):
+#   docker compose stop app
+#   docker compose run --rm litestream restore -o /data/restored.db /data/kickstart.db
+dbs:
+  - path: /data/kickstart.db
+    replica:
+      url: ${LITESTREAM_REPLICA_URL}
+# kickstart:end

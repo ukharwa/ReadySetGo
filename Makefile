@@ -53,6 +53,26 @@ services: ## start the local dev services in compose.dev.yaml
 services-down: ## stop the local dev services (their data is kept)
 	docker compose -f compose.dev.yaml down
 
+.PHONY: image
+image: ## build the app's Docker image
+	docker compose build app
+
+.PHONY: up
+up: ## run the production stack locally at https://$$APP_DOMAIN (localhost)
+	docker compose up -d --build --wait
+
+.PHONY: down
+down: ## stop the local production stack (its data is kept)
+	docker compose down
+
+DEPLOY_DIR ?= /srv/kickstart
+
+.PHONY: deploy
+deploy: ## update the server: make deploy DEPLOY_HOST=user@server [DEPLOY_DIR=/srv/kickstart]
+	@test -n "$(DEPLOY_HOST)" || { echo "set DEPLOY_HOST (user@server)"; exit 1; }
+	rsync -a compose.yaml deploy $(DEPLOY_HOST):$(DEPLOY_DIR)/
+	ssh $(DEPLOY_HOST) 'cd $(DEPLOY_DIR) && docker compose pull app && docker compose up -d --remove-orphans'
+
 .PHONY: migrate
 migrate: ## apply pending migrations
 	go run ./cmd/kickstart migrate up

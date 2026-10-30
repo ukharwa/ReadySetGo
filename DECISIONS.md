@@ -98,10 +98,15 @@ every time another process (such as `app backup`) exits.
 ### Backups
 
 `app backup` writes a consistent, timestamped copy with `VACUUM INTO` and
-keeps the last N, with no `sqlite3` tool needed in the image. Litestream can
-stream changes continuously to S3-compatible storage. Backups are scheduled
-by host cron, and the README has a restore drill. Copying the `.db` file
-while the app runs is not safe in WAL mode.
+keeps the last N, with no `sqlite3` tool needed in the image. `app restore`
+puts a snapshot back: it checks the snapshot with SQLite's integrity check
+and swaps the file in atomically, running as the app's own user (a plain
+`cp` from another container leaves the file owned by root, and the app then
+can't open it). Litestream 0.5 can stream changes continuously to
+S3-compatible storage, configured by one `LITESTREAM_REPLICA_URL`; its
+restore produces a file that `app restore` then puts in place. Backups are
+scheduled by host cron, and the README has a restore drill. Copying the
+`.db` file while the app runs is not safe in WAL mode.
 <!-- kickstart:end -->
 
 <!-- kickstart:begin db=postgres -->
@@ -127,9 +132,11 @@ writes use separate handles that point at the same pool until
 
 ### Backups
 
-`deploy/backup-postgres.sh` runs `pg_dump -Fc`, keeps the last N and pushes
-copies to S3-compatible storage with rclone. Backups are scheduled by host
-cron, and the README has a restore drill. Managed Postgres hosts offer
+`deploy/backup-postgres.sh` runs `pg_dump -Fc` inside the database
+container (so it needs no Postgres tools on the server), keeps the last N
+and, when `BACKUP_REMOTE` is set, pushes the dump to S3-compatible storage
+with rclone. `pg_restore --clean` puts one back. Backups are scheduled by
+host cron, and the README has a restore drill. Managed Postgres hosts offer
 point-in-time restore instead.
 <!-- kickstart:end -->
 
@@ -437,18 +444,25 @@ says which sender to use).
 
 ### Docker Compose in dev and production
 
-CI pushes images to GHCR; the server runs `docker compose pull && docker
-compose up -d` (`make deploy`). Secrets live in a server-side `.env` with
-mode 600. Caddy holds requests for a few seconds while the container
-restarts, so normal deploys show no errors. **Considered:** a plain binary
+CI pushes images to GHCR, named after the module (`make init` sets
+`ghcr.io/<owner>/<repo>`). `make deploy` copies `compose.yaml` and
+`deploy/` to the server and runs `docker compose pull && docker compose up
+-d` there. Secrets live in a server-side `.env` with mode 600; compose.yaml
+sets what follows from the container itself (`HTTP_ADDR`, `APP_URL` from
+`APP_DOMAIN`, `DATABASE_URL`, and `TRUSTED_PROXIES` as Docker's private
+ranges, safe because the app publishes no port). Caddy holds requests for
+up to 10 seconds while the container restarts: recreating the app under
+steady traffic gave no errors, the slowest request taking half a second. **Considered:** a plain binary
 under systemd (no Docker daemon, less memory, but Caddy and Postgres are
 installed and upgraded by hand, and dev differs from production).
 
 ### Image: two-stage build, distroless static, non-root
 
-About 15–25 MB with no shell or package manager; maintenance runs as app
-subcommands. The base image is pinned by digest and kept current by
-Dependabot. Built for `amd64` and `arm64`. **Considered:** `scratch` (copy
+About 27 MB (the pure-Go SQLite driver is most of it) on distroless
+Debian 13, with no shell or package manager; maintenance runs as app
+subcommands. Every base image is pinned by digest and kept current by
+Dependabot. The build stage cross-compiles, so `amd64` and `arm64` images
+build without emulation. **Considered:** `scratch` (copy
 certificates and timezone data by hand) and Alpine (a shell for debugging,
 more to attack).
 
@@ -456,11 +470,16 @@ more to attack).
 
 Automatic HTTPS in production, compression, request IDs, error-only
 logging, and commented examples for load balancing and (in API mode) a
-same-domain frontend. In dev the app runs directly on `localhost`, which
-Chrome and Firefox treat as secure; Caddy with local HTTPS is an opt-in
-Compose profile, also used to test Safari. **Considered:** Caddy for local
-HTTPS by default, which matches production exactly but needs every machine
-to trust Caddy's local certificate.
+same-domain frontend, each checked with `caddy validate`. No ACME email:
+Let's Encrypt stopped sending expiry notices in 2025. In dev the app runs
+directly on `localhost`, which Chrome and Firefox treat as secure. To test
+the full stack over HTTPS (or in Safari), `make up` runs the production
+stack locally with `APP_DOMAIN=localhost`, for which Caddy uses its own
+certificate authority. This replaces the separate dev Caddy profile
+planned earlier. Rootless Docker can't bind ports below 1024, so locally
+`HTTP_PORT` and `HTTPS_PORT` move Caddy to 8081 and 8443. **Considered:**
+Caddy for local HTTPS by default, which matches production exactly but
+needs every machine to trust Caddy's local certificate.
 
 ### Health endpoints
 

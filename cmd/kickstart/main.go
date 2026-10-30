@@ -43,6 +43,7 @@ func commands() []command {
 		{"seed", "add sample users for development (dev only)", seed},
 		// kickstart:begin db=sqlite
 		{"backup", "write a snapshot of the database (-dir, -keep)", backup},
+		{"restore", "replace the database with a snapshot (-from FILE; stop the app first)", restore},
 		// kickstart:end
 	}
 }

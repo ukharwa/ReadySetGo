@@ -173,6 +173,9 @@ func leftovers(root string, o options) []string {
 		if err != nil || bytes.IndexByte(data, 0) >= 0 {
 			return err
 		}
+		if len(bytes.TrimSpace(data)) == 0 {
+			report(rel, "empty file")
+		}
 		exempt := rel == "DECISIONS.md" || rel == "go.sum"
 		sc := bufio.NewScanner(bytes.NewReader(data))
 		sc.Buffer(nil, 1<<20)

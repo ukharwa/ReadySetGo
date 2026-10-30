@@ -193,9 +193,13 @@ func transform(rel string, data []byte, o options) (string, []byte, bool, error)
 		}
 		text = rest
 	}
+	marked := strings.Contains(text, "kickstart:begin")
 	text, err := applyMarkers(text, o)
 	if err != nil {
 		return "", nil, false, err
+	}
+	if marked && strings.TrimSpace(text) == "" {
+		return "", nil, false, nil // every line belonged to an unchosen option
 	}
 	text = rewrite(rel, text, o)
 
@@ -220,8 +224,8 @@ func keepPath(rel string, o options) bool {
 	switch {
 	case dirs[0] == "tools", rel == ".github/workflows/template.yml":
 		return false // template-only
-	case slices.Contains(dirs, otherDB(o.db)):
-		return false
+	case slices.Contains(dirs, otherDB(o.db)), strings.Contains(path.Base(rel), otherDB(o.db)):
+		return false // the other database's folder or file (backup-postgres.sh)
 	case !forUI(rel, o.ui):
 		return false
 	case strings.HasSuffix(rel, ".go") && slices.Contains(o.replacedDirs, path.Dir(rel)):
@@ -385,11 +389,24 @@ func rewrite(rel, text string, o options) string {
 	for _, d := range o.dialectDirs {
 		text = regexp.MustCompile(regexp.QuoteMeta(d)+`\b`).ReplaceAllLiteralString(text, path.Dir(d))
 	}
+	text = strings.ReplaceAll(text, templateImage, imageFor(o))
 	text = strings.ReplaceAll(text, templateModule, o.module)
 	if rel != "DECISIONS.md" {
 		text = templateName.ReplaceAllString(text, o.name)
 	}
 	return text
+}
+
+// templateImage is the template's container image name.
+const templateImage = "ghcr.io/ukharwa/kickstart"
+
+// imageFor names the project's image after its module: GitHub's container
+// registry for a GitHub module, otherwise a plain local name (set APP_IMAGE).
+func imageFor(o options) string {
+	if repo, ok := strings.CutPrefix(o.module, "github.com/"); ok {
+		return "ghcr.io/" + strings.ToLower(repo)
+	}
+	return o.name
 }
 
 func otherDB(db string) string {

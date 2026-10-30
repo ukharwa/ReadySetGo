@@ -113,6 +113,44 @@ func (d *DB) Backup(ctx context.Context, path string) error {
 	return nil
 }
 
+// RestoreFile replaces the database file at target with a copy of snapshot,
+// after checking the snapshot with SQLite's integrity check. The copy is
+// written next to target and renamed over it, so target is never left half
+// written. Nothing may have the database open: stop the app first.
+func RestoreFile(ctx context.Context, snapshot, target string) error {
+	check, err := sql.Open("sqlite", "file:"+snapshot+"?mode=ro")
+	if err != nil {
+		return err
+	}
+	var result string
+	err = check.QueryRowContext(ctx, "PRAGMA integrity_check").Scan(&result)
+	if closeErr := check.Close(); err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		return fmt.Errorf("check %s: %w", snapshot, err)
+	}
+	if result != "ok" {
+		return fmt.Errorf("check %s: %s", snapshot, result)
+	}
+
+	b, err := os.ReadFile(snapshot)
+	if err != nil {
+		return err
+	}
+	tmp := target + ".restoring"
+	if err := os.WriteFile(tmp, b, 0o640); err != nil {
+		return err
+	}
+	// A leftover write-ahead log belongs to the database being replaced.
+	for _, suffix := range []string{"-wal", "-shm"} {
+		if err := os.Remove(target + suffix); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+	}
+	return os.Rename(tmp, target)
+}
+
 func isUniqueViolation(err error) bool {
 	var e *sqlite.Error
 	if !errors.As(err, &e) {

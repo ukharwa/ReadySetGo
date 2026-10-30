@@ -19,7 +19,10 @@ new project picks and removes the rest:
   `api_test.go` to API mode. Keep mode-specific code (and its imports) in
   those files, so shared files need at most a one-line marker around a call.
 - Go files for one database carry a build constraint: `//go:build postgres`
-  or `//go:build !postgres`. Init deletes the other database's files and
+  or `//go:build !postgres`. Other files belong to a database if it is in
+  their name (`backup-postgres.sh`) or folder.
+- A file left empty by its markers is removed (`deploy/litestream.yml` in a
+  Postgres project). Init deletes the other database's files and
   strips the constraint from the rest. Postgres files therefore don't
   compile in the template itself.
 - Inside shared files, option-specific lines sit between markers, written
@@ -78,6 +81,19 @@ query that can't be shared goes in `internal/<feature>/sqlite/` and
   the password `dev-password-123` (dev only)
 - `go run ./cmd/kickstart user promote EMAIL`: make a user an admin (also
   `demote`, `disable`, `enable`)
+- `make up` / `make down`: run the production stack (`compose.yaml`: the
+  app behind Caddy) locally at https://localhost:8443
+- `make deploy DEPLOY_HOST=user@server`: copy `compose.yaml` and `deploy/`
+  to the server, pull the new image and restart
+<!-- kickstart:begin db=sqlite -->
+- `docker compose exec app /app backup -dir /data/backups` takes a snapshot
+  on the server; to restore one, stop the app, then
+  `docker compose run --rm app restore -from /data/backups/FILE.db`
+<!-- kickstart:end -->
+<!-- kickstart:begin db=postgres -->
+- `./deploy/backup-postgres.sh` dumps the database into `backups/` on the
+  server; its header shows how to restore a dump
+<!-- kickstart:end -->
 - `make build`, `make fmt`, `make vet`; `make help` lists everything
 
 ## Layout
@@ -126,6 +142,8 @@ query that can't be shared goes in `internal/<feature>/sqlite/` and
   field).
 - `internal/apptest/`: the end-to-end test harness.
 - `migrations/`: goose SQL migrations, embedded into the binary.
+- `Dockerfile`, `compose.yaml` (production stack), `compose.dev.yaml` (dev
+  services), `deploy/` (Caddyfile, backups).
 
 ## Database conventions
 

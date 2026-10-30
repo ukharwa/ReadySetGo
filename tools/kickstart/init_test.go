@@ -105,6 +105,8 @@ func TestPaths(t *testing.T) {
 		{"internal/jobs/jobs.sql", postgresAPI, "internal/jobs/jobs.sql"},
 		{"cmd/kickstart/main.go", sqliteHTML, "cmd/myapp/main.go"},
 		{"internal/db/db.go", postgresAPI, "internal/db/db.go"},
+		{"deploy/backup-postgres.sh", sqliteHTML, ""},
+		{"deploy/backup-postgres.sh", postgresAPI, "deploy/backup-postgres.sh"},
 		{"internal/auth/web.go", postgresAPI, ""},
 		{"internal/auth/templates/login.html", postgresAPI, ""},
 		{"internal/web/static/app.css", postgresAPI, ""},
@@ -160,7 +162,28 @@ kickstarter stays`
 			t.Errorf("rewrite result lacks %q:\n%s", want, got)
 		}
 	}
+	if got := rewrite("compose.yaml", "image: ghcr.io/ukharwa/kickstart:latest", postgresAPI); got != "image: ghcr.io/me/myapp:latest" {
+		t.Errorf("image for a GitHub module: %q", got)
+	}
+	other := postgresAPI
+	other.module = "example.com/myapp"
+	if got := rewrite("compose.yaml", "image: ghcr.io/ukharwa/kickstart:latest", other); got != "image: myapp:latest" {
+		t.Errorf("image for another module: %q", got)
+	}
 	if got := rewrite("DECISIONS.md", "the kickstart template", postgresAPI); got != "the kickstart template" {
 		t.Errorf("DECISIONS.md was renamed: %q", got)
+	}
+}
+
+// TestTransformDropsEmptiedFiles checks that a file made only of another
+// option's blocks is dropped rather than left empty.
+func TestTransformDropsEmptiedFiles(t *testing.T) {
+	t.Parallel()
+	in := []byte("# kickstart:begin db=sqlite\ndbs: []\n# kickstart:end\n")
+	if _, _, keep, err := transform("deploy/litestream.yml", in, postgresAPI); err != nil || keep {
+		t.Errorf("keep = %v, err = %v; want the emptied file dropped", keep, err)
+	}
+	if _, out, keep, _ := transform("deploy/litestream.yml", in, sqliteHTML); !keep || string(out) != "dbs: []\n" {
+		t.Errorf("sqlite: keep = %v, out = %q", keep, out)
 	}
 }

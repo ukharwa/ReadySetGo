@@ -1,0 +1,15 @@
+# Backups, scheduled by the server's cron rather than the app, so they don't
+# depend on the app running. Install with `crontab -e` on the server and
+# adjust the folder (DEPLOY_DIR). Times are the server's time zone.
+#
+# kickstart:begin db=sqlite
+# A snapshot every night at 03:30, keeping the newest 7, in the app's data
+# volume. Litestream (COMPOSE_PROFILES=litestream) handles copies off the
+# server.
+30 3 * * * cd /srv/kickstart && docker compose exec -T app /app backup -dir /data/backups -keep 7 >> backup.log 2>&1
+# kickstart:end
+# kickstart:begin db=postgres
+# A dump every night at 03:30, keeping the newest 7, copied off the server
+# with rclone (configure the remote with `rclone config` first).
+30 3 * * * cd /srv/kickstart && BACKUP_REMOTE=b2:my-bucket/kickstart ./deploy/backup-postgres.sh >> backup.log 2>&1
+# kickstart:end
