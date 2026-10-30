@@ -18,7 +18,7 @@ import (
 	"modernc.org/sqlite"
 	sqlite3 "modernc.org/sqlite/lib"
 
-	"github.com/ukharwa/kickstart/migrations/sqlite"
+	migrations "github.com/ukharwa/kickstart/migrations/sqlite"
 )
 
 const gooseDialect = goose.DialectSQLite3
@@ -134,12 +134,12 @@ func RestoreFile(ctx context.Context, snapshot, target string) error {
 		return fmt.Errorf("check %s: %s", snapshot, result)
 	}
 
-	b, err := os.ReadFile(snapshot)
+	b, err := os.ReadFile(snapshot) //nolint:gosec // the operator names the snapshot on the command line
 	if err != nil {
 		return err
 	}
 	tmp := target + ".restoring"
-	if err := os.WriteFile(tmp, b, 0o640); err != nil {
+	if err := os.WriteFile(tmp, b, 0o600); err != nil { //nolint:gosec // target is DATABASE_URL, set by the operator
 		return err
 	}
 	// A leftover write-ahead log belongs to the database being replaced.

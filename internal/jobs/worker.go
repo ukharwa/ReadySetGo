@@ -138,7 +138,7 @@ func (w *Worker) call(ctx context.Context, job store.Job) (err error) {
 // with jitter so failed jobs don't all retry at the same moment.
 func retryDelay(attempts int64) time.Duration {
 	d := min(time.Duration(1<<min(attempts, 20))*time.Second, 20*time.Minute)
-	return d + rand.N(d/5+1)
+	return d + rand.N(d/5+1) //nolint:gosec // jitter needs no cryptographic randomness
 }
 
 func errorText(err error) sql.NullString {

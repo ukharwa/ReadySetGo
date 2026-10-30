@@ -1,0 +1,48 @@
+# golangci-lint v2: `make lint`. CI runs the same version (see Makefile).
+version: "2"
+
+linters:
+  # The standard set (errcheck, govet, ineffassign, staticcheck, unused)
+  # plus checks that catch real bugs in this kind of app.
+  default: standard
+  enable:
+    - bodyclose # HTTP response bodies left open
+    - rowserrcheck # rows.Err() not checked after iterating
+    - sqlclosecheck # database rows and statements left open
+    - noctx # HTTP requests without a context (and so without a timeout)
+    - errorlint # error comparisons that miss wrapped errors
+    - gosec # security problems
+    - misspell
+    - forbidigo # logging that bypasses slog
+  settings:
+    forbidigo:
+      forbid:
+        - pattern: ^fmt\.Print(f|ln)?$
+          msg: log with slog (or write to an io.Writer) instead
+        - pattern: ^log\.(Print|Fatal|Panic)(f|ln)?$
+          msg: log with slog instead
+    gosec:
+      excludes:
+        - G104 # unchecked errors: errcheck covers them
+  exclusions:
+    presets:
+      - std-error-handling
+    rules:
+      # Tests may use fixed file permissions, weak randomness and requests
+      # without a deadline.
+      - path: _test\.go
+        linters: [gosec, noctx]
+      # kickstart:begin template
+      # The init tool prints its progress to the terminal.
+      - path: ^tools/
+        linters: [forbidigo, gosec]
+      # kickstart:end
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/ukharwa/kickstart

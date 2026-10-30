@@ -16,10 +16,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	_ "github.com/jackc/pgx/v5/stdlib" // registers the "pgx" driver
 
 	"github.com/ukharwa/kickstart/internal/db"
-	"github.com/ukharwa/kickstart/migrations/postgres"
+	migrations "github.com/ukharwa/kickstart/migrations/postgres"
 )
 
 // URL returns the URL of a new database for this test, dropped when the test
@@ -50,7 +51,7 @@ func URL(t testing.TB) string {
 	}
 
 	name := "test_" + rand.Text()[:16]
-	if _, err := admin.ExecContext(ctx, fmt.Sprintf(`CREATE DATABASE %q TEMPLATE %q`, name, template)); err != nil {
+	if err := ddl(ctx, admin, "CREATE DATABASE "+ident(name)+" TEMPLATE "+ident(template)); err != nil {
 		t.Fatalf("create test database: %v", err)
 	}
 	t.Cleanup(func() {
@@ -62,7 +63,7 @@ func URL(t testing.TB) string {
 			return
 		}
 		defer func() { _ = admin.Close() }()
-		if _, err := admin.ExecContext(ctx, fmt.Sprintf(`DROP DATABASE %q WITH (FORCE)`, name)); err != nil {
+		if err := ddl(ctx, admin, "DROP DATABASE "+ident(name)+" WITH (FORCE)"); err != nil {
 			t.Errorf("drop test database: %v", err)
 		}
 	})
@@ -100,10 +101,10 @@ func ensureTemplate(ctx context.Context, admin *sql.DB, server string) (string, 
 	// Build under a temporary name and rename when complete, so a run that
 	// crashes midway never leaves a half-migrated template behind.
 	building := name + "_building"
-	if _, err := conn.ExecContext(ctx, fmt.Sprintf(`DROP DATABASE IF EXISTS %q WITH (FORCE)`, building)); err != nil {
+	if err := ddl(ctx, conn, "DROP DATABASE IF EXISTS "+ident(building)+" WITH (FORCE)"); err != nil {
 		return "", err
 	}
-	if _, err := conn.ExecContext(ctx, fmt.Sprintf(`CREATE DATABASE %q`, building)); err != nil {
+	if err := ddl(ctx, conn, "CREATE DATABASE "+ident(building)); err != nil {
 		return "", err
 	}
 	d, err := db.Open(ctx, db.Options{URL: withDatabase(server, building), MaxOpenConns: 2})
@@ -117,7 +118,7 @@ func ensureTemplate(ctx context.Context, admin *sql.DB, server string) (string, 
 	if migrateErr != nil {
 		return "", migrateErr
 	}
-	if _, err := conn.ExecContext(ctx, fmt.Sprintf(`ALTER DATABASE %q RENAME TO %q`, building, name)); err != nil {
+	if err := ddl(ctx, conn, "ALTER DATABASE "+ident(building)+" RENAME TO "+ident(name)); err != nil {
 		return "", err
 	}
 	return name, nil
@@ -141,6 +142,19 @@ func migrationsHash() (string, error) {
 		return "", fmt.Errorf("hash migrations: %w", err)
 	}
 	return hex.EncodeToString(h.Sum(nil))[:12], nil
+}
+
+// ident quotes a database name for use in SQL.
+func ident(name string) string { return pgx.Identifier{name}.Sanitize() }
+
+// ddl runs a statement about databases. Database names can't be query
+// parameters, so stmt is built from names quoted with ident; they come from
+// this file (random or hashed) anyway.
+func ddl(ctx context.Context, q interface {
+	ExecContext(context.Context, string, ...any) (sql.Result, error)
+}, stmt string) error {
+	_, err := q.ExecContext(ctx, stmt) //nolint:gosec // see above
+	return err
 }
 
 // withDatabase returns server with its database name replaced.

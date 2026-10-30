@@ -554,11 +554,14 @@ pgbouncer; read replicas; a cache.
 
 ### Make
 
-Already installed everywhere. Tools (air, sqlc) are installed at fixed
-versions into `./bin`; golangci-lint comes from its official release binary.
-Generated sqlc code is committed. **Considered:** Taskfile or just (one more
-tool everywhere) and Go's `tool` directive (pulls sqlc's dependencies into
-`go.mod`).
+Already installed everywhere. `make tools` installs sqlc, air and
+golangci-lint at fixed versions into `./bin` with `go install`, which Go's
+checksum database verifies; CI uses golangci-lint's official Action, which
+downloads its release binary. Generated sqlc code is committed. `make check`
+runs exactly what CI runs. **Considered:** Taskfile or just (one more tool
+everywhere); Go's `tool` directive (pulls sqlc's dependencies into
+`go.mod`); and, for golangci-lint, its install script piped into `sh`,
+which runs unreviewed remote code on every developer's machine.
 
 <!-- kickstart:begin template -->
 ### `make init` is a Go program
@@ -581,7 +584,10 @@ generated code and every shared file to compile both ways.
 
 The standard set plus `bodyclose`, `rowserrcheck`, `sqlclosecheck`, `noctx`,
 `errorlint`, `gosec`, `misspell` and `forbidigo` (no `fmt.Print*` or `log.*`
-outside `main`). **Considered:** just `go vet` and `staticcheck`, and
+outside `main`), with `gofmt` and `goimports` as formatters. Tests are
+exempt from `gosec` and `noctx`. Where a finding is deliberate (retry
+jitter that needs no cryptographic randomness, a path the operator chose),
+a `//nolint` comment names the linter and the reason. **Considered:** just `go vet` and `staticcheck`, and
 gofumpt.
 
 ### Tests: the standard library against real databases
@@ -594,19 +600,24 @@ Docker dependency.
 
 ### CI: GitHub Actions
 
-Lint, a check that generated code is current, `govulncheck`, tests, and on
-`main` and tags an image pushed to GHCR. Third-party Actions are pinned to
-commit hashes (after the 2025 `tj-actions` attack moved a tag to malicious
-code). Dependabot updates Go modules, Actions and images weekly. Deploys are
+Lint, checks that `go.mod` and the generated code are current,
+`govulncheck`, tests (with a Postgres service for Postgres projects), and on
+`main` and tags an `amd64`/`arm64` image pushed to GHCR. Go's version comes
+from `go.mod`. Actions are pinned to commit hashes (after the 2025
+`tj-actions` attack moved a tag to malicious code), and only releases at
+least two weeks old were pinned. Dependabot proposes newer Go modules,
+Actions and images weekly, waiting until a release is a week old; the Go
+version and the Makefile's tools are bumped by hand. The workflows are
+checked with actionlint. Deploys are
 run by hand so GitHub never holds a server key. **Considered:** automatic
 deploys on tags, and `amd64`-only images.
 
 <!-- kickstart:begin template -->
 ### Template CI matrix
 
-Every combination of database, UI mode and modules (all or none) is created
-with `make init` in a fresh copy and must pass lint and tests, which also
-tests init. Each run also fails if anything from an unchosen option is left
+Every combination of database and UI mode (and, from milestone 8, modules:
+all or none) is created with `make init` in a fresh copy and must pass lint
+and tests, which also tests init. Each run also fails if anything from an unchosen option is left
 behind.
 <!-- kickstart:end -->
 

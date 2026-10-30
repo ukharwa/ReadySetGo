@@ -1,4 +1,5 @@
 /bin/
+/tmp/
 .env
 # kickstart:begin db=sqlite
 /data/

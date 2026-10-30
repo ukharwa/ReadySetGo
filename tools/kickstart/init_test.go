@@ -187,3 +187,12 @@ func TestTransformDropsEmptiedFiles(t *testing.T) {
 		t.Errorf("sqlite: keep = %v, out = %q", keep, out)
 	}
 }
+
+func TestDropRedundantAliases(t *testing.T) {
+	t.Parallel()
+	in := "import (\n\tmigrations \"example.com/app/migrations\"\n\tsqlite3 \"modernc.org/sqlite/lib\"\n)\n"
+	want := "import (\n\t\"example.com/app/migrations\"\n\tsqlite3 \"modernc.org/sqlite/lib\"\n)\n"
+	if got := dropRedundantAliases(in); got != want {
+		t.Errorf("got:\n%s\nwant:\n%s", got, want)
+	}
+}

@@ -121,7 +121,7 @@ func createMigration(dirs []string, name string, stdout io.Writer) error {
 	}
 	for _, dir := range dirs {
 		path := filepath.Join(dir, fmt.Sprintf("%05d_%s.sql", next, name))
-		f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+		f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644) //nolint:gosec // a source file, readable like the rest of the repository
 		if err != nil {
 			return fmt.Errorf("create migration: %w", err)
 		}

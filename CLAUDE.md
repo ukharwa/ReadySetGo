@@ -69,7 +69,11 @@ query that can't be shared goes in `internal/<feature>/sqlite/` and
 - `make run`: run the HTTP server and job worker (reads `.env`; copy
   `.env.example` first)
 - `make worker`: run only the job worker
+- `make dev`: like `make run`, rebuilding and restarting on code changes
 - `make test`: all tests, with the race detector
+- `make check`: everything CI checks (lint, tidy, generated code,
+  vulnerabilities, tests); run it before pushing
+- `make tools`: install the pinned sqlc, air and golangci-lint into `bin/`
 - `make migrate`: apply pending migrations; `make migration NAME=add_x`
   creates a new one
 - `make generate`: regenerate `internal/store` after changing SQL
@@ -235,6 +239,10 @@ query that can't be shared goes in `internal/<feature>/sqlite/` and
     or `X-Forwarded-For` directly.
   - Raise one route's body limit by wrapping it in `httpx.MaxBytes(n)`;
     limit requests with `ratelimit.PerIP` or a `ratelimit.Limiter`.
+- **Linting:** fix findings rather than silencing them. When one is
+  deliberate, add `//nolint:<linter> // <reason>` on that line.
+- **Upgrading Go:** change the `go` line in `go.mod` and the `golang` image
+  in the `Dockerfile` together; CI reads its version from `go.mod`.
 - **Tests:** standard `testing` only, table-driven, `t.Parallel()` where
   possible, no assertion libraries. Tests that touch the database use
   `dbtest.New(t)`, which gives each test its own database. End-to-end tests

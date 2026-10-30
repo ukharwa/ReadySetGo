@@ -1,0 +1,20 @@
+# Live reload for `make dev`: rebuilds and restarts the server when Go, SQL
+# or email-template files change. Page templates and static files are read
+# from disk in dev, so edits to them show on the next request without a
+# rebuild.
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  cmd = "go build -o ./tmp/app ./cmd/kickstart"
+  entrypoint = ["./tmp/app", "serve"]
+  include_ext = ["go", "sql", "txt"]
+  exclude_dir = ["tmp", "bin", "data", "backups", "deploy"]
+  exclude_regex = ["_test\\.go$"]
+  delay = 300
+  # Stop the old server gracefully (SIGINT), giving it time to finish.
+  send_interrupt = true
+  kill_delay = "5s"
+
+[misc]
+  clean_on_exit = true

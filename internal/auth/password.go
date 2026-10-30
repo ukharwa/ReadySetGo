@@ -83,15 +83,16 @@ func (h *hasher) Verify(ctx context.Context, encoded, password string) (ok, reha
 	b64 := base64.RawStdEncoding
 	salt, err1 := b64.DecodeString(parts[4])
 	want, err2 := b64.DecodeString(parts[5])
-	if err1 != nil || err2 != nil || len(want) == 0 {
+	if err1 != nil || err2 != nil || len(want) == 0 || len(want) > 1024 {
 		return false, false, errMalformedHash
 	}
+	wantLength := uint32(len(want)) //nolint:gosec // bounded to 1024 just above
 
 	if err := h.acquire(ctx); err != nil {
 		return false, false, err
 	}
 	defer h.release()
-	got := argon2.IDKey([]byte(password), salt, time, memory, threads, uint32(len(want)))
+	got := argon2.IDKey([]byte(password), salt, time, memory, threads, wantLength)
 	ok = subtle.ConstantTimeCompare(got, want) == 1
 	rehash = version != argon2.Version || memory != argonMemory || time != argonTime ||
 		threads != argonThreads || len(want) != keyLength

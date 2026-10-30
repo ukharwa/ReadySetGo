@@ -130,8 +130,8 @@ func TestRecoverRethrowsAbort(t *testing.T) {
 		panic(http.ErrAbortHandler)
 	}))
 	defer func() {
-		if v := recover(); v != http.ErrAbortHandler {
-			t.Errorf("recovered %v, want http.ErrAbortHandler to pass through", v)
+		if err, _ := recover().(error); !errors.Is(err, http.ErrAbortHandler) {
+			t.Errorf("recovered %v, want http.ErrAbortHandler to pass through", err)
 		}
 	}()
 	serve(h, httptest.NewRequest(http.MethodGet, "/", nil))

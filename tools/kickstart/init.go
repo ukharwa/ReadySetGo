@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -50,7 +51,7 @@ func checkGit(root string) error {
 	if _, err := os.Stat(filepath.Join(root, ".git")); err != nil {
 		return nil // not a git checkout (template-check's temporary copy)
 	}
-	out, err := exec.Command("git", "-C", root, "status", "--porcelain").Output()
+	out, err := exec.CommandContext(context.Background(), "git", "-C", root, "status", "--porcelain").Output()
 	if err != nil {
 		return fmt.Errorf("git status: %w", err)
 	}
@@ -204,6 +205,7 @@ func transform(rel string, data []byte, o options) (string, []byte, bool, error)
 	text = rewrite(rel, text, o)
 
 	if strings.HasSuffix(newRel, ".go") {
+		text = dropRedundantAliases(text)
 		formatted, err := format.Source([]byte(text))
 		if err != nil {
 			return "", nil, false, fmt.Errorf("gofmt after init: %w", err)
@@ -383,6 +385,21 @@ func evalCondition(cond string, o options) (bool, error) {
 
 var templateName = regexp.MustCompile(`\bkickstart\b`)
 
+// redundantAlias matches an import whose alias is just its last path
+// element, like `migrations ".../migrations"`: needed before init, when the
+// folder was named after a database, and noise after it.
+var redundantAlias = regexp.MustCompile(`(?m)^(\s*)(\w+) ("[^"\n]*/(\w+)")$`)
+
+func dropRedundantAliases(text string) string {
+	return redundantAlias.ReplaceAllStringFunc(text, func(line string) string {
+		m := redundantAlias.FindStringSubmatch(line)
+		if m[2] != m[4] {
+			return line // a real alias
+		}
+		return m[1] + m[3]
+	})
+}
+
 // rewrite updates references to paths that moved and to the template's name.
 // DECISIONS.md keeps "kickstart": there it names the template itself.
 func rewrite(rel, text string, o options) string {
@@ -417,7 +434,7 @@ func otherDB(db string) string {
 }
 
 func runIn(dir, name string, args ...string) error {
-	cmd := exec.Command(name, args...)
+	cmd := exec.CommandContext(context.Background(), name, args...)
 	cmd.Dir = dir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

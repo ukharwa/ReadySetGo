@@ -62,7 +62,7 @@ func serve(ctx context.Context, args []string, getenv func(string) string, stdou
 	}
 	srv := httpx.NewServer(handler, logger)
 
-	ln, err := net.Listen("tcp", cfg.HTTPAddr)
+	ln, err := (&net.ListenConfig{}).Listen(ctx, "tcp", cfg.HTTPAddr)
 	if err != nil {
 		return fmt.Errorf("listen on %s: %w", cfg.HTTPAddr, err)
 	}

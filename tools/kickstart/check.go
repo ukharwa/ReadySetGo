@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -73,10 +74,10 @@ func runCheck(args []string) error {
 		{"go", "vet", "./..."},
 		{"go", "test", "-race", "-count=1", "./..."},
 	}
-	if _, err := exec.LookPath("golangci-lint"); err == nil {
-		steps = append(steps, []string{"golangci-lint", "run", "./..."})
+	if lint := findTool(repo, "golangci-lint"); lint != "" {
+		steps = append(steps, []string{lint, "run", "./..."})
 	}
-	if sqlc := filepath.Join(repo, "bin", "sqlc"); fileExists(sqlc) {
+	if sqlc := findTool(repo, "sqlc"); sqlc != "" {
 		steps = append(steps, []string{sqlc, "generate"})
 	}
 	for _, step := range steps {
@@ -95,7 +96,7 @@ func runCheck(args []string) error {
 	if err := runIn(tmp, "gofmt", "-w", "."); err != nil {
 		return err
 	}
-	out, err := exec.Command("git", "-C", tmp, "status", "--porcelain").Output()
+	out, err := exec.CommandContext(context.Background(), "git", "-C", tmp, "status", "--porcelain").Output()
 	if err != nil {
 		return err
 	}
@@ -116,7 +117,7 @@ func runCheck(args []string) error {
 // copyWorkingTree copies every file git would consider part of the project:
 // tracked files and untracked files that aren't ignored.
 func copyWorkingTree(repo, dst string) error {
-	out, err := exec.Command("git", "-C", repo, "ls-files", "-z", "--cached", "--others", "--exclude-standard").Output()
+	out, err := exec.CommandContext(context.Background(), "git", "-C", repo, "ls-files", "-z", "--cached", "--others", "--exclude-standard").Output()
 	if err != nil {
 		return fmt.Errorf("git ls-files: %w", err)
 	}
@@ -196,6 +197,18 @@ func leftovers(root string, o options) []string {
 		return nil
 	})
 	return problems
+}
+
+// findTool returns the path of a dev tool: the template's bin/ copy (from
+// `make tools`) or one on PATH (in CI), or "" if neither exists.
+func findTool(repo, name string) string {
+	if p := filepath.Join(repo, "bin", name); fileExists(p) {
+		return p
+	}
+	if p, err := exec.LookPath(name); err == nil {
+		return p
+	}
+	return ""
 }
 
 func fileExists(path string) bool {

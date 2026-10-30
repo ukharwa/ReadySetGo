@@ -5,7 +5,14 @@ export
 
 BIN := bin/kickstart
 SQLC := bin/sqlc
+LINT := bin/golangci-lint
+
+# Pinned dev tool versions. Dependabot doesn't update these: bump them by
+# hand now and then, and run `make tools`.
 SQLC_VERSION := v1.31.1
+AIR_VERSION := v1.67.4
+GOLANGCI_LINT_VERSION := v2.15.0
+GOVULNCHECK_VERSION := v1.9.0
 
 .DEFAULT_GOAL := help
 
@@ -16,6 +23,10 @@ help: ## list targets
 .PHONY: run
 run: ## run the HTTP server
 	go run ./cmd/kickstart serve
+
+.PHONY: dev
+dev: ## run the server, rebuilding and restarting it when code changes
+	bin/air
 
 .PHONY: worker
 worker: ## run the job worker on its own (serve already runs one)
@@ -37,9 +48,27 @@ fmt: ## format all Go code
 vet: ## run go vet
 	go vet ./...
 
+.PHONY: lint
+lint: ## run the linters and formatting checks
+	$(LINT) run ./...
+
+.PHONY: vuln
+vuln: ## look for known vulnerabilities in the code's dependencies and Go itself
+	go run golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION) ./...
+
+.PHONY: check
+check: ## run everything CI checks
+	$(LINT) run ./...
+	go mod tidy -diff
+	$(SQLC) diff
+	go run golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION) ./...
+	go test -race ./...
+
 .PHONY: tools
-tools: ## install the pinned dev tools into bin/
+tools: ## install the pinned dev tools into bin/ (sqlc needs a C compiler)
 	GOBIN=$(CURDIR)/bin go install github.com/sqlc-dev/sqlc/cmd/sqlc@$(SQLC_VERSION)
+	GOBIN=$(CURDIR)/bin go install github.com/air-verse/air@$(AIR_VERSION)
+	GOBIN=$(CURDIR)/bin go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 
 .PHONY: generate
 generate: ## regenerate internal/store from the SQL queries

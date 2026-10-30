@@ -3,6 +3,7 @@ package httpx
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -129,7 +130,7 @@ func Recover(logger *slog.Logger) Middleware {
 				if v == nil {
 					return
 				}
-				if v == http.ErrAbortHandler {
+				if err, ok := v.(error); ok && errors.Is(err, http.ErrAbortHandler) {
 					panic(v) // net/http's deliberate way to abort a response
 				}
 				logger.ErrorContext(r.Context(), "panic serving request",

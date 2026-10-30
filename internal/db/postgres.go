@@ -16,7 +16,7 @@ import (
 	"github.com/pressly/goose/v3"
 	"github.com/pressly/goose/v3/lock"
 
-	"github.com/ukharwa/kickstart/migrations/postgres"
+	migrations "github.com/ukharwa/kickstart/migrations/postgres"
 )
 
 const gooseDialect = goose.DialectPostgres

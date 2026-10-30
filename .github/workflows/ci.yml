@@ -1,0 +1,89 @@
+# Runs on every push and pull request: lint, checks that go.mod and the
+# generated code are current, a scan for known vulnerabilities, and the
+# tests (`make check` runs the same locally). On main and on version tags
+# it then builds the image for amd64 and arm64 and pushes it to GitHub's
+# container registry as ghcr.io/<owner>/<repo>.
+#
+# Actions are pinned to a commit hash, not a tag: a tag can be moved to
+# point at different code (as happened in the 2025 tj-actions attack).
+# Dependabot keeps the hashes up to date.
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    # kickstart:begin db=postgres
+    services:
+      postgres:
+        image: postgres:18-alpine@sha256:10a5c69a83035ab5239f5620d708520e8b28f5aa1f2b20143e6024532edadfb5
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U test"
+          --health-interval 2s --health-timeout 5s --health-retries 15
+    env:
+      TEST_DATABASE_URL: postgres://test:test@localhost:5432/postgres?sslmode=disable
+    # kickstart:end
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: v2.15.0 # keep in step with GOLANGCI_LINT_VERSION in the Makefile
+      - name: go.mod is tidy
+        run: go mod tidy -diff
+      - uses: sqlc-dev/setup-sqlc@bac53b7fb28c039a6c7f5736fd1e89744021bdd6 # v5.0.0
+        with:
+          sqlc-version: "1.31.1"
+      - name: Generated code is current
+        run: sqlc diff
+      - name: No known vulnerabilities
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
+      - name: Test
+        run: go test -race ./...
+
+  image:
+    needs: check
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=semver,pattern=v{{version}}
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
