@@ -57,6 +57,10 @@ services-down: ## stop the local dev services (their data is kept)
 migrate: ## apply pending migrations
 	go run ./cmd/kickstart migrate up
 
+.PHONY: seed
+seed: ## add sample users for development (password: dev-password-123)
+	go run ./cmd/kickstart seed
+
 .PHONY: migration
 migration: ## create a new migration: make migration NAME=add_things
 	go run ./cmd/kickstart migrate create $(NAME)
@@ -69,10 +73,10 @@ backup: ## write a database snapshot into backups/
 
 # kickstart:begin template
 .PHONY: init
-init: ## turn this template into a new project: make init NAME=myapp [MODULE=…] [DB=sqlite|postgres]
-	go run ./tools/kickstart init -name "$(NAME)" -module "$(MODULE)" -db "$(DB)"
+init: ## turn this template into a new project: make init NAME=myapp [MODULE=…] [DB=sqlite|postgres] [UI=html|api]
+	go run ./tools/kickstart init -name "$(NAME)" -module "$(MODULE)" -db "$(DB)" -ui "$(UI)"
 
 .PHONY: template-check
-template-check: ## init a temporary copy and run every check on it: make template-check [DB=…]
-	go run ./tools/kickstart check -db "$(DB)"
+template-check: ## init a temporary copy and run every check on it: make template-check [DB=…] [UI=…]
+	go run ./tools/kickstart check -db "$(DB)" -ui "$(UI)"
 # kickstart:end

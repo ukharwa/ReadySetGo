@@ -163,8 +163,8 @@ func leftovers(root string, o options) []string {
 		if d.IsDir() && rel == ".git" {
 			return filepath.SkipDir
 		}
-		if otherDB.MatchString(rel) || templateName.MatchString(rel) {
-			report(rel, "path names an unchosen option or the template")
+		if otherDB.MatchString(rel) || templateName.MatchString(rel) || !forUI(rel, o.ui) {
+			report(rel, "path belongs to an unchosen option or the template")
 		}
 		if d.IsDir() {
 			return nil

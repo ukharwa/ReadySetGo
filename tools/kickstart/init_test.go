@@ -96,17 +96,25 @@ func TestPaths(t *testing.T) {
 		{"migrations/sqlite/00001_users.sql", sqliteHTML, "migrations/00001_users.sql"},
 		{"migrations/postgres/00001_users.sql", sqliteHTML, ""},
 		{"migrations/postgres/00001_users.sql", postgresAPI, "migrations/00001_users.sql"},
-		{"internal/store/models.go", sqliteHTML, "internal/store/models.go"},
-		{"internal/store/models.go", postgresAPI, ""},
-		{"internal/store/postgres/models.go", sqliteHTML, ""},
-		{"internal/store/postgres/models.go", postgresAPI, "internal/store/models.go"},
+		{"internal/auth/store/models.go", sqliteHTML, "internal/auth/store/models.go"},
+		{"internal/auth/store/models.go", postgresAPI, ""},
+		{"internal/auth/store/postgres/models.go", sqliteHTML, ""},
+		{"internal/auth/store/postgres/models.go", postgresAPI, "internal/auth/store/models.go"},
 		{"internal/jobs/sqlite/claim.sql", sqliteHTML, "internal/jobs/claim.sql"},
 		{"internal/jobs/postgres/claim.sql", sqliteHTML, ""},
 		{"internal/jobs/jobs.sql", postgresAPI, "internal/jobs/jobs.sql"},
 		{"cmd/kickstart/main.go", sqliteHTML, "cmd/myapp/main.go"},
 		{"internal/db/db.go", postgresAPI, "internal/db/db.go"},
+		{"internal/auth/web.go", postgresAPI, ""},
+		{"internal/auth/templates/login.html", postgresAPI, ""},
+		{"internal/web/static/app.css", postgresAPI, ""},
+		{"internal/auth/api.go", postgresAPI, "internal/auth/api.go"},
+		{"internal/auth/web_test.go", sqliteHTML, "internal/auth/web_test.go"},
+		{"internal/auth/api_test.go", sqliteHTML, ""},
+		{"internal/auth/emails/verify_email.txt", sqliteHTML, "internal/auth/emails/verify_email.txt"},
 	}
 	for _, tt := range tests {
+		tt.o.replacedDirs = replacedDirs([]string{"internal/auth/store/postgres/db.go", "migrations/postgres/migrations.go", "internal/jobs/postgres/claim.sql"}, tt.o.db)
 		got := ""
 		if keepPath(tt.rel, tt.o) {
 			got = movePath(tt.rel, tt.o)

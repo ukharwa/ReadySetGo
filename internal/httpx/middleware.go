@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/netip"
 	"regexp"
 	"runtime/debug"
 	"slices"
@@ -25,6 +26,23 @@ func Chain(h http.Handler, middleware ...Middleware) http.Handler {
 		h = m(h)
 	}
 	return h
+}
+
+// Stack returns the middleware every application request passes through,
+// outermost first: real client IP, request ID, access log, panic recovery,
+// security headers, the cross-origin (CSRF) check, the body limit and the
+// request timeout. hsts turns on Strict-Transport-Security.
+func Stack(logger *slog.Logger, trustedProxies []netip.Prefix, hsts bool) []Middleware {
+	return []Middleware{
+		RealIP(trustedProxies),
+		RequestID,
+		AccessLog(logger),
+		Recover(logger),
+		SecurityHeaders(hsts),
+		CrossOrigin(logger),
+		MaxBytes(DefaultMaxBodyBytes),
+		Timeout(RequestTimeout),
+	}
 }
 
 // validRequestID accepts the IDs Caddy generates (UUIDs) and similar, and

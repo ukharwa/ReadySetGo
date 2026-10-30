@@ -69,6 +69,7 @@ func initProject(root string, o options) error {
 		return err
 	}
 	o.dialectDirs = dialectDirs(files, o.db)
+	o.replacedDirs = replacedDirs(files, o.db)
 
 	type output struct {
 		path string
@@ -221,10 +222,24 @@ func keepPath(rel string, o options) bool {
 		return false // template-only
 	case slices.Contains(dirs, otherDB(o.db)):
 		return false
-	case o.db == "postgres" && path.Dir(rel) == "internal/store" && strings.HasSuffix(rel, ".go"):
-		return false // SQLite's generated code; Postgres's moves up to replace it
+	case !forUI(rel, o.ui):
+		return false
+	case strings.HasSuffix(rel, ".go") && slices.Contains(o.replacedDirs, path.Dir(rel)):
+		return false // the other database's version of code the chosen one's replaces
 	}
 	return true
+}
+
+// forUI reports whether rel is kept for the UI mode ui. Files named web.go
+// or web_test.go, templates/ folders and internal/web/ serve HTML pages;
+// files named api.go or api_test.go serve the JSON API. Everything else is
+// shared.
+func forUI(rel, ui string) bool {
+	base := path.Base(rel)
+	html := base == "web.go" || base == "web_test.go" || strings.HasPrefix(rel, "internal/web/") ||
+		slices.Contains(strings.Split(path.Dir(rel), "/"), "templates")
+	api := base == "api.go" || base == "api_test.go"
+	return (!html || ui == "html") && (!api || ui == "api")
 }
 
 // movePath flattens the chosen database's folders and renames the command.
@@ -235,6 +250,20 @@ func movePath(rel string, o options) string {
 		dirs[1] = o.name
 	}
 	return path.Join(append(dirs, path.Base(rel))...)
+}
+
+// replacedDirs lists folders whose own Go files the chosen database's
+// folder inside them replaces. The generated stores work this way:
+// internal/auth/store/ holds SQLite's code and internal/auth/store/postgres/
+// Postgres's, which moves up to take its place.
+func replacedDirs(files []string, db string) []string {
+	var dirs []string
+	for _, f := range files {
+		if d := path.Dir(f); path.Base(d) == db && strings.HasSuffix(f, ".go") && !slices.Contains(dirs, path.Dir(d)) {
+			dirs = append(dirs, path.Dir(d))
+		}
+	}
+	return dirs
 }
 
 // dialectDirs lists the chosen database's folders found in files, deepest

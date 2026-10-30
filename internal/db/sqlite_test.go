@@ -13,9 +13,9 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/ukharwa/kickstart/internal/auth/store"
 	"github.com/ukharwa/kickstart/internal/db"
 	"github.com/ukharwa/kickstart/internal/db/dbtest"
-	"github.com/ukharwa/kickstart/internal/store"
 )
 
 // TestConcurrentWrites checks the single-writer pool: many goroutines writing

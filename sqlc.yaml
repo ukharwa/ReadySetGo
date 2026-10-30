@@ -1,9 +1,12 @@
-# sqlc turns the SQL queries listed below into typed Go code in
-# internal/store. Regenerate with `make generate` after changing a query or a
-# migration; never edit internal/store by hand.
+# sqlc turns each feature's SQL queries into typed Go code in that
+# feature's own package, internal/<feature>/store. Regenerate with
+# `make generate` after changing a query or a migration; never edit the
+# generated code by hand.
 #
 # Queries live next to their feature: internal/<feature>/<feature>.sql.
-# Write parameters as @name.
+# Write parameters as @name. The first entry holds the shared settings
+# (&sqlc); the others reuse them with `<<:` and set only their queries and
+# output folder.
 # kickstart:begin template
 # (Shared query files are read by both engines, which both accept @name.
 # Queries that must differ live in internal/<feature>/<db>/; init flattens
@@ -12,16 +15,15 @@
 version: "2"
 sql:
   # kickstart:begin db=sqlite
-  - engine: sqlite
+  - &sqlc
+    engine: sqlite
     schema: migrations/sqlite
-    queries:
-      - internal/auth/auth.sql
-      - internal/jobs/jobs.sql
-      - internal/jobs/sqlite/claim.sql
+    queries: [internal/auth/auth.sql]
     gen:
-      go:
+      go: &go
         package: store
-        out: internal/store
+        out: internal/auth/store
+        omit_unused_structs: true
         # SQLite has no UUID type: UUID columns are TEXT, mapped to uuid.UUID
         # here. Name UUID columns `id` or `<thing>_id`.
         # kickstart:begin template
@@ -32,16 +34,21 @@ sql:
             go_type: github.com/google/uuid.UUID
           - column: "*.*_id"
             go_type: github.com/google/uuid.UUID
+  - <<: *sqlc
+    queries: [internal/jobs/jobs.sql, internal/jobs/sqlite/claim.sql]
+    gen: {go: {<<: *go, out: internal/jobs/store}}
   # kickstart:end
   # kickstart:begin db=postgres
-  - engine: postgresql
+  - &sqlc
+    engine: postgresql
     schema: migrations/postgres
-    queries:
-      - internal/auth/auth.sql
-      - internal/jobs/jobs.sql
-      - internal/jobs/postgres/claim.sql
+    queries: [internal/auth/auth.sql]
     gen:
-      go:
+      go: &go
         package: store
-        out: internal/store/postgres
+        out: internal/auth/store/postgres
+        omit_unused_structs: true
+  - <<: *sqlc
+    queries: [internal/jobs/jobs.sql, internal/jobs/postgres/claim.sql]
+    gen: {go: {<<: *go, out: internal/jobs/store/postgres}}
   # kickstart:end

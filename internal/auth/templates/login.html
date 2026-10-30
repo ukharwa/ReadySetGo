@@ -1,0 +1,18 @@
+{{define "title"}}Log in{{end}}
+
+{{define "content"}}
+<h1>Log in</h1>
+{{with .Data.Error}}<p class="error-summary" role="alert">{{.}}</p>{{end}}
+<form method="post" action="/login" class="stack">
+  <input type="hidden" name="next" value="{{.Data.Next}}">
+  <label>Email
+    <input type="email" name="email" value="{{.Data.Form.Get "email"}}" autocomplete="email" required autofocus>
+  </label>
+  <label>Password
+    <input type="password" name="password" autocomplete="current-password" required>
+  </label>
+  <label class="check"><input type="checkbox" name="remember" value="1"> Keep me logged in for 30 days</label>
+  <button type="submit">Log in</button>
+</form>
+<p><a href="/forgot-password">Forgotten your password?</a> · <a href="/register">Create an account</a></p>
+{{end}}

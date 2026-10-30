@@ -1,0 +1,9 @@
+Subject: Someone tried to use your email address
+
+Hello,
+
+Someone tried to change the email address of a {{.AppName}} account to this
+address, but you already have an account with it. Nothing has changed.
+
+If it was you, log in to your existing account instead:
+{{.BaseURL}}/login

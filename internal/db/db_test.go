@@ -5,9 +5,9 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/ukharwa/kickstart/internal/auth/store"
 	"github.com/ukharwa/kickstart/internal/db"
 	"github.com/ukharwa/kickstart/internal/db/dbtest"
-	"github.com/ukharwa/kickstart/internal/store"
 )
 
 func newUser(email string) store.CreateUserParams {

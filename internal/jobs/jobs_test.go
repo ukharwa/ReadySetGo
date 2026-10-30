@@ -13,7 +13,7 @@ import (
 
 	"github.com/ukharwa/kickstart/internal/db"
 	"github.com/ukharwa/kickstart/internal/db/dbtest"
-	"github.com/ukharwa/kickstart/internal/store"
+	"github.com/ukharwa/kickstart/internal/jobs/store"
 )
 
 var discard = slog.New(slog.DiscardHandler)
@@ -55,7 +55,7 @@ func TestEnqueueAndRun(t *testing.T) {
 		return json.Unmarshal(payload, &got)
 	})
 
-	if err := Enqueue(t.Context(), store.New(d.Write), "greet", map[string]string{"To": "ada"}); err != nil {
+	if err := Enqueue(t.Context(), d.Write, "greet", map[string]string{"To": "ada"}); err != nil {
 		t.Fatal(err)
 	}
 	if !runOne(t, w) {
@@ -78,7 +78,7 @@ func TestEnqueueInTransaction(t *testing.T) {
 	t.Parallel()
 	d := dbtest.New(t)
 	_ = d.InTx(t.Context(), func(tx *sql.Tx) error {
-		if err := Enqueue(t.Context(), store.New(tx), "greet", nil); err != nil {
+		if err := Enqueue(t.Context(), tx, "greet", nil); err != nil {
 			t.Fatal(err)
 		}
 		return errors.New("roll back")
@@ -94,7 +94,7 @@ func TestRetryThenFail(t *testing.T) {
 	w, now := testWorker(t, d)
 	calls := 0
 	w.Handle("flaky", func(context.Context, []byte) error { calls++; return errors.New("smtp down") })
-	if err := Enqueue(t.Context(), store.New(d.Write), "flaky", nil); err != nil {
+	if err := Enqueue(t.Context(), d.Write, "flaky", nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -131,9 +131,8 @@ func TestPanicAndUnknownKind(t *testing.T) {
 	d := dbtest.New(t)
 	w, _ := testWorker(t, d)
 	w.Handle("boom", func(context.Context, []byte) error { panic("boom") })
-	q := store.New(d.Write)
 	for _, kind := range []string{"boom", "nobody-handles-this"} {
-		if err := Enqueue(t.Context(), q, kind, nil); err != nil {
+		if err := Enqueue(t.Context(), d.Write, kind, nil); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -156,7 +155,7 @@ func TestLeaseExpiry(t *testing.T) {
 	d := dbtest.New(t)
 	w, now := testWorker(t, d)
 	w.Handle("work", func(context.Context, []byte) error { return nil })
-	if err := Enqueue(t.Context(), store.New(d.Write), "work", nil); err != nil {
+	if err := Enqueue(t.Context(), d.Write, "work", nil); err != nil {
 		t.Fatal(err)
 	}
 	// A worker claims the job, then dies without finishing.
@@ -191,7 +190,7 @@ func TestConcurrentWorkers(t *testing.T) {
 		return nil
 	}
 	for i := range jobs {
-		if err := Enqueue(t.Context(), store.New(d.Write), "work", i); err != nil {
+		if err := Enqueue(t.Context(), d.Write, "work", i); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -227,7 +226,7 @@ func TestRunWaitsForRunningJob(t *testing.T) {
 		close(finished)
 		return nil
 	})
-	if err := Enqueue(t.Context(), store.New(d.Write), "slow", nil); err != nil {
+	if err := Enqueue(t.Context(), d.Write, "slow", nil); err != nil {
 		t.Fatal(err)
 	}
 

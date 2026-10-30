@@ -1,0 +1,58 @@
+{{define "title"}}Your account{{end}}
+
+{{define "content"}}
+<h1>Your account</h1>
+<p>You're logged in as <strong>{{.Data.User.Email}}</strong>.</p>
+
+{{if not .Data.User.EmailVerified}}
+<section class="card">
+  <h2>Confirm your email address</h2>
+  <p>We sent a link to {{.Data.User.Email}}. Some features need a confirmed address.</p>
+  <form method="post" action="/account/resend-verification" class="inline">
+    <button type="submit" class="secondary">Send a new link</button>
+  </form>
+</section>
+{{end}}
+
+<section class="card">
+  <h2>Change your email address</h2>
+  <form method="post" action="/account/email" class="stack">
+    <label>New email address
+      <input type="email" name="email" value="{{.Data.Email.Get "email"}}" autocomplete="email" required>
+      {{with .Data.Email.Errors.email}}<span class="field-error">{{.}}</span>{{end}}
+    </label>
+    <label>Current password
+      <input type="password" name="password" autocomplete="current-password" required>
+      {{with .Data.Email.Errors.password}}<span class="field-error">{{.}}</span>{{end}}
+    </label>
+    <button type="submit">Send a confirmation link</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Change your password</h2>
+  <form method="post" action="/account/password" class="stack">
+    <label>Current password
+      <input type="password" name="current_password" autocomplete="current-password" required>
+      {{with .Data.Password.Errors.current_password}}<span class="field-error">{{.}}</span>{{end}}
+    </label>
+    <label>New password
+      <input type="password" name="new_password" autocomplete="new-password" required>
+      {{with .Data.Password.Errors.new_password}}<span class="field-error">{{.}}</span>{{end}}
+    </label>
+    <button type="submit">Change password</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Delete your account</h2>
+  <p>This deletes your account and everything in it, straight away. It can't be undone.</p>
+  <form method="post" action="/account/delete" class="stack">
+    <label>Current password
+      <input type="password" name="password" autocomplete="current-password" required>
+      {{with .Data.Delete.Errors.password}}<span class="field-error">{{.}}</span>{{end}}
+    </label>
+    <button type="submit" class="danger">Delete my account</button>
+  </form>
+</section>
+{{end}}

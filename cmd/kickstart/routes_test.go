@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/ukharwa/kickstart/internal/apptest"
 	"github.com/ukharwa/kickstart/internal/config"
 	"github.com/ukharwa/kickstart/internal/httpx"
 )
@@ -14,7 +15,11 @@ import (
 // stack and health checks bypass it.
 func TestRoutesMiddleware(t *testing.T) {
 	t.Parallel()
-	h := routes(config.Config{Env: "prod"}, slog.New(slog.DiscardHandler), &httpx.Health{})
+	a := apptest.New(t)
+	h, err := routes(config.Config{Env: "prod", AppName: "Test"}, slog.New(slog.DiscardHandler), &httpx.Health{}, a.Accounts, a.Limiter)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/no-such-page", nil))

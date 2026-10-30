@@ -25,7 +25,9 @@ make services
 make run
 ```
 
-Then open <http://localhost:8080/readyz>. `make help` lists every command.
+Then open <http://localhost:8080>. `make seed` adds two users to log in
+with, `admin@example.com` and `user@example.com`, both with the password
+`dev-password-123`. `make help` lists every command.
 
 `make services` starts:
 

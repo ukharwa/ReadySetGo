@@ -1,0 +1,18 @@
+{{define "title"}}Sign up{{end}}
+
+{{define "content"}}
+<h1>Create an account</h1>
+<form method="post" action="/register" class="stack">
+  <label>Email
+    <input type="email" name="email" value="{{.Data.Form.Get "email"}}" autocomplete="email" required autofocus>
+    {{with .Data.Form.Errors.email}}<span class="field-error">{{.}}</span>{{end}}
+  </label>
+  <label>Password
+    <input type="password" name="password" autocomplete="new-password" required>
+    {{with .Data.Form.Errors.password}}<span class="field-error">{{.}}</span>{{end}}
+    <span class="hint">Long is what counts: a few unrelated words work well.</span>
+  </label>
+  <button type="submit">Sign up</button>
+</form>
+<p>Already have an account? <a href="/login">Log in</a></p>
+{{end}}

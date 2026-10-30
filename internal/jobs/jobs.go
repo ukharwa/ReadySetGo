@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/ukharwa/kickstart/internal/db"
-	"github.com/ukharwa/kickstart/internal/store"
+	"github.com/ukharwa/kickstart/internal/jobs/store"
 )
 
 // maxAttempts is how often a job runs before it is marked failed. With the
@@ -29,12 +29,15 @@ const maxAttempts = 10
 // schedules a retry.
 type Handler func(ctx context.Context, payload []byte) error
 
+// DBTX is a database handle or transaction: a *sql.DB or *sql.Tx.
+type DBTX = store.DBTX
+
 // Enqueue adds a job of kind, with payload marshalled to JSON, to run as
-// soon as a worker is free. Pass store.New(tx) inside db.InTx to enqueue in
-// the same transaction as the change that caused the job: it then exists
-// only if that change commits.
-func Enqueue(ctx context.Context, q *store.Queries, kind string, payload any) error {
-	_, err := insert(ctx, q, kind, payload, "", db.Now())
+// soon as a worker is free. Pass the *sql.Tx from db.InTx to enqueue in the
+// same transaction as the change that caused the job: it then exists only
+// if that change commits. Otherwise pass the database's Write handle.
+func Enqueue(ctx context.Context, tx DBTX, kind string, payload any) error {
+	_, err := insert(ctx, store.New(tx), kind, payload, "", db.Now())
 	return err
 }
 

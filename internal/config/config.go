@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/mail"
 	"net/netip"
+	"net/url"
 	"slices"
 	"strconv"
 	"strings"
@@ -18,6 +19,8 @@ import (
 // Each variable is documented in .env.example.
 type Config struct {
 	Env             string         // APP_ENV: "dev" or "prod"
+	AppName         string         // APP_NAME: shown in pages and emails
+	AppURL          string         // APP_URL: the site's address, for links in emails
 	HTTPAddr        string         // HTTP_ADDR
 	LogFormat       string         // LOG_FORMAT: "text" or "json"
 	LogLevel        slog.Level     // LOG_LEVEL
@@ -43,6 +46,8 @@ type Config struct {
 
 	WorkerEnabled     bool // WORKER_ENABLED: run the job worker inside `serve`
 	WorkerConcurrency int  // WORKER_CONCURRENCY
+
+	PasswordMinLength int // PASSWORD_MIN_LENGTH
 }
 
 // Dev reports whether the application runs in development mode.
@@ -53,6 +58,8 @@ func (c Config) Dev() bool { return c.Env == "dev" }
 func (c Config) LogValue() slog.Value {
 	return slog.GroupValue(
 		slog.String("env", c.Env),
+		slog.String("app_name", c.AppName),
+		slog.String("app_url", c.AppURL),
 		slog.String("http_addr", c.HTTPAddr),
 		slog.String("log_format", c.LogFormat),
 		slog.String("log_level", c.LogLevel.String()),
@@ -71,6 +78,7 @@ func (c Config) LogValue() slog.Value {
 		slog.String("smtp_tls", c.SMTPTLS),
 		slog.Bool("worker_enabled", c.WorkerEnabled),
 		slog.Int("worker_concurrency", c.WorkerConcurrency),
+		slog.Int("password_min_length", c.PasswordMinLength),
 	)
 }
 
@@ -81,6 +89,16 @@ func Load(getenv func(string) string) (Config, error) {
 
 	var c Config
 	c.Env = l.oneOf("APP_ENV", "", "dev", "prod")
+	c.AppName = l.str("APP_NAME", "kickstart")
+	defaultURL := ""
+	if c.Dev() {
+		defaultURL = "http://localhost:8080"
+	}
+	c.AppURL = strings.TrimSuffix(l.str("APP_URL", defaultURL), "/")
+	if u, err := url.Parse(c.AppURL); c.AppURL == "" || err != nil || u.Host == "" ||
+		(u.Scheme != "https" && (u.Scheme != "http" || !c.Dev())) || u.Path != "" || u.RawQuery != "" {
+		l.fail("APP_URL", fmt.Sprintf("must be the site's address, like https://example.com (http only in dev; got %q)", c.AppURL))
+	}
 	c.HTTPAddr = l.str("HTTP_ADDR", ":8080")
 	defaultFormat := "json"
 	if c.Dev() {
@@ -129,6 +147,11 @@ func Load(getenv func(string) string) (Config, error) {
 	c.WorkerConcurrency = l.integer("WORKER_CONCURRENCY", 4)
 	if c.WorkerConcurrency < 1 {
 		l.fail("WORKER_CONCURRENCY", "must be at least 1")
+	}
+
+	c.PasswordMinLength = l.integer("PASSWORD_MIN_LENGTH", 12)
+	if c.PasswordMinLength < 8 || c.PasswordMinLength > 64 {
+		l.fail("PASSWORD_MIN_LENGTH", "must be between 8 and 64")
 	}
 
 	if c.ShutdownDrain < 0 {

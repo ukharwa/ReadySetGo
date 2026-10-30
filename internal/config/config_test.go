@@ -30,6 +30,7 @@ func TestLoadDefaults(t *testing.T) {
 			if tt.env == "prod" {
 				vars["SMTP_HOST"] = "smtp.example.com"
 				vars["SMTP_FROM"] = "noreply@example.com"
+				vars["APP_URL"] = "https://example.com"
 			}
 			c, err := Load(env(vars))
 			if err != nil {
@@ -37,6 +38,8 @@ func TestLoadDefaults(t *testing.T) {
 			}
 			want := Config{
 				Env:             tt.env,
+				AppName:         "kickstart",
+				AppURL:          "http://localhost:8080",
 				HTTPAddr:        ":8080",
 				LogFormat:       tt.wantFormat,
 				LogLevel:        slog.LevelInfo,
@@ -53,10 +56,12 @@ func TestLoadDefaults(t *testing.T) {
 				SMTPTLS:           "starttls",
 				WorkerEnabled:     true,
 				WorkerConcurrency: 4,
+				PasswordMinLength: 12,
 			}
 			if tt.env == "prod" {
 				want.SMTPHost = "smtp.example.com"
 				want.SMTPFrom = "noreply@example.com"
+				want.AppURL = "https://example.com"
 			}
 			if !reflect.DeepEqual(c, want) {
 				t.Errorf("Load = %+v, want %+v", c, want)
@@ -69,6 +74,8 @@ func TestLoadOverrides(t *testing.T) {
 	t.Parallel()
 	c, err := Load(env(map[string]string{
 		"APP_ENV":          "prod",
+		"APP_NAME":         "Acme",
+		"APP_URL":          "https://acme.example.com/",
 		"HTTP_ADDR":        "127.0.0.1:9000",
 		"LOG_FORMAT":       "text",
 		"LOG_LEVEL":        "debug",
@@ -83,20 +90,23 @@ func TestLoadOverrides(t *testing.T) {
 		"DB_CONN_MAX_IDLE_TIME": "1m",
 		"DB_CONN_MAX_LIFETIME":  "1h",
 		// kickstart:end
-		"SMTP_HOST":          "smtp.example.com",
-		"SMTP_PORT":          "465",
-		"SMTP_USERNAME":      "user",
-		"SMTP_PASSWORD":      "pass",
-		"SMTP_FROM":          "App <noreply@example.com>",
-		"SMTP_TLS":           "tls",
-		"WORKER_ENABLED":     "false",
-		"WORKER_CONCURRENCY": "2",
+		"SMTP_HOST":           "smtp.example.com",
+		"SMTP_PORT":           "465",
+		"SMTP_USERNAME":       "user",
+		"SMTP_PASSWORD":       "pass",
+		"SMTP_FROM":           "App <noreply@example.com>",
+		"SMTP_TLS":            "tls",
+		"WORKER_ENABLED":      "false",
+		"WORKER_CONCURRENCY":  "2",
+		"PASSWORD_MIN_LENGTH": "15",
 	}))
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
 	want := Config{
 		Env:             "prod",
+		AppName:         "Acme",
+		AppURL:          "https://acme.example.com",
 		HTTPAddr:        "127.0.0.1:9000",
 		LogFormat:       "text",
 		LogLevel:        slog.LevelDebug,
@@ -122,6 +132,7 @@ func TestLoadOverrides(t *testing.T) {
 		SMTPTLS:           "tls",
 		WorkerEnabled:     false,
 		WorkerConcurrency: 2,
+		PasswordMinLength: 15,
 	}
 	if !reflect.DeepEqual(c, want) {
 		t.Errorf("Load = %+v, want %+v", c, want)
@@ -140,13 +151,14 @@ func TestLoadReportsAllErrors(t *testing.T) {
 		"MIGRATE_ON_START":   "maybe",
 		"TRUSTED_PROXIES":    "10.0.0.0/8,caddy",
 		"WORKER_CONCURRENCY": "0",
+		"APP_URL":            "ftp://example.com",
 	}))
 	if err == nil {
 		t.Fatal("Load succeeded, want error")
 	}
 	for _, key := range []string{
 		"APP_ENV", "LOG_FORMAT", "LOG_LEVEL", "SHUTDOWN_DRAIN", "SHUTDOWN_TIMEOUT",
-		"DATABASE_URL", "MIGRATE_ON_START", "TRUSTED_PROXIES", "SMTP_HOST", "WORKER_CONCURRENCY",
+		"DATABASE_URL", "MIGRATE_ON_START", "TRUSTED_PROXIES", "SMTP_HOST", "WORKER_CONCURRENCY", "APP_URL",
 	} {
 		if !strings.Contains(err.Error(), key) {
 			t.Errorf("error does not mention %s:\n%v", key, err)
@@ -169,7 +181,7 @@ func TestLogValueHidesSecrets(t *testing.T) {
 
 func TestSMTPRules(t *testing.T) {
 	t.Parallel()
-	base := map[string]string{"APP_ENV": "prod", "DATABASE_URL": "db", "SMTP_FROM": "noreply@example.com"}
+	base := map[string]string{"APP_ENV": "prod", "DATABASE_URL": "db", "SMTP_FROM": "noreply@example.com", "APP_URL": "https://example.com"}
 	tests := []struct {
 		name    string
 		vars    map[string]string

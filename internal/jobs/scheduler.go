@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/ukharwa/kickstart/internal/db"
-	"github.com/ukharwa/kickstart/internal/store"
+	"github.com/ukharwa/kickstart/internal/jobs/store"
 )
 
 // checkInterval is how often the scheduler looks for a task that is due.

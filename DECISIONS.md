@@ -136,9 +136,11 @@ point-in-time restore instead.
 ### Data access: `database/sql` + sqlc
 
 Queries are plain SQL; sqlc generates typed Go functions from them, with no
-runtime reflection or query builder. Queries that work the same on every
-database are shared; the few that can't be (upserts, job claiming) live in
-per-database files. **Considered:** sqlx (one query string for all
+runtime reflection or query builder. Each feature gets its own generated
+package (`internal/<feature>/store`) containing only the structs its own
+queries use, so a feature or module can be removed by deleting its folder,
+with no regeneration. Queries that work the same on every database are
+shared; the few that can't be (job claiming) live in per-database files. **Considered:** sqlx (one query string for all
 databases and easy dynamic queries, but column mismatches only show up at
 runtime) and ORMs such as GORM, ent or Bun (database differences handled for
 you, at the cost of hidden behaviour: GORM's struct updates silently skip
@@ -227,10 +229,14 @@ both kinds of app. This fits the init-time pruning model, so no concern.
 ### Pages: server-rendered `html/template` + HTMX
 
 One codebase, no frontend build step, and cookie sessions plus CSRF
-protection stay simple. HTMX is copied into the repo and embedded rather
-than loaded from a CDN, so the Content-Security-Policy stays strict. Every
-template is parsed at startup and a test renders every page, which catches
-template errors early. **Considered:** templ (type-checked components, but
+protection stay simple. HTMX (2.0.11, checked against npm's published
+SHA-512) is copied into the repo and embedded rather than loaded from a CDN,
+and configured not to inject styles or use `eval`, so the
+Content-Security-Policy stays strict. Every template is parsed at startup
+and a test renders every page, which catches template errors early. Forms
+post, then redirect, carrying a one-off "flash" message in a short-lived
+cookie. Error pages are a standalone template, so they render even when the
+rest of the app can't. **Considered:** templ (type-checked components, but
 a code-generation step and a dependency).
 
 ### Static assets: embedded, cache-busted
@@ -246,10 +252,14 @@ binary (utility classes, but a CSS build step).
 <!-- kickstart:begin ui=api -->
 ### API: JSON
 
-JSON handlers with one consistent error format. Links in verification and
-reset emails point at the frontend (`APP_FRONTEND_URL`). A browser frontend
-is served from the same domain as the API (Caddy sends `/api/*` to Go), so
-there is no CORS setup and cookies stay `SameSite=Lax`.
+JSON handlers under `/api/`. Errors use RFC 9457 problem details
+(`application/problem+json`), with the request ID and per-field errors as
+extensions. Links in verification and reset emails point at `APP_URL`, the
+frontend's address; the frontend sends their token to the API. A browser
+frontend is served from the same domain as the API (Caddy sends `/api/*` to
+Go), so there is no CORS setup and cookies stay `SameSite=Lax`.
+**Considered:** a separate `APP_FRONTEND_URL` setting, which is redundant
+when the frontend and API share a domain.
 <!-- kickstart:end -->
 
 ### Configuration: environment variables only
@@ -282,19 +292,25 @@ process now and separately later. No cobra.
 
 ### Sessions stored in the database
 
-A random 32-byte token in an HttpOnly cookie; the database stores only its
+A random 128-bit token in an HttpOnly cookie; the database stores only its
 SHA-256 hash, so a leaked database or backup can't be used to log in.
-Sessions expire after inactivity and after a fixed maximum age, every login
-issues a new token, logout deletes the session, and password changes log out
-other sessions. "Last seen" is written at most every few minutes.
+Sessions expire after inactivity and after a fixed maximum age: a browser
+session after 24 idle hours or 7 days, a "remember me" session after 30
+days. Every login issues a new token, logout deletes the session, and
+password changes log out other sessions. "Last seen" is written at most
+every 5 minutes. The `SessionStore` interface in the auth package is the
+seam; its default keeps sessions in the database and reads them from the
+primary, never a replica, so a new session is found straight away.
 
 <!-- kickstart:begin ui=api -->
 ### API clients: cookies for browsers, bearer tokens for everything else
 
 Browser frontends use the same cookie sessions. Mobile apps, CLIs and
-scripts use plain random bearer tokens, stored hashed in the same table and
-revocable the same way. **Considered:** bearer tokens only, which means a
-browser app keeps its token where JavaScript (and any XSS bug) can read it.
+scripts use plain random bearer tokens (30 idle days, 90 days at most),
+stored hashed in the same table and revocable the same way. The table is the
+same in both UI modes, so the schema doesn't depend on the mode.
+**Considered:** bearer tokens only, which means a browser app keeps its
+token where JavaScript (and any XSS bug) can read it.
 <!-- kickstart:end -->
 
 ### No JWT
@@ -334,14 +350,24 @@ factor. A breached-password check (Have I Been Pwned) is skipped for now.
   old), and delete account all ask for the current password again.
 - Account deletion is a hard delete. **Considered:** soft delete, which
   means filtering deleted users out of every query forever.
-- Verification and reset tokens are random, stored hashed, single-use,
-  time-limited, and compared in constant time.
+- Verification and reset tokens are random (128 bits), stored hashed,
+  single-use and time-limited. They are found by looking up their SHA-256
+  hash, so there is no comparison to time: the brief's "constant-time token
+  comparison" is met by never comparing raw tokens. (Password hashes, which
+  are compared, use `subtle.ConstantTimeCompare`.)
+- Emailed links open a page with a button; only submitting it acts. Mail
+  scanners that open links therefore can't use them up.
+- A password reset also confirms the email address, since opening the link
+  proves access to the inbox.
+- Register and login take the same time whether or not the account exists:
+  register hashes the password either way, and login checks a dummy hash
+  for unknown addresses.
 
 ### Roles: a `role` column
 
-`user` or `admin`, with `requireRole("admin")` middleware and
-`app user promote|demote|disable` so the first admin never needs a default
-password. **Considered:** full role-based permissions (RBAC), which apps
+`user` or `admin`, with `auth.RequireRole("admin")` middleware and
+`app user promote|demote|disable|enable` so the first admin never needs a
+default password. **Considered:** full role-based permissions (RBAC), which apps
 this size don't need yet.
 
 ### Left out: two-factor login and social login

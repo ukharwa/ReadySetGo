@@ -16,7 +16,6 @@ import (
 	"strings"
 
 	"github.com/ukharwa/kickstart/internal/jobs"
-	"github.com/ukharwa/kickstart/internal/store"
 )
 
 // Message is one plain-text email.
@@ -34,16 +33,16 @@ type Sender interface {
 // JobKind is the job that sends a queued email.
 const JobKind = "email.send"
 
-// Enqueue queues m for the worker to send. Use store.New(tx) inside db.InTx
-// to send it only if the surrounding change commits.
+// Enqueue queues m for the worker to send. Pass the *sql.Tx from db.InTx to
+// send it only if the surrounding change commits.
 //
 // The job holds the whole message, so a link with a token in it sits in the
 // jobs table until the email is sent (usually seconds).
-func Enqueue(ctx context.Context, q *store.Queries, m Message) error {
+func Enqueue(ctx context.Context, tx jobs.DBTX, m Message) error {
 	if err := m.Validate(); err != nil {
 		return err
 	}
-	return jobs.Enqueue(ctx, q, JobKind, m)
+	return jobs.Enqueue(ctx, tx, JobKind, m)
 }
 
 // Handler returns the job handler for JobKind, which sends with s.

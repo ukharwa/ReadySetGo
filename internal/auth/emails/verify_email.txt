@@ -1,0 +1,10 @@
+Subject: Confirm your email address
+
+Hello,
+
+Confirm the email address for your {{.AppName}} account by opening this link:
+
+{{.Link}}
+
+The link works for 24 hours. If you didn't create an account, you can ignore
+this email.

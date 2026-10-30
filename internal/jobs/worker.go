@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/ukharwa/kickstart/internal/db"
-	"github.com/ukharwa/kickstart/internal/store"
+	"github.com/ukharwa/kickstart/internal/jobs/store"
 )
 
 const (

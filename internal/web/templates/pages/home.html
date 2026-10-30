@@ -1,0 +1,11 @@
+{{define "title"}}Home{{end}}
+
+{{define "content"}}
+<h1>{{.AppName}}</h1>
+{{if .User}}
+  <p>You're logged in as {{.User.Email}}.</p>
+{{else}}
+  <p>This is the home page. Replace it with your app.</p>
+  <p><a href="/register" class="button">Create an account</a> or <a href="/login">log in</a>.</p>
+{{end}}
+{{end}}

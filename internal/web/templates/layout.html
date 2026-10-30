@@ -1,0 +1,34 @@
+{{define "layout" -}}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+{{/* HTMX settings that keep it within the Content-Security-Policy: no
+     injected indicator styles and no eval (so no hx-on attributes). */ -}}
+<meta name="htmx-config" content='{"includeIndicatorStyles":false,"allowEval":false}'>
+<title>{{block "title" .}}{{end}} · {{.AppName}}</title>
+<link rel="stylesheet" href="{{asset "app.css"}}">
+<script src="{{asset "htmx.min.js"}}" defer></script>
+</head>
+<body>
+<header class="site-header">
+  <nav>
+    <a href="/" class="brand">{{.AppName}}</a>
+    <span class="spacer"></span>
+    {{if .User}}
+      <a href="/account">Account</a>
+      <form method="post" action="/logout" class="inline"><button type="submit" class="link">Log out</button></form>
+    {{else}}
+      <a href="/login">Log in</a>
+      <a href="/register" class="button">Sign up</a>
+    {{end}}
+  </nav>
+</header>
+<main>
+  {{with .Flash}}<p class="flash" role="status">{{.}}</p>{{end}}
+  {{block "content" .}}{{end}}
+</main>
+</body>
+</html>
+{{- end}}

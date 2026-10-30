@@ -11,19 +11,13 @@ import (
 	"github.com/google/uuid"
 )
 
-type Job struct {
-	ID          uuid.UUID
-	Kind        string
-	Payload     string
-	UniqueKey   sql.NullString
-	RunAt       time.Time
-	Attempts    int64
-	MaxAttempts int64
-	LockedUntil sql.NullTime
-	LastError   sql.NullString
-	CompletedAt sql.NullTime
-	FailedAt    sql.NullTime
-	CreatedAt   time.Time
+type Session struct {
+	TokenHash     string
+	UserID        uuid.UUID
+	CreatedAt     time.Time
+	LastSeenAt    time.Time
+	IdleExpiresAt time.Time
+	ExpiresAt     time.Time
 }
 
 type User struct {
@@ -35,4 +29,13 @@ type User struct {
 	DisabledAt      sql.NullTime
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
+}
+
+type UserToken struct {
+	TokenHash string
+	UserID    uuid.UUID
+	Purpose   string
+	Email     string
+	CreatedAt time.Time
+	ExpiresAt time.Time
 }

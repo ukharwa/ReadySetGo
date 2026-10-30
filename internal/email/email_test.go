@@ -10,7 +10,6 @@ import (
 	"github.com/ukharwa/kickstart/internal/email"
 	"github.com/ukharwa/kickstart/internal/email/emailtest"
 	"github.com/ukharwa/kickstart/internal/jobs"
-	"github.com/ukharwa/kickstart/internal/store"
 )
 
 func TestValidate(t *testing.T) {
@@ -42,7 +41,7 @@ func TestQueuedEmailIsSent(t *testing.T) {
 	w.Handle(email.JobKind, email.Handler(rec))
 
 	m := email.Message{To: "ada@example.com", Subject: "Welcome", Body: "Hello, Ada."}
-	if err := email.Enqueue(t.Context(), store.New(d.Write), m); err != nil {
+	if err := email.Enqueue(t.Context(), d.Write, m); err != nil {
 		t.Fatal(err)
 	}
 	if len(rec.Messages()) != 0 {
@@ -64,7 +63,7 @@ func TestQueuedEmailIsSent(t *testing.T) {
 func TestEnqueueRejectsInvalid(t *testing.T) {
 	t.Parallel()
 	d := dbtest.New(t)
-	err := email.Enqueue(t.Context(), store.New(d.Write), email.Message{To: "nope", Subject: "x", Body: "x"})
+	err := email.Enqueue(t.Context(), d.Write, email.Message{To: "nope", Subject: "x", Body: "x"})
 	if err == nil {
 		t.Error("Enqueue accepted an invalid message")
 	}

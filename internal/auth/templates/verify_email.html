@@ -1,0 +1,14 @@
+{{define "title"}}Confirm your email address{{end}}
+
+{{define "content"}}
+<h1>Confirm your email address</h1>
+{{with .Data.Error}}
+  <p class="error-summary" role="alert">{{.}}</p>
+  <p>Log in and use your <a href="/account">account page</a> to send a new link.</p>
+{{else}}
+<form method="post" action="/verify-email" class="stack">
+  <input type="hidden" name="token" value="{{.Data.Token}}">
+  <button type="submit">Confirm my email address</button>
+</form>
+{{end}}
+{{end}}

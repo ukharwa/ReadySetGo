@@ -1,19 +1,51 @@
 package httpx
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/ukharwa/kickstart/internal/logging"
+	"github.com/ukharwa/kickstart/internal/validate"
 )
 
-// Error writes a minimal response for an error status. Server errors include
-// the request ID, so a user can quote it and the matching log lines can be
-// found. It never includes error details.
+// Error responds with a minimal page or JSON problem for an error status.
+// Server errors include the request ID, so a user can quote it and the
+// matching log lines can be found. It never includes error details.
 func Error(w http.ResponseWriter, r *http.Request, status int) {
-	body := http.StatusText(status)
-	if status >= 500 {
-		body = fmt.Sprintf("%s\nError ID: %s", body, logging.RequestID(r.Context()))
+	ErrorMessage(w, r, status, "")
+}
+
+// ErrorMessage is Error with a message for the user. The message must be
+// safe to show: never pass an error's text.
+func ErrorMessage(w http.ResponseWriter, r *http.Request, status int, message string) {
+	// kickstart:begin ui=html
+	if wantsPage(r) {
+		writeErrorPage(w, r, status, message)
+		return
 	}
-	writeText(w, status, body+"\n")
+	// kickstart:end
+	writeProblem(w, r, status, message, nil)
+}
+
+// Problem is a JSON error response in the RFC 9457 format
+// (application/problem+json), with the request ID and any field errors as
+// extensions.
+type Problem struct {
+	Title     string          `json:"title"`
+	Status    int             `json:"status"`
+	Detail    string          `json:"detail,omitempty"`
+	RequestID string          `json:"request_id,omitempty"`
+	Errors    validate.Errors `json:"errors,omitempty"`
+}
+
+// WriteInvalid responds 422 with the field errors errs.
+func WriteInvalid(w http.ResponseWriter, r *http.Request, errs validate.Errors) {
+	writeProblem(w, r, http.StatusUnprocessableEntity, "Some fields are invalid.", errs)
+}
+
+func writeProblem(w http.ResponseWriter, r *http.Request, status int, detail string, errs validate.Errors) {
+	p := Problem{Title: http.StatusText(status), Status: status, Detail: detail, Errors: errs}
+	if status >= 500 {
+		p.RequestID = logging.RequestID(r.Context())
+	}
+	writeJSON(w, status, "application/problem+json", p)
 }
