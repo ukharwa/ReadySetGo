@@ -480,8 +480,13 @@ more to attack).
 ### Caddy
 
 Automatic HTTPS in production, compression, request IDs, error-only
-logging, and commented examples for load balancing and (in API mode) a
-same-domain frontend, each checked with `caddy validate`. No ACME email:
+logging, and (in API mode) a commented example for a same-domain frontend,
+checked with `caddy validate`. Caddy finds the app containers through
+Docker's DNS (`dynamic a`), balances them by fewest connections and sends
+requests only to instances whose `/readyz` answers, so one instance or
+several (`docker compose up --scale app=3`) need no edit. A plain
+`reverse_proxy app:8080` was the first version: with two instances it sent
+every request to one of them. No ACME email:
 Let's Encrypt stopped sending expiry notices in 2025. In dev the app runs
 directly on `localhost`, which Chrome and Firefox treat as secure. To test
 the full stack over HTTPS (or in Safari), `make up` runs the production
@@ -523,6 +528,27 @@ with one implementation built in `main`, except jobs (below), and gets a
 selecting setting only when it ships with two implementations; for email,
 `SMTP_HOST` being set or not is that setting. **Considered:** a setting for
 every seam now, accepting a single value.
+
+### Checked with two instances
+
+Milestone 11 ran a Postgres project with every module as two app
+instances behind Caddy (`docker compose up --scale app=2`):
+- Requests were spread over both, and a session from one worked on the
+  other. Stopping one lost no requests; a request during a single
+  instance's restart waited about 6 seconds and succeeded.
+<!-- kickstart:begin module=uploads -->
+- A file uploaded through one instance downloaded from both (the shared
+  `data` volume; several servers need the S3 step).
+<!-- kickstart:end -->
+- Migrations ran once, the other instance finding nothing to do (an
+  advisory lock guards a simultaneous start, as `internal/db` tests).
+  Scheduled tasks were enqueued once per period, and a job (an email) ran
+  once.
+- Rate limits are per instance, as documented: two instances allowed 9
+  wrong passwords for one account before refusing, where one allows 5.
+
+SQLite projects stay on one instance: the database is a file one process
+writes.
 
 ### Job queue: hand-written, database-backed, core
 
