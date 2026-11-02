@@ -6,6 +6,11 @@
 // stored under random keys, never the user's filename, and served with
 // headers that stop a browser running them: images inline, everything else
 // as a download.
+//
+// A feature that attaches files to its own records saves them with
+// Service.Save from a handler wrapped in Limit, using RequestContext and
+// FilePart as this package's handlers do, and keeps the upload IDs in a
+// table of its own that references uploads(id) ON DELETE CASCADE.
 package uploads
 
 import (

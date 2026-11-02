@@ -20,14 +20,14 @@ import (
 // MaxSize over a slow connection.
 const uploadTime = 5 * time.Minute
 
-// limitUpload is the middleware for upload routes: a body limit of MaxSize
-// plus room for the form around the file.
-var limitUpload = httpx.MaxBytes(MaxSize + 64<<10)
+// Limit is the middleware for upload routes, a feature's included: a body
+// limit of MaxSize plus room for the form around the file.
+var Limit = httpx.MaxBytes(MaxSize + 64<<10)
 
-// uploadContext gives an upload request the time it needs, past the server's
-// usual read and write timeouts and the request's context deadline (which a
-// slow upload would outlive). Call the returned cancel when done.
-func uploadContext(w http.ResponseWriter, r *http.Request) (context.Context, context.CancelFunc) {
+// RequestContext gives an upload request the time it needs, past the
+// server's usual read and write timeouts and the request's context deadline
+// (which a slow upload would outlive). Call the returned cancel when done.
+func RequestContext(w http.ResponseWriter, r *http.Request) (context.Context, context.CancelFunc) {
 	deadline := time.Now().Add(uploadTime)
 	rc := http.NewResponseController(w)
 	_ = rc.SetReadDeadline(deadline) // unsupported only by test recorders
@@ -35,9 +35,9 @@ func uploadContext(w http.ResponseWriter, r *http.Request) (context.Context, con
 	return context.WithDeadline(context.WithoutCancel(r.Context()), deadline)
 }
 
-// filePart returns the multipart form's "file" field, streamed rather than
-// buffered, or validate.Errors if there isn't one.
-func filePart(r *http.Request) (*multipart.Part, error) {
+// FilePart returns the multipart form's "file" field, streamed rather than
+// buffered, or validate.Errors if there isn't one. Pass it to Service.Save.
+func FilePart(r *http.Request) (*multipart.Part, error) {
 	noFile := validate.Errors{"file": "Choose a file to upload."}
 	mr, err := r.MultipartReader()
 	if err != nil {

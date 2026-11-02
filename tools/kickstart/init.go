@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -28,6 +29,9 @@ func runInit(args []string) error {
 	}
 	if err := checkGit("."); err != nil {
 		return err
+	}
+	if out, err := exec.CommandContext(context.Background(), "git", "rev-parse", "--short=12", "HEAD").Output(); err == nil {
+		o.commit = strings.TrimSpace(string(out))
 	}
 	if err := initProject(".", o); err != nil {
 		return err
@@ -238,6 +242,9 @@ func transform(rel string, data []byte, o options) (string, []byte, bool, error)
 		return "", nil, false, nil // every line belonged to an unchosen option
 	}
 	text = rewrite(rel, text, o)
+	if rel == "CLAUDE.md" {
+		text = recordInit(text, o)
+	}
 
 	if strings.HasSuffix(newRel, ".go") {
 		text = dropRedundantAliases(text)
@@ -467,6 +474,19 @@ func dropRedundantAliases(text string) string {
 
 // rewrite updates references to paths that moved and to the template's name.
 // DECISIONS.md keeps "kickstart": there it names the template itself.
+// command is the make init command that produces o.
+func (o options) command() string {
+	modules := cmp.Or(strings.Join(o.modules, ","), "none")
+	return fmt.Sprintf("make init NAME=%s MODULE=%s DB=%s UI=%s MODULES=%s", o.name, o.module, o.db, o.ui, modules)
+}
+
+// recordInit fills in CLAUDE.md's record of how the project was made: the
+// command, and the template commit it ran on, which later changes start
+// from.
+func recordInit(text string, o options) string {
+	return strings.NewReplacer("INIT_COMMAND", o.command(), "INIT_COMMIT", cmp.Or(o.commit, "unknown")).Replace(text)
+}
+
 func rewrite(rel, text string, o options) string {
 	for _, d := range o.dialectDirs {
 		text = regexp.MustCompile(regexp.QuoteMeta(d)+`\b`).ReplaceAllLiteralString(text, path.Dir(d))

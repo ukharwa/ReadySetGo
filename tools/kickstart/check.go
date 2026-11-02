@@ -223,6 +223,8 @@ func leftovers(root string, o options, removedExample bool) []string {
 			switch {
 			case strings.Contains(line, "kickstart:begin"), strings.Contains(line, "kickstart:end"):
 				report(where, "init marker left behind")
+			case strings.Contains(line, "INIT_COMMAND"), strings.Contains(line, "INIT_COMMIT"):
+				report(where, "init's record of itself not filled in")
 			case strings.HasPrefix(line, "//go:build postgres"), strings.HasPrefix(line, "//go:build !postgres"):
 				report(where, "database build constraint left behind")
 			case !exempt && !growth && otherDB.MatchString(line):

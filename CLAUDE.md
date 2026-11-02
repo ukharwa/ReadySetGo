@@ -6,6 +6,189 @@ are, `README.md` how to run and deploy the app, and `SCALING.md` what to do
 as it grows.
 
 <!-- kickstart:begin template -->
+## Read first: this is the uninitialised template
+
+This repository is the kickstart template, not yet an app. It stays that
+way until `make init` runs, which deletes `tools/kickstart/`: while that
+folder exists, you are in the template. A user who opens a session here and
+describes an app ("set this up with Postgres and an API") is starting a new
+project, so follow "Starting a new project" below before anything else.
+Don't build features, hand-edit files to switch the database or UI, or
+delete folders yourself: init does all of that, consistently. If the user
+wants to change the template itself, skip to "Working on the template
+itself".
+
+## Starting a new project
+
+Steps 1 to 4 normally end in one message to the user: what the checks
+found, anything to correct, the questions still open, and the `make init`
+command you propose. Nothing runs until they answer.
+
+### 1. Check the checkout
+
+Run these; don't assume.
+
+- `git remote -v`. If `origin` is the template (`ukharwa/kickstart`), the
+  new project would push into the template, so nothing may run until
+  that's fixed (asking the other questions meanwhile is fine). Two ways:
+  - **Recommended:** GitHub's "Use this template" button makes a separate
+    repository whose history starts with one commit. The user clones it
+    and opens Claude Code there, and these checks run again in the new
+    clone.
+  - An empty repository that this checkout's `origin` is pointed at. Once
+    the user gives its URL, run `git remote set-url origin URL` yourself
+    and check `git ls-remote origin` lists nothing (it must be empty).
+    Quicker, but the project keeps the template's history.
+
+  No `origin` at all is fine.
+- `git status`. Init refuses uncommitted changes; ask before committing or
+  stashing anything.
+- `go version`: 1.27 or newer is required.
+- `docker info` and `docker compose version`: Docker with the Compose
+  plugin runs the development services, Postgres's tests and the
+  production stack.
+- `cc --version`: `make tools` builds sqlc, which needs a C compiler.
+- Whether the ports the new project uses in development are free:
+  `ss -ltn` (or `lsof -i`) for 8080 (the app), 5432 (Postgres, if
+  chosen), 1025 and 8025 (Mailpit), and `docker ps` to see what holds
+  them. Another project's dev services often do, the template's own
+  included. Recommend the next free ports, moved in the new project's
+  `.env` (step 5); stop someone else's containers only if the user says
+  so.
+
+If something required is missing, say what to install before going on.
+
+### 2. Work out the options
+
+Map what the user asked for onto init's options. Then ask about whatever is
+still open, recommending an answer for each.
+
+| Option | Values | Default | Notes |
+|---|---|---|---|
+| `NAME` | lowercase letters, digits and hyphens, starting with a letter | none | Names the command (`cmd/NAME`), containers, database and image. Use the user's name for it; proposing the repository's name for them to confirm is fine, picking one silently isn't. Init refuses `kickstart`, the template's own name. |
+| `MODULE` | a Go module path | `github.com/ukharwa/NAME` | Take it from `origin` when there is one: `git@github.com:OWNER/REPO.git` means `github.com/OWNER/REPO`. Pass `MODULE=` whenever that differs from the default (another owner, or a repository not named `NAME`). Off GitHub, the image is plain `NAME` and `APP_IMAGE` must be set for deploys. |
+| `DB` | `sqlite`, `postgres` | `sqlite` | Below. |
+| `UI` | `html`, `api` | `html` | Below. |
+| `MODULES` | a comma-separated list, `all` or `none` | `none` | Below. |
+
+How requests map:
+
+- **`UI=api`:** "API", "REST", "JSON", "backend for a mobile app", "React,
+  Vue, Svelte or another SPA frontend", "headless".
+- **`UI=html`:** "web app", "website", "server-rendered", "pages", "HTMX",
+  "forms", with no separate frontend.
+- **`DB=postgres`:** Postgres by name; several app servers; many users
+  writing at once; a managed database; Postgres features (full-text
+  search, JSONB).
+- **`DB=sqlite`:** SQLite by name; "simple", "one server", "small".
+- **`workspaces`:** teams, organisations, companies or accounts shared by
+  several users, multi-tenant, inviting colleagues, roles within a team.
+- **`admin`:** an admin panel or back office, managing users, retrying
+  failed jobs.
+- **`audit`:** an audit log or trail, activity history, compliance.
+- **`uploads`:** file uploads, attachments, images, documents, avatars.
+  Each file belongs to the user who uploaded it, and only they can fetch
+  it. Files attached to a feature's records, or shared by a team, are
+  built on top afterwards, reusing its storage and checks.
+- **`metrics`:** Prometheus, Grafana, monitoring, performance metrics.
+- **`errreport`:** Sentry, GlitchTip, Bugsink, error tracking or alerts.
+
+A database the user named is the one to use; mention a mismatch only when
+there's a real one (SQLite for an app that must run on several servers).
+When they didn't name one, recommend SQLite unless the app needs more than
+one server or heavy concurrent writes (README.md, "Which database should I
+pick?"). Recommend only the modules the description calls for, and list
+the rest in a line so the user can add any: init runs once, so modules
+can't be added by running it again.
+
+### 3. Correct what the template doesn't do
+
+Say so in the same message, with what the template does instead
+(DECISIONS.md has the reasons):
+
+- **MariaDB, MySQL, MongoDB or another database:** only SQLite and
+  PostgreSQL. MariaDB was dropped on purpose. PostgreSQL is the nearest
+  match; mention SQLite too if the app is small and nothing requires a
+  database server.
+- **Both pages and a JSON API in one project:** one UI mode per project. A
+  browser frontend goes with `UI=api`.
+- **A React (or other SPA) frontend:** init doesn't create it. It lives in
+  its own folder (say `frontend/`) or repository and talks to `/api/` on
+  the same domain, so there's no CORS setup. In development, run its dev
+  server with a proxy sending `/api` to `http://localhost:8080`, and set
+  `APP_URL` to the dev server's address, because emailed links open
+  there. In production, Caddy serves its built files (the Caddyfile has
+  the block), so the image or `make deploy` must also ship the build.
+- **An OpenAPI or Swagger page:** not generated; "API" here means JSON
+  endpoints under `/api/`, each listed in its feature's `Routes` method.
+- **JWT:** not used. A browser frontend signs in with an HttpOnly session
+  cookie; mobile apps and scripts get revocable bearer tokens
+  (`POST /api/auth/token`).
+- **Social login (Google and others), two-factor login or passkeys:** not
+  included; they'd be built afterwards. Social login needs the OAuth flow,
+  linking accounts by verified email, and a migration allowing users
+  without a password (`password_hash` is required now).
+- **Uploads to S3:** the uploads module stores files on local disk; adding
+  S3 is a step in SCALING.md.
+- **Redis, Kubernetes, message queues or microservices:** left out by
+  design; SCALING.md shows where each fits as the app grows.
+- **Another framework, an ORM, GraphQL, gRPC, templ or Tailwind:** not part
+  of the template, whose conventions assume its own stack. Point out the
+  cost; it's the user's call.
+- **Changing an option later:** init runs once and deletes itself, so the
+  database, UI mode and modules are fixed by this step. Moving from SQLite
+  to PostgreSQL later is a documented job (SCALING.md); adding a module
+  means copying it across from a fresh copy of the template.
+
+If a request rests on a misunderstanding, say so plainly. If the user
+still wants something unsupported, explain what it would take and let them
+decide.
+
+### 4. Propose the command
+
+Give the exact command with one line per choice and its reason, for
+example `make init NAME=shop DB=postgres UI=api MODULES=workspaces,admin`,
+plus any port changes, and wait for the user's yes.
+
+### 5. Run it and check the result
+
+```bash
+make init NAME=… MODULE=… DB=… UI=… MODULES=…
+cp .env.example .env
+```
+
+Leave out `MODULE=` when it's the default. If step 1 found ports taken,
+move them in `.env` now, as "Local ports" under "Commands" lists.
+
+Then:
+
+```bash
+make services
+make test
+make tools
+make check
+```
+
+`make services` starts Mailpit, and Postgres for a Postgres project, whose
+tests need it. `make tools` installs the pinned linters and sqlc into
+`bin/`, and `make check` runs everything CI runs (it downloads the
+vulnerability checker). If a step fails, stop and report it: nothing is
+committed yet, so `git status` shows what init changed and git can undo
+it.
+
+If the user wants to see the app, also run `make seed` and `make run`
+(leave it running in the background), check `http://localhost:8080/readyz`
+(or the moved port) answers, and give them the addresses (with any moved
+ports), the seed logins (`admin@example.com` and `user@example.com`,
+password `dev-password-123`) and Mailpit's inbox.
+
+### 6. Hand over
+
+Show `git status` and offer to commit. Mention that `make remove-example`
+deletes the notes example if the user doesn't want it (before the first
+deploy), and that README.md covers running, deploying and backups. From
+then on this file describes the project itself: follow it.
+
 ## Working on the template itself
 
 This repository is the kickstart template. Before `make init`, it is a
@@ -76,12 +259,98 @@ query that can't be shared goes in `internal/<feature>/sqlite/` and
 `sqlc.yaml`; init flattens the chosen one into the feature folder.
 <!-- kickstart:end -->
 
+## This project
+
+It was created from a template by `INIT_COMMAND`, run on commit
+`INIT_COMMIT`: the template as it was just before init, which this
+repository's history keeps. That chose:
+
+<!-- kickstart:begin db=sqlite -->
+- **Database:** SQLite, on one server. SCALING.md covers moving to a
+  database server when the app needs more than one.
+<!-- kickstart:end -->
+<!-- kickstart:begin db=postgres -->
+- **Database:** PostgreSQL.
+<!-- kickstart:end -->
+<!-- kickstart:begin ui=html -->
+- **UI:** server-rendered pages with HTMX.
+<!-- kickstart:end -->
+<!-- kickstart:begin ui=api -->
+- **UI:** a JSON API under `/api/`, for a separate frontend or a mobile
+  app.
+<!-- kickstart:end -->
+<!-- kickstart:begin module=workspaces -->
+- **Module:** workspaces (teams sharing data).
+<!-- kickstart:end -->
+<!-- kickstart:begin module=admin -->
+- **Module:** admin (managing users and failed jobs).
+<!-- kickstart:end -->
+<!-- kickstart:begin module=audit -->
+- **Module:** audit (security events kept in a table).
+<!-- kickstart:end -->
+<!-- kickstart:begin module=uploads -->
+- **Module:** uploads (users' files).
+<!-- kickstart:end -->
+<!-- kickstart:begin module=metrics -->
+- **Module:** metrics (Prometheus and the profiler).
+<!-- kickstart:end -->
+<!-- kickstart:begin module=errreport -->
+- **Module:** errreport (error reports to Sentry and compatible services).
+<!-- kickstart:end -->
+
+The init step deleted itself, so these can't be changed by a setting.
+Asked to change one, say what it involves first, then follow "Changing
+what init chose" below rather than editing your way there piecemeal.
+
+## Changing what init chose
+
+To switch the database or UI mode, or to add one of the template's other
+optional modules, let init work out the change:
+
+1. Make two scratch copies of the template commit above, outside this
+   repository: `git archive INIT_COMMIT | tar -x -C DIR` for each.
+2. In one, run the command above unchanged; in the other, the same command
+   with the new options.
+3. `diff -ruN old new` is exactly what the change needs. Compare the first
+   copy with this repository too: anything that differs there is the
+   project's own work, which the change must keep. (The copies aren't git
+   checkouts, so they record the commit as `unknown`; ignore that line.)
+4. If nothing has been built yet (this repository still matches the first
+   copy), the second copy can simply replace these files. Otherwise apply
+   the diff here (`patch -p1 --dry-run` first) and settle each conflict by
+   hand.
+5. A module's migration needs a number after this project's latest, since
+   goose won't apply an older number to a database that's past it.
+6. Run `make generate`, `make test` and `make check`, and update the
+   record of this command above and the matching decision in
+   DECISIONS.md, with a dated note rather than rewriting it.
+
+Moving an existing database's data into a new one is a separate step:
+SCALING.md covers it.
+<!-- kickstart:begin module=workspaces,module=admin,module=audit,module=uploads,module=metrics,module=errreport -->
+README.md ("Removing a module") explains taking a module out.
+<!-- kickstart:end -->
+
 ## Commands
 
 - `make services`: start the dev services. Mailpit's inbox at
   <http://localhost:8025> catches every email the app sends.
   <!-- kickstart:begin db=postgres -->
   Postgres is needed by `run` and `test`.
+  <!-- kickstart:end -->
+- **Local ports:** the app uses 8080 and Mailpit 1025 and 8025
+  <!-- kickstart:begin db=postgres -->
+  (Postgres 5432)
+  <!-- kickstart:end -->
+  in development. When another project already holds one (`ss -ltn`,
+  `docker ps`), move it in `.env`, taking the next free port, rather than
+  stopping that project. These settings move together:
+  - the app: `HTTP_ADDR` and `APP_URL`
+  - Mailpit: `MAILPIT_SMTP_PORT` with `SMTP_PORT`, and `MAILPIT_PORT` (its
+    inbox)
+  <!-- kickstart:begin db=postgres -->
+  - Postgres: `POSTGRES_PORT`, with the port in `DATABASE_URL` and
+    `TEST_DATABASE_URL`
   <!-- kickstart:end -->
 - `make run`: run the HTTP server and job worker (reads `.env`; copy
   `.env.example` first)
@@ -281,8 +550,19 @@ query that can't be shared goes in `internal/<feature>/sqlite/` and
    for every route.
 <!-- example:begin -->
 
-`internal/notes/` does each step; copy it and rename.
+`internal/notes/` does each step; copy it and rename. If the notes example
+grows into a real feature instead, delete its `example:begin` and
+`example:end` markers (and `make remove-example` with them), so its code
+is never removed by mistake.
 <!-- example:end -->
+
+A feature may use the project's modules; the modules themselves still
+don't depend on each other.
+<!-- kickstart:begin module=uploads -->
+Files attached to a feature's records go through `uploads.Service`, with
+`uploads.Limit`, `uploads.RequestContext` and `uploads.FilePart` in the
+handlers and a link table from the feature's rows to `uploads(id)`.
+<!-- kickstart:end -->
 
 ## Conventions
 

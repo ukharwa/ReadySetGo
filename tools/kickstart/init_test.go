@@ -215,3 +215,28 @@ func TestJoinLocalImports(t *testing.T) {
 		t.Errorf("got:\n%s\nwant:\n%s", got, want)
 	}
 }
+
+func TestRecordInit(t *testing.T) {
+	t.Parallel()
+	o := postgresAPI
+	o.commit = "abc123def456"
+	got := recordInit("Made by `INIT_COMMAND` from commit INIT_COMMIT.\n", o)
+	want := "Made by `make init NAME=myapp MODULE=github.com/me/myapp DB=postgres UI=api MODULES=uploads` from commit abc123def456.\n"
+	if got != want {
+		t.Errorf("got  %q\nwant %q", got, want)
+	}
+	if got := recordInit("INIT_COMMIT", sqliteHTML); got != "unknown" {
+		t.Errorf("without a commit: %q", got)
+	}
+	if got := sqliteHTML.command(); !strings.HasSuffix(got, " MODULES=none") {
+		t.Errorf("no modules: %q", got)
+	}
+}
+
+func TestValidateRejectsTemplateName(t *testing.T) {
+	t.Parallel()
+	o := options{name: "kickstart", db: "sqlite", ui: "html"}
+	if err := o.validate(); err == nil || !strings.Contains(err.Error(), "template's own name") {
+		t.Errorf("err = %v", err)
+	}
+}

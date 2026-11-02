@@ -623,6 +623,13 @@ the constraint from the other. Postgres is therefore tested through
 the working tree and then the full test suite. **Considered:** building
 both databases in place with build tags, which would need build-tagged
 generated code and every shared file to compile both ways.
+
+Init writes its own command and the template commit it ran on into the
+project's `CLAUDE.md`. Changing a choice later (another database, a module
+added) then means running init on two scratch copies of that commit, with
+the old options and the new, and applying their difference. **Considered:**
+a separate tool for each kind of change, which would have to stay in step
+with init.
 <!-- kickstart:end -->
 
 ### Linting: golangci-lint v2

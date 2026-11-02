@@ -27,7 +27,7 @@ func NewAPI(svc *Service) *API {
 func (h *API) Routes(mux *http.ServeMux) {
 	user := func(f http.HandlerFunc) http.Handler { return auth.RequireUser(f) }
 	mux.Handle("GET /api/uploads", user(h.list))
-	mux.Handle("POST /api/uploads", auth.RequireUser(limitUpload(http.HandlerFunc(h.upload))))
+	mux.Handle("POST /api/uploads", auth.RequireUser(Limit(http.HandlerFunc(h.upload))))
 	mux.Handle("GET /api/uploads/{uploadID}", user(h.download))
 	mux.Handle("DELETE /api/uploads/{uploadID}", user(h.delete))
 }
@@ -76,11 +76,11 @@ func (h *API) list(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *API) upload(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := uploadContext(w, r)
+	ctx, cancel := RequestContext(w, r)
 	defer cancel()
 	r = r.WithContext(ctx)
 	me, _ := auth.UserFrom(ctx)
-	part, err := filePart(r)
+	part, err := FilePart(r)
 	if err != nil {
 		h.fail(w, r, err)
 		return

@@ -32,6 +32,12 @@ and start on the features.
 3. Commit, push, and follow the rest of this README, which is now the
    project's own.
 
+Or let Claude Code do steps 2 and 3: open it in the new repository and
+describe the app ("a Postgres API for a mobile app, with teams and file
+uploads"). `CLAUDE.md` tells it to check the checkout, ask about anything
+missing, point out what the template doesn't support, and confirm the
+`make init` command with you before running it.
+
 The modules:
 
 | Module | Adds |
@@ -180,6 +186,10 @@ with, `admin@example.com` and `user@example.com`, both with the password
 <!-- kickstart:begin db=postgres -->
 - Postgres
 <!-- kickstart:end -->
+
+If another project already uses one of these ports (or the app's 8080),
+change it in `.env`; CLAUDE.md ("Local ports") lists the settings that move
+together.
 
 `make up` runs the production stack (the app behind Caddy) on your machine
 at https://localhost, with Caddy's own certificate authority.

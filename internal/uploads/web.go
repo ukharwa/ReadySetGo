@@ -37,7 +37,7 @@ func NewWeb(svc *Service, rd *web.Renderer) (*Web, error) {
 func (h *Web) Routes(mux *http.ServeMux) {
 	user := func(f http.HandlerFunc) http.Handler { return auth.RequireUser(f) }
 	mux.Handle("GET /uploads", user(h.list))
-	mux.Handle("POST /uploads", auth.RequireUser(limitUpload(http.HandlerFunc(h.upload))))
+	mux.Handle("POST /uploads", auth.RequireUser(Limit(http.HandlerFunc(h.upload))))
 	mux.Handle("GET /uploads/{uploadID}", user(h.download))
 	mux.Handle("POST /uploads/{uploadID}/delete", user(h.delete))
 }
@@ -66,12 +66,12 @@ func (h *Web) render(w http.ResponseWriter, r *http.Request, status int, message
 }
 
 func (h *Web) upload(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := uploadContext(w, r)
+	ctx, cancel := RequestContext(w, r)
 	defer cancel()
 	r = r.WithContext(ctx)
 	u, _ := auth.UserFrom(ctx)
 	var saved Upload
-	part, err := filePart(r)
+	part, err := FilePart(r)
 	if err == nil {
 		saved, err = h.svc.Save(ctx, u.ID, part.FileName(), part)
 	}

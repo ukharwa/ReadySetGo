@@ -34,6 +34,7 @@ type options struct {
 	db      string
 	ui      string
 	modules []string
+	commit  string // the template commit init ran on, if known
 
 	dialectDirs  []string // the chosen database's folders; set by initProject
 	replacedDirs []string // see replacedDirs; set by initProject
@@ -93,6 +94,9 @@ func (o *options) validate() error {
 	var errs []error
 	if !validName.MatchString(o.name) {
 		errs = append(errs, fmt.Errorf("NAME %q: use lowercase letters, digits and hyphens, starting with a letter", o.name))
+	}
+	if o.name == "kickstart" {
+		errs = append(errs, errors.New("NAME kickstart: that's the template's own name; give the project its own"))
 	}
 	if o.module == "" {
 		o.module = "github.com/ukharwa/" + o.name

@@ -78,14 +78,12 @@ The queries are portable and sqlc generates the same Go functions for both
 databases, so this is a configuration and data-copy job rather than a
 rewrite.
 
-1. Get the Postgres pieces from the template this project came from:
-   initialise a scratch copy with the same `NAME`, `MODULE`, `UI` and
-   `MODULES` and `DB=postgres`, and copy across `internal/db/postgres.go`
-   (replacing `sqlite.go`), `migrations/` for Postgres, the Postgres
-   `sqlc.yaml`, the `compose.yaml` and `compose.dev.yaml` services, the CI
-   database service, `deploy/backup-postgres.sh` and the Postgres settings
-   in `internal/config` and `.env.example`. Swap the driver in `go.mod`
-   (`go get github.com/jackc/pgx/v5`, `go mod tidy`).
+1. Switch the code with CLAUDE.md's "Changing what init chose": init on
+   two scratch copies of the template commit, the recorded command and the
+   same with `DB=postgres`, and their diff is the whole change (the
+   driver, the database code and its tests, migrations, generated queries,
+   Compose services, CI, backups and docs, with the SQLite-only `backup`
+   and `restore` commands gone).
 2. Rewrite your own features' migrations for Postgres: `TEXT` ids become
    `uuid`, `DATETIME` becomes `timestamptz`, `INTEGER` becomes `bigint`;
    name constraints as the existing migrations do. Then `make generate` and
