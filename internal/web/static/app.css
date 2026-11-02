@@ -73,7 +73,7 @@ form.stack { display: grid; gap: 1rem; margin: 1rem 0; }
 form.stack button { justify-self: start; }
 label { display: grid; gap: 0.3rem; font-weight: 500; }
 label.check { display: flex; align-items: center; gap: 0.5rem; font-weight: normal; }
-input[type="email"], input[type="password"], input[type="text"], textarea, select {
+input[type="email"], input[type="password"], input[type="text"], input[type="search"], textarea, select {
   font: inherit;
   padding: 0.55rem 0.7rem;
   border: 1px solid var(--border);
@@ -122,6 +122,27 @@ form.inline { display: inline; }
 
 ul.list { padding-left: 1.2rem; }
 ul.list li { margin: 0.4rem 0; }
+
+/* Tables and lists of records */
+.table-scroll { overflow-x: auto; margin: 1rem 0; }
+table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+th, td { text-align: left; vertical-align: top; padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--border); }
+th { font-weight: 600; white-space: nowrap; }
+td time { white-space: nowrap; }
+form.filter { display: flex; flex-wrap: wrap; align-items: end; gap: 0.75rem; margin: 1rem 0; }
+form.filter input { width: 18rem; max-width: 100%; }
+.pager { display: flex; gap: 1.5rem; }
+dl.details { display: grid; grid-template-columns: max-content 1fr; gap: 0.4rem 1.5rem; }
+dl.details dt { color: var(--muted); }
+dl.details dd { margin: 0; }
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 
 section.card {
   border: 1px solid var(--border);

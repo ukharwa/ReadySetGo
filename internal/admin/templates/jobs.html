@@ -1,0 +1,32 @@
+{{define "title"}}Failed jobs{{end}}
+
+{{define "content"}}
+<p class="muted"><a href="/admin/users">Users</a> · <a href="/admin/jobs">Failed jobs</a></p>
+<h1>Failed jobs</h1>
+<p class="muted">Background jobs that failed on every attempt, newest first. Times are UTC; failed jobs are deleted after 30 days.</p>
+
+<div class="table-scroll">
+<table>
+  <thead>
+    <tr><th>Failed</th><th>Kind</th><th>Attempts</th><th>Last error</th><th><span class="visually-hidden">Action</span></th></tr>
+  </thead>
+  <tbody>
+    {{range .Data}}
+    <tr>
+      <td><time datetime="{{.FailedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{.FailedAt.Format "2 Jan 2006 15:04"}}</time></td>
+      <td><code>{{.Kind}}</code></td>
+      <td>{{.Attempts}}</td>
+      <td>{{.LastError}}</td>
+      <td>
+        <form method="post" action="/admin/jobs/{{.ID}}/retry" class="inline">
+          <button type="submit" class="link">Retry</button>
+        </form>
+      </td>
+    </tr>
+    {{else}}
+    <tr><td colspan="5" class="muted">No failed jobs.</td></tr>
+    {{end}}
+  </tbody>
+</table>
+</div>
+{{end}}

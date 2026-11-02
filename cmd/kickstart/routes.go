@@ -11,6 +11,12 @@ import (
 	"github.com/ukharwa/kickstart/internal/httpx"
 
 	// kickstart:begin ui=api
+	// kickstart:begin module=admin
+	"github.com/ukharwa/kickstart/internal/admin"
+	// kickstart:end
+	// kickstart:begin module=audit
+	"github.com/ukharwa/kickstart/internal/audit"
+	// kickstart:end
 	// kickstart:begin module=workspaces
 	"github.com/ukharwa/kickstart/internal/workspaces"
 	// kickstart:end
@@ -39,6 +45,12 @@ func routes(cfg config.Config, logger *slog.Logger, health *httpx.Health, svc *s
 	auth.NewAPI(svc.accounts, svc.limiter).Routes(app)
 	// kickstart:begin module=workspaces
 	workspaces.NewAPI(svc.workspaces).Routes(app)
+	// kickstart:end
+	// kickstart:begin module=audit
+	audit.NewAPI(svc.audit).Routes(app)
+	// kickstart:end
+	// kickstart:begin module=admin
+	admin.NewAPI(svc.admin).Routes(app)
 	// kickstart:end
 	// kickstart:end
 

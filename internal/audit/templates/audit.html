@@ -1,0 +1,40 @@
+{{define "title"}}Audit log{{end}}
+
+{{define "content"}}
+<h1>Audit log</h1>
+<p class="muted">Security events, newest first. Times are UTC.</p>
+
+<form method="get" action="/admin/audit" class="filter">
+  <label>Account
+    <input type="search" name="email" value="{{.Data.Email}}" placeholder="Email address">
+  </label>
+  <button type="submit" class="secondary">Show</button>
+  {{if .Data.Email}}<a href="/admin/audit">Show all</a>{{end}}
+</form>
+
+<div class="table-scroll">
+<table>
+  <thead>
+    <tr><th>Time</th><th>Event</th><th>Account</th><th>By</th><th>IP address</th></tr>
+  </thead>
+  <tbody>
+    {{range .Data.Entries}}
+    <tr>
+      <td><time datetime="{{.At.Format "2006-01-02T15:04:05Z07:00"}}">{{.At.Format "2 Jan 2006 15:04:05"}}</time></td>
+      <td>{{.Event}}{{with .Detail}} <span class="muted">({{.}})</span>{{end}}</td>
+      <td>{{or .UserEmail "—"}}</td>
+      <td>{{or .ActorEmail "—"}}</td>
+      <td>{{or .IP "—"}}</td>
+    </tr>
+    {{else}}
+    <tr><td colspan="5" class="muted">No events{{if .Data.Email}} for {{.Data.Email}}{{end}}.</td></tr>
+    {{end}}
+  </tbody>
+</table>
+</div>
+
+<p class="pager">
+  {{with .Data.Newer}}<a href="{{.}}">← Newer</a>{{end}}
+  {{with .Data.Older}}<a href="{{.}}">Older →</a>{{end}}
+</p>
+{{end}}

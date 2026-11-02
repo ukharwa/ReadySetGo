@@ -1,0 +1,66 @@
+{{define "title"}}{{.Data.User.Email}}{{end}}
+
+{{define "content"}}
+{{$u := .Data.User}}
+<p class="muted"><a href="/admin/users">Users</a> · <a href="/admin/jobs">Failed jobs</a></p>
+<h1>{{$u.Email}}</h1>
+{{with .Data.Error}}<p class="error-summary" role="alert">{{.}}</p>{{end}}
+
+<dl class="details">
+  <dt>Role</dt><dd>{{$u.Role}}</dd>
+  <dt>Email address</dt><dd>{{if $u.EmailVerified}}confirmed{{else}}not confirmed yet{{end}}</dd>
+  <dt>Status</dt><dd>{{if $u.Disabled}}disabled{{else}}active{{end}}</dd>
+  <dt>Joined</dt><dd>{{$u.CreatedAt.Format "2 Jan 2006 15:04"}} UTC</dd>
+</dl>
+
+{{if .Data.Self}}
+<p class="muted">This is your own account. Another admin, or the command line, can change it.</p>
+{{else}}
+<section class="card">
+  <h2>Role</h2>
+  <form method="post" action="/admin/users/{{$u.ID}}/role" class="stack">
+    <label>Role
+      <select name="role">
+        <option value="user" {{if eq $u.Role "user"}}selected{{end}}>user</option>
+        <option value="admin" {{if eq $u.Role "admin"}}selected{{end}}>admin</option>
+      </select>
+    </label>
+    <button type="submit" class="secondary">Change role</button>
+  </form>
+</section>
+
+{{if not $u.EmailVerified}}
+<section class="card">
+  <h2>Confirmation link</h2>
+  <p>The address isn't confirmed yet. Sending a new link cancels the old one.</p>
+  <form method="post" action="/admin/users/{{$u.ID}}/verification" class="stack">
+    <button type="submit" class="secondary">Send a new link</button>
+  </form>
+</section>
+{{end}}
+
+<section class="card">
+  <h2>Access</h2>
+  {{if $u.Disabled}}
+  <p>The account can't log in. Its data is kept.</p>
+  <form method="post" action="/admin/users/{{$u.ID}}/enable" class="stack">
+    <button type="submit" class="secondary">Enable the account</button>
+  </form>
+  {{else}}
+  <p>Disabling the account logs it out everywhere and stops it logging in. Its data is kept.</p>
+  <form method="post" action="/admin/users/{{$u.ID}}/disable" class="stack">
+    <button type="submit" class="danger">Disable the account</button>
+  </form>
+  {{end}}
+</section>
+
+<section class="card">
+  <h2>Delete the account</h2>
+  <p>This deletes the account and everything that belongs to it, straight away. It can't be undone.</p>
+  <form method="post" action="/admin/users/{{$u.ID}}/delete" class="stack">
+    <label class="check"><input type="checkbox" required> I understand this can't be undone</label>
+    <button type="submit" class="danger">Delete {{$u.Email}}</button>
+  </form>
+</section>
+{{end}}
+{{end}}

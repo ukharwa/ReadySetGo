@@ -16,6 +16,12 @@ import (
 	"github.com/ukharwa/kickstart/internal/logging"
 	"github.com/ukharwa/kickstart/internal/ratelimit"
 
+	// kickstart:begin module=admin
+	"github.com/ukharwa/kickstart/internal/admin"
+	// kickstart:end
+	// kickstart:begin module=audit
+	"github.com/ukharwa/kickstart/internal/audit"
+	// kickstart:end
 	// kickstart:begin module=workspaces
 	"github.com/ukharwa/kickstart/internal/workspaces"
 	// kickstart:end
@@ -85,6 +91,12 @@ type services struct {
 	// kickstart:begin module=workspaces
 	workspaces *workspaces.Service
 	// kickstart:end
+	// kickstart:begin module=audit
+	audit *audit.Service
+	// kickstart:end
+	// kickstart:begin module=admin
+	admin *admin.Service
+	// kickstart:end
 }
 
 // newServices builds the services, with sessions in the database.
@@ -107,6 +119,12 @@ func newServices(cfg config.Config, d *db.DB, logger *slog.Logger) (*services, e
 	if err != nil {
 		return nil, err
 	}
+	// kickstart:end
+	// kickstart:begin module=audit
+	s.audit = audit.NewService(d, s.accounts, logger)
+	// kickstart:end
+	// kickstart:begin module=admin
+	s.admin = admin.NewService(d, s.accounts, logger)
 	// kickstart:end
 	return s, nil
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"net"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ukharwa/kickstart/internal/auth"
 	"github.com/ukharwa/kickstart/internal/db/dbtest"
 )
 
@@ -110,6 +112,30 @@ func TestMigrateStatus(t *testing.T) {
 	}
 	if !strings.Contains(out.String(), "00001_users.sql") || strings.Contains(out.String(), "pending") {
 		t.Errorf("status after up should list 00001_users.sql as applied:\n%s", out.String())
+	}
+}
+
+func TestUserCommand(t *testing.T) {
+	t.Parallel()
+	env := map[string]string{"APP_ENV": "dev", "LOG_LEVEL": "error", "DATABASE_URL": dbtest.URL(t)}
+	getenv := func(k string) string { return env[k] }
+	user := func(args ...string) error {
+		return run(t.Context(), append([]string{"user"}, args...), getenv, io.Discard)
+	}
+	if err := run(t.Context(), []string{"seed"}, getenv, io.Discard); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	for _, args := range [][]string{{"promote", "user@example.com"}, {"disable", "user@example.com"}, {"delete", "user@example.com"}} {
+		if err := user(args...); err != nil {
+			t.Errorf("user %v: %v", args, err)
+		}
+	}
+	if err := user("enable", "user@example.com"); !errors.Is(err, auth.ErrUserNotFound) {
+		t.Errorf("enabling a deleted user: err = %v, want ErrUserNotFound", err)
+	}
+	if err := user("rename", "admin@example.com"); err == nil || !strings.Contains(err.Error(), "usage") {
+		t.Errorf("unknown action: err = %v, want the usage", err)
 	}
 }
 

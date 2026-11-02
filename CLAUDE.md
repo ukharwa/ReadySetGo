@@ -90,7 +90,7 @@ query that can't be shared goes in `internal/<feature>/sqlite/` and
 - `make seed`: add `admin@example.com` and `user@example.com`, both with
   the password `dev-password-123` (dev only)
 - `go run ./cmd/kickstart user promote EMAIL`: make a user an admin (also
-  `demote`, `disable`, `enable`)
+  `demote`, `disable`, `enable`, `delete`)
 - `make up` / `make down`: run the production stack (`compose.yaml`: the
   app behind Caddy) locally at https://localhost:8443
 - `make deploy DEPLOY_HOST=user@server`: copy `compose.yaml` and `deploy/`
@@ -146,12 +146,35 @@ query that can't be shared goes in `internal/<feature>/sqlite/` and
   `api.go` is the JSON API under `/api/auth/`.
   <!-- kickstart:end -->
   Other features react to accounts through `OnUserCreated` and
-  `OnUserDeleting` hooks, which run inside the same transaction.
+  `OnUserDeleting` hooks, and to security events (failed logins, role
+  changes, …) through `OnEvent`; all run inside the same transaction.
 <!-- kickstart:begin module=workspaces -->
 - `internal/workspaces/`: workspaces, their members (owner, admin, member)
   and email invitations. `middleware.go` resolves `{workspaceID}` and
   answers 404 to non-members; `workspacestest/` signs people in with their
   personal workspace for tests.
+<!-- kickstart:end -->
+<!-- kickstart:begin module=admin -->
+<!-- kickstart:begin ui=html -->
+- `internal/admin/`: the admin pages under `/admin/`: users (role,
+  disabling, deleting, verification links) and failed jobs to retry.
+<!-- kickstart:end -->
+<!-- kickstart:begin ui=api -->
+- `internal/admin/`: the admin endpoints under `/api/admin/`: users (role,
+  disabling, deleting, verification links) and failed jobs to retry.
+<!-- kickstart:end -->
+  Account changes go through `auth.Service`, like the CLI's; admins can't
+  change their own account there.
+<!-- kickstart:end -->
+<!-- kickstart:begin module=audit -->
+- `internal/audit/`: keeps every security event in the `audit_events`
+  table (an `OnEvent` hook) and lists them for admins
+  <!-- kickstart:begin ui=html -->
+  at `/admin/audit`.
+  <!-- kickstart:end -->
+  <!-- kickstart:begin ui=api -->
+  at `/api/admin/audit-events`.
+  <!-- kickstart:end -->
 <!-- kickstart:end -->
 <!-- kickstart:begin ui=html -->
 - `internal/web/`: the page layout, renderer, stylesheet, HTMX and flash
@@ -181,6 +204,10 @@ query that can't be shared goes in `internal/<feature>/sqlite/` and
   `db.ErrConflict` with `errors.Is`; never check driver error types.
 - **IDs:** UUIDv7 from `db.NewID()`, generated in Go before the insert.
   Name UUID columns `id` or `<thing>_id`.
+  <!-- kickstart:begin db=sqlite -->
+  A nullable UUID column needs its own entry in `sqlc.yaml`'s overrides
+  (see the comment there).
+  <!-- kickstart:end -->
 - **Timestamps:** set from Go with `db.Now()` (UTC, microseconds), never by
   database defaults.
 - **Emails and usernames:** trim and lowercase in Go before saving or
@@ -210,7 +237,9 @@ query that can't be shared goes in `internal/<feature>/sqlite/` and
 - **Context:** `context.Context` is the first parameter. Every database and
   outbound call uses a context with a timeout.
 - **Logging:** use slog's `…Context` methods. Never log passwords, tokens,
-  cookies, emails, query strings or database URLs.
+  cookies, emails, query strings or database URLs. Changes to accounts go
+  through `auth.Service`, which logs each as a security event with the
+  user, the acting user, the IP address and the request ID.
 - **State:** no package-level mutable state; dependencies are built in
   `main` and passed explicitly. Nothing may assume a single instance.
 - **Background work:**

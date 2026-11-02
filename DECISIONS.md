@@ -373,7 +373,7 @@ factor. A breached-password check (Have I Been Pwned) is skipped for now.
 ### Roles: a `role` column
 
 `user` or `admin`, with `auth.RequireRole("admin")` middleware and
-`app user promote|demote|disable|enable` so the first admin never needs a
+`app user promote|demote|disable|enable|delete` so the first admin never needs a
 default password. **Considered:** full role-based permissions (RBAC), which apps
 this size don't need yet.
 
@@ -423,6 +423,17 @@ comes from `X-Forwarded-For` only when the request arrives from
 `TRUSTED_PROXIES`. The default store is in memory and per instance, so two
 instances allow up to twice the attempts; `SCALING.md` covers a shared
 store. **Considered:** database-backed counters from the start.
+
+### Security events: logged by the account service
+
+Logins and failed logins, password resets and changes, email changes, new
+accounts, role changes, and disabling and deleting accounts are each logged
+as a `security event` line: the event, the user's ID, the acting user's ID,
+a detail such as the new role, the IP address and the request ID, never an
+email address. The account service records them, so the CLI's changes are
+covered too, and `OnEvent` hooks receive each one inside the change's
+transaction. **Considered:** logging in the handlers, which would miss the
+CLI.
 
 ### Email: SMTP through the job queue
 
@@ -686,16 +697,31 @@ that point. `SCALING.md` step 6 covers it.
 
 User search and detail, role changes, disabling and deleting users,
 resending verification, and a failed-jobs list with retry, behind
-`requireRole("admin")`. **Considered:** CLI subcommands only.
+`auth.RequireRole(auth.RoleAdmin)`; JSON endpoints in API mode.
+- Changes go through the account service, so they are checked, logged and
+  hooked exactly like the CLI's.
+- Admins can't change their own account there, so no one locks themselves
+  out by accident; another admin, or the CLI, can.
+- Failed jobs never show their payload: an email job's holds its links,
+  tokens included. Retrying gives a job a fresh set of attempts.
+
+**Considered:** CLI subcommands only.
 <!-- kickstart:end -->
 
 <!-- kickstart:begin module=audit -->
 ### Audit log
 
-Security events always go to the logs; this module also keeps them in an
-`audit_events` table with its own admin-only page. When a user is deleted,
-their rows stay with the user reference cleared. **Considered:** making the
-table part of the core.
+Security events always go to the logs; this module also keeps them, for
+good, in an `audit_events` table, with its own admin-only page (filtered by
+account, 50 a page).
+- Each event is written in the transaction of the change it describes, so
+  it exists exactly when the change does; if it can't be written, the change
+  rolls back.
+- When a user is deleted, their rows stay and the database clears the
+  reference to them (`ON DELETE SET NULL`).
+
+**Considered:** making the table part of the core, and writing events after
+the change commits, which could lose some.
 <!-- kickstart:end -->
 
 <!-- kickstart:begin module=metrics -->

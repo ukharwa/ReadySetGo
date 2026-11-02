@@ -20,6 +20,12 @@
       <!-- kickstart:begin module=workspaces -->
       <a href="/workspaces">Workspaces</a>
       <!-- kickstart:end -->
+      <!-- kickstart:begin module=admin -->
+      {{if eq .User.Role "admin"}}<a href="/admin/users">Admin</a>{{end}}
+      <!-- kickstart:end -->
+      <!-- kickstart:begin module=audit -->
+      {{if eq .User.Role "admin"}}<a href="/admin/audit">Audit log</a>{{end}}
+      <!-- kickstart:end -->
       <a href="/account">Account</a>
       <form method="post" action="/logout" class="inline"><button type="submit" class="link">Log out</button></form>
     {{else}}

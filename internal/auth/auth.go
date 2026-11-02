@@ -28,6 +28,8 @@ import (
 	"github.com/ukharwa/kickstart/internal/auth/store"
 	"github.com/ukharwa/kickstart/internal/db"
 	"github.com/ukharwa/kickstart/internal/email"
+	"github.com/ukharwa/kickstart/internal/httpx"
+	"github.com/ukharwa/kickstart/internal/logging"
 	"github.com/ukharwa/kickstart/internal/ratelimit"
 	"github.com/ukharwa/kickstart/internal/validate"
 )
@@ -118,6 +120,7 @@ type Service struct {
 	now       func() time.Time // replaced in tests
 	created   []Hook
 	deleting  []Hook
+	events    []EventHook
 }
 
 // Hook lets another feature act when an account is created or deleted,
@@ -139,6 +142,83 @@ func runHooks(ctx context.Context, tx *sql.Tx, hooks []Hook, u User) error {
 		}
 	}
 	return nil
+}
+
+// Names of the security events Service records.
+const (
+	EventUserCreated            = "user.created"
+	EventUserDeleted            = "user.deleted"
+	EventRoleChanged            = "user.role_changed"
+	EventUserDisabled           = "user.disabled"
+	EventUserEnabled            = "user.enabled"
+	EventLogin                  = "auth.login"
+	EventLoginFailed            = "auth.login_failed"
+	EventPasswordResetRequested = "auth.password_reset_requested"
+	EventPasswordReset          = "auth.password_reset"
+	EventPasswordChanged        = "auth.password_changed"
+	EventEmailChanged           = "auth.email_changed"
+)
+
+// Event is a security-relevant change to an account, or attempt at one.
+// Every event is logged; OnEvent hooks can also keep them.
+type Event struct {
+	Name      string    // one of the Event… constants
+	UserID    uuid.UUID // the account; uuid.Nil if none matched
+	ActorID   uuid.UUID // the logged-in user who acted; uuid.Nil for a visitor or the CLI
+	Detail    string    // such as the new role; never an address, password or token
+	IP        string    // the client's address, if the event came from a request
+	RequestID string
+	At        time.Time
+}
+
+// EventHook receives every event, inside the transaction of the change it
+// describes (or a transaction of its own), so what it writes commits with
+// the change. An error rolls the change back.
+type EventHook func(ctx context.Context, tx *sql.Tx, e Event) error
+
+// OnEvent adds a hook that runs for every security event.
+func (s *Service) OnEvent(h EventHook) { s.events = append(s.events, h) }
+
+// record logs an event and passes it to the event hooks, in tx or, if tx
+// is nil, in a transaction of its own.
+func (s *Service) record(ctx context.Context, tx *sql.Tx, e Event) error {
+	e.At, e.RequestID = s.now(), logging.RequestID(ctx)
+	if u, ok := UserFrom(ctx); ok {
+		e.ActorID = u.ID
+	}
+	if ip := httpx.ClientIP(ctx); e.IP == "" && ip.IsValid() {
+		e.IP = ip.String()
+	}
+	attrs := []any{"event", e.Name} // and whichever of the rest are known
+	if e.UserID != uuid.Nil {
+		attrs = append(attrs, "user_id", e.UserID)
+	}
+	if e.ActorID != uuid.Nil {
+		attrs = append(attrs, "actor_id", e.ActorID)
+	}
+	if e.Detail != "" {
+		attrs = append(attrs, "detail", e.Detail)
+	}
+	if e.IP != "" {
+		attrs = append(attrs, "ip", e.IP)
+	}
+	s.logger.InfoContext(ctx, "security event", attrs...)
+	run := func(tx *sql.Tx) error {
+		for _, h := range s.events {
+			if err := h(ctx, tx, e); err != nil {
+				return fmt.Errorf("event hook: %w", err)
+			}
+		}
+		return nil
+	}
+	switch {
+	case len(s.events) == 0:
+		return nil
+	case tx != nil:
+		return run(tx)
+	default:
+		return s.db.InTx(ctx, run)
+	}
 }
 
 // NewService returns a Service. It hashes one dummy password, so it takes a
@@ -280,6 +360,9 @@ func (s *Service) Register(ctx context.Context, address, password string) error 
 		if err := runHooks(ctx, tx, s.created, toUser(user)); err != nil {
 			return err
 		}
+		if err := s.record(ctx, tx, Event{Name: EventUserCreated, UserID: user.ID}); err != nil {
+			return err
+		}
 		token, err := createToken(ctx, q, user.ID, "verify_email", address, verifyTokenTTL, now)
 		if err != nil {
 			return err
@@ -309,16 +392,18 @@ func (s *Service) Login(ctx context.Context, address, password, ip string, life 
 	u, err := store.New(s.db.Write).GetUserByEmail(ctx, address)
 	if errors.Is(db.Err(err), db.ErrNotFound) {
 		_, _, _ = s.hasher.Verify(ctx, s.dummyHash, password)
-		return "", ErrInvalidCredentials
+		return "", s.loginFailed(ctx, uuid.Nil, ip, "unknown address")
 	} else if err != nil {
 		return "", err
 	}
 	ok, rehash, err := s.hasher.Verify(ctx, u.PasswordHash, password)
-	if err != nil {
+	switch {
+	case err != nil:
 		return "", err
-	}
-	if !ok || u.DisabledAt.Valid {
-		return "", ErrInvalidCredentials
+	case !ok:
+		return "", s.loginFailed(ctx, u.ID, ip, "wrong password")
+	case u.DisabledAt.Valid:
+		return "", s.loginFailed(ctx, u.ID, ip, "account disabled")
 	}
 
 	for _, k := range keys {
@@ -331,7 +416,19 @@ func (s *Service) Login(ctx context.Context, address, password, ip string, life 
 			s.logger.WarnContext(ctx, "re-hash password", "err", err)
 		}
 	}
-	return s.startSession(ctx, u.ID, life)
+	token, err := s.startSession(ctx, u.ID, life)
+	if err != nil {
+		return "", err
+	}
+	return token, s.record(ctx, nil, Event{Name: EventLogin, UserID: u.ID, IP: ip})
+}
+
+// loginFailed records a failed login and returns ErrInvalidCredentials.
+func (s *Service) loginFailed(ctx context.Context, userID uuid.UUID, ip, why string) error {
+	if err := s.record(ctx, nil, Event{Name: EventLoginFailed, UserID: userID, IP: ip, Detail: why}); err != nil {
+		return err
+	}
+	return ErrInvalidCredentials
 }
 
 func (s *Service) startSession(ctx context.Context, userID uuid.UUID, life Lifetime) (string, error) {
@@ -450,6 +547,9 @@ func (s *Service) RequestPasswordReset(ctx context.Context, address string) erro
 		if err != nil {
 			return err
 		}
+		if err := s.record(ctx, tx, Event{Name: EventPasswordResetRequested, UserID: u.ID}); err != nil {
+			return err
+		}
 		return s.sendEmail(ctx, tx, "reset_password.txt", address, map[string]any{"Link": s.link("/reset-password", token)})
 	})
 }
@@ -477,7 +577,10 @@ func (s *Service) ResetPassword(ctx context.Context, token, password string) err
 		}); err != nil {
 			return err
 		}
-		return q.DeleteUserTokens(ctx, store.DeleteUserTokensParams{UserID: t.UserID, Purpose: "reset_password"})
+		if err := q.DeleteUserTokens(ctx, store.DeleteUserTokensParams{UserID: t.UserID, Purpose: "reset_password"}); err != nil {
+			return err
+		}
+		return s.record(ctx, tx, Event{Name: EventPasswordReset, UserID: t.UserID})
 	})
 	if err != nil {
 		return err
@@ -519,7 +622,13 @@ func (s *Service) ChangePassword(ctx context.Context, u User, currentToken, curr
 	if err := s.checkCurrentPassword(ctx, u, "current_password", current); err != nil {
 		return err
 	}
-	if err := s.setPassword(ctx, store.New(s.db.Write), u.ID, password); err != nil {
+	err := s.db.InTx(ctx, func(tx *sql.Tx) error {
+		if err := s.setPassword(ctx, store.New(tx), u.ID, password); err != nil {
+			return err
+		}
+		return s.record(ctx, tx, Event{Name: EventPasswordChanged, UserID: u.ID})
+	})
+	if err != nil {
 		return err
 	}
 	return s.sessions.DeleteForUser(ctx, u.ID, hashToken(currentToken))
@@ -581,6 +690,9 @@ func (s *Service) ConfirmEmailChange(ctx context.Context, token string) error {
 		}); err != nil {
 			return db.Err(err)
 		}
+		if err := s.record(ctx, tx, Event{Name: EventEmailChanged, UserID: t.UserID}); err != nil {
+			return err
+		}
 		return s.sendEmail(ctx, tx, "email_changed.txt", old.Email, map[string]any{"NewEmail": t.Email})
 	})
 }
@@ -591,18 +703,37 @@ func (s *Service) DeleteAccount(ctx context.Context, u User, password string) er
 	if err := s.checkCurrentPassword(ctx, u, "password", password); err != nil {
 		return err
 	}
+	return s.DeleteUser(ctx, u.ID)
+}
+
+// DeleteUser deletes a user and everything that belongs to them, returning
+// ErrUserNotFound if there is no such user. A deletion hook may refuse with
+// validate.Errors.
+func (s *Service) DeleteUser(ctx context.Context, userID uuid.UUID) error {
 	err := s.db.InTx(ctx, func(tx *sql.Tx) error {
-		if err := runHooks(ctx, tx, s.deleting, u); err != nil {
+		q := store.New(tx)
+		row, err := q.GetUserByID(ctx, userID)
+		if errors.Is(db.Err(err), db.ErrNotFound) {
+			return ErrUserNotFound
+		} else if err != nil {
 			return err
 		}
-		return store.New(tx).DeleteUser(ctx, u.ID)
+		if err := runHooks(ctx, tx, s.deleting, toUser(row)); err != nil {
+			return err
+		}
+		// Recorded before the delete, so what a hook keeps can point at
+		// the user until the database clears the reference.
+		if err := s.record(ctx, tx, Event{Name: EventUserDeleted, UserID: userID}); err != nil {
+			return err
+		}
+		return q.DeleteUser(ctx, userID)
 	})
 	if err != nil {
 		return err
 	}
 	// The database deletes them with the user; a shared session store
 	// wouldn't.
-	return s.sessions.DeleteForUser(ctx, u.ID, "")
+	return s.sessions.DeleteForUser(ctx, userID, "")
 }
 
 // CreateUser adds a user directly, for the CLI and seed data.
@@ -629,7 +760,10 @@ func (s *Service) CreateUser(ctx context.Context, address, password, role string
 			return db.Err(err)
 		}
 		u = toUser(row)
-		return runHooks(ctx, tx, s.created, u)
+		if err := runHooks(ctx, tx, s.created, u); err != nil {
+			return err
+		}
+		return s.record(ctx, tx, Event{Name: EventUserCreated, UserID: u.ID})
 	})
 	return u, err
 }
@@ -644,33 +778,54 @@ func (s *Service) MarkEmailVerified(ctx context.Context, tx *sql.Tx, userID uuid
 	return err
 }
 
-// SetRole gives the user with address a role.
-func (s *Service) SetRole(ctx context.Context, address, role string) error {
+// UserByEmail returns the user with address, or ErrUserNotFound.
+func (s *Service) UserByEmail(ctx context.Context, address string) (User, error) {
 	address, _ = validate.Email(address)
-	n, err := store.New(s.db.Write).SetRole(ctx, store.SetRoleParams{Email: address, Role: role, UpdatedAt: s.now()})
-	if err != nil {
-		return err
+	u, err := store.New(s.db.Read).GetUserByEmail(ctx, address)
+	if errors.Is(db.Err(err), db.ErrNotFound) {
+		return User{}, ErrUserNotFound
 	}
-	if n == 0 {
-		return ErrUserNotFound
-	}
-	return nil
+	return toUser(u), err
 }
 
-// SetDisabled disables or re-enables the user with address. Disabling logs
-// out all their sessions.
-func (s *Service) SetDisabled(ctx context.Context, address string, disabled bool) error {
-	address, _ = validate.Email(address)
-	id, err := store.New(s.db.Write).SetDisabled(ctx, store.SetDisabledParams{
-		Email: address, DisabledAt: sql.NullTime{Time: s.now(), Valid: disabled}, UpdatedAt: s.now(),
+// SetRole gives a user a role: RoleUser or RoleAdmin.
+func (s *Service) SetRole(ctx context.Context, userID uuid.UUID, role string) error {
+	if role != RoleUser && role != RoleAdmin {
+		return validate.Errors{"role": "Choose user or admin."}
+	}
+	return s.db.InTx(ctx, func(tx *sql.Tx) error {
+		n, err := store.New(tx).SetRole(ctx, store.SetRoleParams{ID: userID, Role: role, UpdatedAt: s.now()})
+		if err != nil {
+			return err
+		}
+		if n == 0 {
+			return ErrUserNotFound
+		}
+		return s.record(ctx, tx, Event{Name: EventRoleChanged, UserID: userID, Detail: role})
 	})
-	if errors.Is(db.Err(err), db.ErrNotFound) {
-		return ErrUserNotFound
-	} else if err != nil {
+}
+
+// SetDisabled disables or re-enables a user. Disabling logs out all their
+// sessions.
+func (s *Service) SetDisabled(ctx context.Context, userID uuid.UUID, disabled bool) error {
+	event := EventUserEnabled
+	if disabled {
+		event = EventUserDisabled
+	}
+	err := s.db.InTx(ctx, func(tx *sql.Tx) error {
+		n, err := store.New(tx).SetDisabled(ctx, store.SetDisabledParams{
+			ID: userID, DisabledAt: sql.NullTime{Time: s.now(), Valid: disabled}, UpdatedAt: s.now(),
+		})
+		if err != nil {
+			return err
+		}
+		if n == 0 {
+			return ErrUserNotFound
+		}
+		return s.record(ctx, tx, Event{Name: event, UserID: userID})
+	})
+	if err != nil || !disabled {
 		return err
 	}
-	if disabled {
-		return s.sessions.DeleteForUser(ctx, id, "")
-	}
-	return nil
+	return s.sessions.DeleteForUser(ctx, userID, "")
 }

@@ -1,0 +1,39 @@
+{{define "title"}}Users{{end}}
+
+{{define "content"}}
+<p class="muted"><a href="/admin/users">Users</a> · <a href="/admin/jobs">Failed jobs</a></p>
+<h1>Users</h1>
+
+<form method="get" action="/admin/users" class="filter">
+  <label>Search
+    <input type="search" name="q" value="{{.Data.Search}}" placeholder="Part of an email address">
+  </label>
+  <button type="submit" class="secondary">Search</button>
+  {{if .Data.Search}}<a href="/admin/users">Show all</a>{{end}}
+</form>
+
+<div class="table-scroll">
+<table>
+  <thead>
+    <tr><th>Email address</th><th>Role</th><th>Status</th><th>Joined</th></tr>
+  </thead>
+  <tbody>
+    {{range .Data.Users}}
+    <tr>
+      <td><a href="/admin/users/{{.ID}}">{{.Email}}</a></td>
+      <td>{{.Role}}</td>
+      <td>{{if .Disabled}}disabled{{else if .EmailVerified}}active{{else}}unconfirmed{{end}}</td>
+      <td>{{.CreatedAt.Format "2 Jan 2006"}}</td>
+    </tr>
+    {{else}}
+    <tr><td colspan="4" class="muted">No users{{with .Data.Search}} matching “{{.}}”{{end}}.</td></tr>
+    {{end}}
+  </tbody>
+</table>
+</div>
+
+<p class="pager">
+  {{with .Data.Prev}}<a href="{{.}}">← Previous</a>{{end}}
+  {{with .Data.Next}}<a href="{{.}}">Next →</a>{{end}}
+</p>
+{{end}}

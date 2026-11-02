@@ -156,6 +156,9 @@ func leftovers(root string, o options) []string {
 	// Words that only appear in a module's own code and docs.
 	moduleWords := map[string]*regexp.Regexp{
 		"workspaces": regexp.MustCompile(`(?i)\bworkspaces?\b`),
+		"audit":      regexp.MustCompile(`(?i)\baudit`),
+		// "admin" is also a core role, so look for the folder and routes.
+		"admin": regexp.MustCompile(`internal/admin\b|/admin/(users|jobs|failed-jobs)\b`),
 	}
 	var unchosen []*regexp.Regexp
 	for m, re := range moduleWords {

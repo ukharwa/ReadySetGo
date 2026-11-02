@@ -10,6 +10,12 @@ import (
 	"github.com/ukharwa/kickstart/internal/httpx"
 	"github.com/ukharwa/kickstart/internal/web"
 
+	// kickstart:begin module=admin
+	"github.com/ukharwa/kickstart/internal/admin"
+	// kickstart:end
+	// kickstart:begin module=audit
+	"github.com/ukharwa/kickstart/internal/audit"
+	// kickstart:end
 	// kickstart:begin module=workspaces
 	"github.com/ukharwa/kickstart/internal/workspaces"
 	// kickstart:end
@@ -43,6 +49,20 @@ func mountPages(cfg config.Config, logger *slog.Logger, root, app *http.ServeMux
 		return err
 	}
 	workspacePages.Routes(app)
+	// kickstart:end
+	// kickstart:begin module=audit
+	auditPages, err := audit.NewWeb(svc.audit, pages)
+	if err != nil {
+		return err
+	}
+	auditPages.Routes(app)
+	// kickstart:end
+	// kickstart:begin module=admin
+	adminPages, err := admin.NewWeb(svc.admin, pages)
+	if err != nil {
+		return err
+	}
+	adminPages.Routes(app)
 	// kickstart:end
 	return nil
 }

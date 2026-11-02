@@ -25,11 +25,22 @@ sql:
         out: internal/auth/store
         omit_unused_structs: true
         # SQLite has no UUID type: UUID columns are TEXT, mapped to uuid.UUID
-        # here. Name UUID columns `id` or `<thing>_id`.
+        # here. Name UUID columns `id` or `<thing>_id`. The first matching
+        # entry wins, whether or not the column is nullable, so a nullable
+        # UUID column (uuid.NullUUID) or a non-UUID `_id` column is listed
+        # by name, above the patterns.
         # kickstart:begin template
         # (This keeps the generated Go identical to the Postgres version.)
         # kickstart:end
         overrides:
+          # kickstart:begin module=audit
+          - column: "audit_events.user_id"
+            go_type: github.com/google/uuid.NullUUID
+          - column: "audit_events.actor_id"
+            go_type: github.com/google/uuid.NullUUID
+          - column: "audit_events.request_id"
+            go_type: string
+          # kickstart:end
           - column: "*.id"
             go_type: github.com/google/uuid.UUID
           - column: "*.*_id"
@@ -41,6 +52,16 @@ sql:
   - <<: *sqlc
     queries: [internal/workspaces/workspaces.sql]
     gen: {go: {<<: *go, out: internal/workspaces/store}}
+  # kickstart:end
+  # kickstart:begin module=audit
+  - <<: *sqlc
+    queries: [internal/audit/audit.sql]
+    gen: {go: {<<: *go, out: internal/audit/store}}
+  # kickstart:end
+  # kickstart:begin module=admin
+  - <<: *sqlc
+    queries: [internal/admin/admin.sql]
+    gen: {go: {<<: *go, out: internal/admin/store}}
   # kickstart:end
   # kickstart:end
   # kickstart:begin db=postgres
@@ -60,5 +81,15 @@ sql:
   - <<: *sqlc
     queries: [internal/workspaces/workspaces.sql]
     gen: {go: {<<: *go, out: internal/workspaces/store/postgres}}
+  # kickstart:end
+  # kickstart:begin module=audit
+  - <<: *sqlc
+    queries: [internal/audit/audit.sql]
+    gen: {go: {<<: *go, out: internal/audit/store/postgres}}
+  # kickstart:end
+  # kickstart:begin module=admin
+  - <<: *sqlc
+    queries: [internal/admin/admin.sql]
+    gen: {go: {<<: *go, out: internal/admin/store/postgres}}
   # kickstart:end
   # kickstart:end

@@ -260,36 +260,36 @@ func (q *Queries) MarkEmailVerified(ctx context.Context, arg MarkEmailVerifiedPa
 	return result.RowsAffected()
 }
 
-const setDisabled = `-- name: SetDisabled :one
-UPDATE users SET disabled_at = $1, updated_at = $2 WHERE email = $3
-RETURNING id
+const setDisabled = `-- name: SetDisabled :execrows
+UPDATE users SET disabled_at = $1, updated_at = $2 WHERE id = $3
 `
 
 type SetDisabledParams struct {
 	DisabledAt sql.NullTime
 	UpdatedAt  time.Time
-	Email      string
+	ID         uuid.UUID
 }
 
-func (q *Queries) SetDisabled(ctx context.Context, arg SetDisabledParams) (uuid.UUID, error) {
-	row := q.db.QueryRowContext(ctx, setDisabled, arg.DisabledAt, arg.UpdatedAt, arg.Email)
-	var id uuid.UUID
-	err := row.Scan(&id)
-	return id, err
+func (q *Queries) SetDisabled(ctx context.Context, arg SetDisabledParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setDisabled, arg.DisabledAt, arg.UpdatedAt, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const setRole = `-- name: SetRole :execrows
-UPDATE users SET role = $1, updated_at = $2 WHERE email = $3
+UPDATE users SET role = $1, updated_at = $2 WHERE id = $3
 `
 
 type SetRoleParams struct {
 	Role      string
 	UpdatedAt time.Time
-	Email     string
+	ID        uuid.UUID
 }
 
 func (q *Queries) SetRole(ctx context.Context, arg SetRoleParams) (int64, error) {
-	result, err := q.db.ExecContext(ctx, setRole, arg.Role, arg.UpdatedAt, arg.Email)
+	result, err := q.db.ExecContext(ctx, setRole, arg.Role, arg.UpdatedAt, arg.ID)
 	if err != nil {
 		return 0, err
 	}

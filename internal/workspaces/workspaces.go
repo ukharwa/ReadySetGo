@@ -161,7 +161,7 @@ func (s *Service) beforeUserDeleted(ctx context.Context, tx *sql.Tx, u auth.User
 	}
 	if len(owned) > 0 {
 		return validate.Errors{"account": fmt.Sprintf(
-			"You're the only owner of “%s”, which other people use. Make one of them an owner, or delete the workspace, first.",
+			"This account is the only owner of “%s”, which other people use. Make one of them an owner, or delete the workspace, first.",
 			owned[0].Name)}
 	}
 	return q.DeleteSoleMemberWorkspaces(ctx, u.ID)

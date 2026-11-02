@@ -23,11 +23,10 @@ WHERE id = @id AND email = @email AND email_verified_at IS NULL;
 UPDATE users SET email = @email, email_verified_at = @verified_at, updated_at = @verified_at WHERE id = @id;
 
 -- name: SetRole :execrows
-UPDATE users SET role = @role, updated_at = @updated_at WHERE email = @email;
+UPDATE users SET role = @role, updated_at = @updated_at WHERE id = @id;
 
--- name: SetDisabled :one
-UPDATE users SET disabled_at = @disabled_at, updated_at = @updated_at WHERE email = @email
-RETURNING id;
+-- name: SetDisabled :execrows
+UPDATE users SET disabled_at = @disabled_at, updated_at = @updated_at WHERE id = @id;
 
 -- name: DeleteUser :exec
 DELETE FROM users WHERE id = @id;
