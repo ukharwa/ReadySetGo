@@ -668,7 +668,8 @@ Docker dependency.
 
 Lint, checks that `go.mod` and the generated code are current,
 `govulncheck`, tests (with a Postgres service for Postgres projects), and on
-`main` and tags an `amd64`/`arm64` image pushed to GHCR. Go's version comes
+`main` and tags an `amd64`/`arm64` image pushed to GHCR (skipped in the
+template repository itself, which has no app to deploy). Go's version comes
 from `go.mod`. Actions are pinned to commit hashes (after the 2025
 `tj-actions` attack moved a tag to malicious code), and only releases at
 least two weeks old were pinned. Dependabot proposes newer Go modules,

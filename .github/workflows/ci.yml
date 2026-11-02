@@ -57,7 +57,9 @@ jobs:
 
   image:
     needs: check
-    if: github.event_name == 'push'
+    # Only an app made from the template ships an image: the template
+    # repository itself (marked as a template on GitHub) has nothing to deploy.
+    if: github.event_name == 'push' && !github.event.repository.is_template
     runs-on: ubuntu-latest
     permissions:
       contents: read
