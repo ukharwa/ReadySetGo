@@ -63,6 +63,9 @@ func runCheck(args []string) error {
 	if err := initProject(tmp, o); err != nil {
 		return fmt.Errorf("init: %w", err)
 	}
+	if err := tidyProject(tmp, o); err != nil { // as runInit does
+		return fmt.Errorf("init: %w", err)
+	}
 
 	if os.Getenv("TEST_DATABASE_URL") == "" {
 		if err := os.Setenv("TEST_DATABASE_URL", defaultTestDatabaseURL); err != nil {
@@ -73,7 +76,6 @@ func runCheck(args []string) error {
 		return []string{"git", "-c", "user.name=check", "-c", "user.email=check@example.com", "commit", "-q", "-m", msg}
 	}
 	steps := [][]string{
-		{"go", "mod", "tidy"}, // as runInit does
 		{"git", "init", "-q"},
 		{"git", "add", "-A"},
 		commit("init"),

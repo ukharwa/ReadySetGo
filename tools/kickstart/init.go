@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -32,7 +33,7 @@ func runInit(args []string) error {
 		return err
 	}
 	fmt.Printf("Created %s (%s, database: %s). Running go mod tidy…\n", o.name, o.module, o.db)
-	if err := runIn(".", "go", "mod", "tidy"); err != nil {
+	if err := tidyProject(".", o); err != nil {
 		return err
 	}
 	fmt.Println("\nDone. Review the result with `git status`, then:")
@@ -43,6 +44,40 @@ func runInit(args []string) error {
 	fmt.Println("  make test")
 	fmt.Println("  make run")
 	return nil
+}
+
+// tidyProject drops the other database's driver, and the modules only it
+// uses, from go.mod, then runs go mod tidy. goose's own go.mod requires both
+// drivers, so once the template requires newer versions than goose does,
+// tidy alone would keep the unused ones as indirect requirements rather than
+// downgrade them. Tidy adds back anything a remaining package does need.
+func tidyProject(dir string, o options) error {
+	prefix := "github.com/jackc/" // pgx and its helpers
+	if o.db == "postgres" {
+		prefix = "modernc.org/" // the SQLite driver and its C runtime
+	}
+	cmd := exec.CommandContext(context.Background(), "go", "mod", "edit", "-json")
+	cmd.Dir = dir
+	out, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("go mod edit -json: %w", err)
+	}
+	var mod struct{ Require []struct{ Path string } }
+	if err := json.Unmarshal(out, &mod); err != nil {
+		return fmt.Errorf("read go.mod: %w", err)
+	}
+	args := []string{"mod", "edit"}
+	for _, r := range mod.Require {
+		if strings.HasPrefix(r.Path, prefix) {
+			args = append(args, "-droprequire="+r.Path)
+		}
+	}
+	if len(args) > 2 {
+		if err := runIn(dir, "go", args...); err != nil {
+			return err
+		}
+	}
+	return runIn(dir, "go", "mod", "tidy")
 }
 
 // checkGit refuses to run on uncommitted changes, so the result can always be
