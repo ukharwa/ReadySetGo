@@ -39,7 +39,7 @@ func commands() []command {
 		{"serve", "run the HTTP server", serve},
 		{"worker", "run the job worker and scheduler without the HTTP server", worker},
 		{"migrate", "manage the database schema: up, down, status, or create NAME", migrate},
-		{"user", "manage a user: promote, demote, disable or enable EMAIL", user},
+		{"user", "manage a user: promote, demote, disable, enable or delete EMAIL", user},
 		{"seed", "add sample users for development (dev only)", seed},
 		// kickstart:begin db=sqlite
 		{"backup", "write a snapshot of the database (-dir, -keep)", backup},
