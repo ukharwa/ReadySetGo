@@ -1,81 +1,143 @@
 # ReadySetGo
 
 <!-- readysetgo:begin template -->
-A starting point for Go web apps and APIs backed by SQLite or PostgreSQL:
-database, accounts, security, background jobs, email, Caddy, Docker,
-tooling and deployment, with no business logic. Copy it, run `make init`,
-and start on the features.
+**Ready, set, Go: a production-ready Go starter with auth, SQL and Caddy,
+built to scale from one server to many.**
 
-## Start a new project from this template
+[![CI](https://github.com/ukharwa/ReadySetGo/actions/workflows/ci.yml/badge.svg)](https://github.com/ukharwa/ReadySetGo/actions/workflows/ci.yml)
+[![Template](https://github.com/ukharwa/ReadySetGo/actions/workflows/template.yml/badge.svg)](https://github.com/ukharwa/ReadySetGo/actions/workflows/template.yml)
 
-1. Copy the template (GitHub's "Use this template", or clone it) into a new
-   repository, and install Go 1.27 or newer.
-2. Initialise it with the options the project needs:
+Every new app needs the same foundation before the interesting part
+starts: accounts, a database, security headers, email, background jobs,
+HTTPS, Docker, CI, backups. ReadySetGo is that foundation, done properly
+and tested, with no business logic in the way. Pick a database and a UI
+style, run one command, and start on your features.
 
-   ```bash
-   make init NAME=myapp DB=sqlite UI=html MODULES=workspaces,admin
-   ```
+It's plain Go: the standard library first, a handful of small,
+well-maintained libraries, and no framework to learn.
 
-   | Option | Values | Default |
-   |---|---|---|
-   | `NAME` | the app's name: lowercase letters, digits and hyphens | required |
-   | `MODULE` | the Go module path | `github.com/ukharwa/NAME` |
-   | `DB` | `sqlite` or `postgres` (see the guide below) | `sqlite` |
-   | `UI` | `html` (pages with HTMX) or `api` (JSON for a separate frontend or mobile app) | `html` |
-   | `MODULES` | any of `workspaces`, `admin`, `audit`, `uploads`, `metrics`, `errreport`, or `all` | none |
+## What you get
 
-   Init renames everything to `NAME`, keeps only the chosen database, UI mode
-   and modules, deletes the template's own tooling, runs `go mod tidy`, and
-   leaves a project whose README, `AGENTS.md` and `SCALING.md` describe only
-   what it uses. Nothing from an unchosen option remains: CI checks that for
-   every combination.
-3. Commit, push, and follow the rest of this README, which is now the
-   project's own.
+- 🔐 **Accounts done right.** Sign-up, login with "remember me", email
+  verification, password reset, email and password changes, and account
+  deletion. Argon2id hashing, database-backed sessions, and bearer tokens
+  for API clients.
+- 🗄️ **SQLite or PostgreSQL.** Typed queries with sqlc, migrations with
+  goose, UUIDv7 keys, and backups for either (Litestream or `pg_dump`).
+- 🖥️ **Pages or an API.** Server-rendered HTML with HTMX, or a JSON API for
+  a React app or mobile client. You choose; the other is removed.
+- 🛡️ **Secure by default.** CSRF protection, strict security headers and
+  Content-Security-Policy, `__Host-` cookies, rate limits, and a log of
+  security events.
+- ⚙️ **Background jobs and email.** A database-backed job queue with
+  scheduled tasks, safe on many instances, and email sent through it.
+- 🚀 **Ready to deploy.** A small non-root Docker image, Compose for
+  development and production, Caddy with automatic HTTPS, and one-command
+  deploys to any VPS.
+- 📈 **Ready to grow.** It runs on one server today, and moving to several
+  is configuration, not a rewrite: checked with two instances behind
+  Caddy. [`SCALING.md`](SCALING.md) is the playbook.
+- 🧰 **Tooling included.** Make, live reload, golangci-lint, real-database
+  tests, and GitHub Actions for lint, tests and images.
+- 🤖 **Works with coding agents.** [`AGENTS.md`](AGENTS.md) teaches Claude
+  Code, OpenAI Codex and others how the project works, and walks them
+  through setting up a new one.
 
-Or let a coding agent do steps 2 and 3: open Claude Code, OpenAI Codex or
-another agent that reads `AGENTS.md` in the new repository and describe the
-app ("a Postgres API for a mobile app, with teams and file uploads").
-`AGENTS.md` tells it to check the checkout, ask about anything
-missing, point out what the template doesn't support, and confirm the
-`make init` command with you before running it.
-
-The modules:
+Optional modules add what some apps need and others don't:
 
 | Module | Adds |
 |---|---|
-| `workspaces` | Shared workspaces with owners, admins and members, and email invitations, for apps where teams share data |
-| `admin` | Admin pages (or endpoints) to find and manage users and retry failed jobs |
-| `audit` | Security events (logins, role changes, …) kept in a table, with an admin-only log |
-| `uploads` | File uploads to local disk behind a storage interface, with type checks and owner-only downloads |
+| `workspaces` | Teams that share data: owners, admins and members, with email invitations |
+| `admin` | Admin pages (or endpoints) to manage users and retry failed jobs |
+| `audit` | A permanent log of security events, with an admin view |
+| `uploads` | File uploads with type checks and owner-only downloads |
 | `metrics` | Prometheus metrics and Go's profiler on an internal port |
 | `errreport` | Error reports to Sentry, GlitchTip or Bugsink |
 
-Every project also starts with the notes example, which `make
-remove-example` deletes once it has served as a pattern.
+Every project also starts with a small notes feature that shows the whole
+pattern, from migration to test. `make remove-example` deletes it when
+you're ready.
 
-### Which database should I pick?
+## Quick start
+
+You need Go 1.27 or newer and Docker.
+
+1. Click **Use this template** on GitHub to create your repository, and
+   clone it.
+2. Choose your setup:
+
+   ```bash
+   make init NAME=myapp MODULE=github.com/you/myapp DB=sqlite UI=html MODULES=workspaces,admin
+   ```
+
+3. Run it:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   ```bash
+   make services
+   ```
+
+   ```bash
+   make run
+   ```
+
+   Open <http://localhost:8080>, and `make seed` adds two users to try it
+   with.
+
+That's it. `make init` keeps only what you chose, renames everything to
+your app, and leaves a README, `AGENTS.md` and `SCALING.md` that describe
+your project and nothing else. CI checks that for every combination of
+options.
+
+### Or let your coding agent do it
+
+Open Claude Code, Codex or another agent in your new repository and
+describe the app: "a Postgres API for a mobile app, with teams and file
+uploads". `AGENTS.md` has it check your setup, ask about anything missing,
+tell you what the template doesn't do, and confirm the `make init` command
+with you before running it.
+
+## Choose your setup
+
+| Option | What it sets | Default |
+|---|---|---|
+| `NAME` | your app's name: lowercase letters, digits and hyphens | required |
+| `MODULE` | the Go module path, usually `github.com/you/NAME` | `github.com/ukharwa/NAME`, so set yours |
+| `DB` | `sqlite` or `postgres` | `sqlite` |
+| `UI` | `html` (pages with HTMX) or `api` (JSON for a separate frontend or mobile app) | `html` |
+| `MODULES` | any of the modules above, comma-separated, or `all` | none |
+
+### Which database?
 
 | | SQLite (default) | PostgreSQL |
 |---|---|---|
-| Pick it for | one server, a few hundred to a few thousand users, more reads than writes | apps you expect to run on several servers, heavy concurrent writes, or that need Postgres features (full-text search, JSONB) or a managed database |
-| Runs as | a file next to the app; nothing else to run | a database server: a container on the VPS, or a managed service |
-| How far it goes | one machine. With WAL mode it handles hundreds of requests a second; writes happen one at a time, which only hurts under sustained heavy writing | as far as the apps here are likely to go: a bigger server, a connection pooler and read replicas before anything harder |
-| Backups | snapshots by a command, and Litestream streaming every change to S3-compatible storage | `pg_dump` by a script, copied to S3-compatible storage with rclone |
-| When it's outgrown | move to PostgreSQL: the queries are portable, so it's a configuration and data-copy job (`SCALING.md`) | `SCALING.md`: pooling, replicas, managed Postgres |
+| Best for | one server and a few thousand users, more reads than writes | several servers, heavy concurrent writes, or Postgres features such as full-text search and JSONB |
+| Runs as | a file next to the app: nothing else to run | a database server: a container on your VPS, or a managed service |
+| How far it goes | one machine: hundreds of requests a second, with writes one at a time | as far as you're likely to need: bigger servers, connection pooling and read replicas |
+| Backups | snapshots, plus Litestream streaming every change to S3-compatible storage | `pg_dump`, copied to S3-compatible storage with rclone |
+| Outgrown? | move to PostgreSQL: the queries are portable, so it's configuration and a data copy | `SCALING.md` covers pooling, replicas and managed Postgres |
 
 Start with SQLite unless you already know the app needs more than one
 server. Choose PostgreSQL from the start when a client requires a managed
-database or the app will take many writes from many users at once.
+database, or many users will be writing at once.
 
-## Working on the template
+## Learn more
 
-`tools/readysetgo/README.md` explains the markers init uses. `make
-template-check DB=… UI=… MODULES=…` initialises a temporary copy and runs
-every check on it; the Template workflow runs all combinations in CI.
+- [`DECISIONS.md`](DECISIONS.md): every choice, why it was made, and what
+  else was considered.
+- [`SCALING.md`](SCALING.md): what to do as the app grows, cheapest step
+  first.
+- [`AGENTS.md`](AGENTS.md): the conventions, for you and your coding agent.
+- [`tools/readysetgo/README.md`](tools/readysetgo/README.md): working on
+  the template itself. `make template-check DB=… UI=… MODULES=…` tests one
+  combination; CI tests them all.
 
 ---
 
-*The rest of this README becomes the new project's.*
+*Everything below this line becomes your project's README.*
 <!-- readysetgo:end -->
 
 <!-- readysetgo:begin ui=html -->
