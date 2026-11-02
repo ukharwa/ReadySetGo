@@ -128,7 +128,7 @@ remove-example: ## delete the notes example (before the first deploy)
 
 # readysetgo:begin template
 .PHONY: init
-init: ## turn this template into a new project: make init NAME=myapp [MODULE=…] [DB=sqlite|postgres] [UI=html|api] [MODULES=a,b|all]
+init: ## turn this template into a new project: make init NAME=myapp MODULE=github.com/you/myapp [DB=sqlite|postgres] [UI=html|api] [MODULES=a,b|all]
 	go run ./tools/readysetgo init -name "$(NAME)" -module "$(MODULE)" -db "$(DB)" -ui "$(UI)" -modules "$(MODULES)"
 
 .PHONY: template-check

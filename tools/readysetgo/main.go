@@ -9,6 +9,7 @@
 package main
 
 import (
+	"cmp"
 	"errors"
 	"flag"
 	"fmt"
@@ -66,7 +67,7 @@ func parseOptions(fs *flag.FlagSet, args []string) (options, error) {
 	var o options
 	var modules string
 	fs.StringVar(&o.name, "name", "", "project name: lowercase letters, digits and hyphens")
-	fs.StringVar(&o.module, "module", "", "Go module path (default github.com/ukharwa/NAME)")
+	fs.StringVar(&o.module, "module", "", "Go module path, such as github.com/you/NAME (required)")
 	fs.StringVar(&o.db, "db", "", "database: sqlite or postgres (default sqlite)")
 	fs.StringVar(&o.ui, "ui", "", "UI mode: html or api (default html)")
 	fs.StringVar(&modules, "modules", "", "comma-separated optional modules, or all: "+strings.Join(allModules, ", "))
@@ -98,8 +99,8 @@ func (o *options) validate() error {
 	if o.name == "readysetgo" {
 		errs = append(errs, errors.New("NAME readysetgo: that's the template's own name; give the project its own"))
 	}
-	if o.module == "" {
-		o.module = "github.com/ukharwa/" + o.name
+	if strings.TrimSpace(o.module) == "" {
+		errs = append(errs, errors.New("MODULE is required: the Go module path, such as github.com/you/"+cmp.Or(o.name, "NAME")))
 	}
 	if !slices.Contains(databases, o.db) {
 		errs = append(errs, fmt.Errorf("DB %q: want one of %s", o.db, strings.Join(databases, ", ")))

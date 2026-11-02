@@ -212,8 +212,9 @@ template starts on the newest.
 
 ### Module path: chosen at init
 
-`make init MODULE=…`, defaulting to `github.com/ukharwa/<NAME>`, because
-some apps live under a different GitHub account.
+`make init MODULE=…`, with no default: a project's module path depends on
+who owns its repository, which init can't know. (It first defaulted to
+`github.com/ukharwa/<NAME>`, which was wrong for anyone else.)
 
 ### Routing: standard library `net/http` ServeMux
 

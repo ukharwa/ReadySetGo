@@ -105,7 +105,7 @@ with you before running it.
 | Option | What it sets | Default |
 |---|---|---|
 | `NAME` | your app's name: lowercase letters, digits and hyphens | required |
-| `MODULE` | the Go module path, usually `github.com/you/NAME` | `github.com/ukharwa/NAME`, so set yours |
+| `MODULE` | the Go module path, usually `github.com/you/NAME` | required |
 | `DB` | `sqlite` or `postgres` | `sqlite` |
 | `UI` | `html` (pages with HTMX) or `api` (JSON for a separate frontend or mobile app) | `html` |
 | `MODULES` | any of the modules above, comma-separated, or `all` | none |

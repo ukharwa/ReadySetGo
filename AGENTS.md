@@ -67,7 +67,7 @@ still open, recommending an answer for each.
 | Option | Values | Default | Notes |
 |---|---|---|---|
 | `NAME` | lowercase letters, digits and hyphens, starting with a letter | none | Names the command (`cmd/NAME`), containers, database and image. Use the user's name for it; proposing the repository's name for them to confirm is fine, picking one silently isn't. Init refuses `readysetgo`, the template's own name. |
-| `MODULE` | a Go module path | `github.com/ukharwa/NAME` | Take it from `origin` when there is one: `git@github.com:OWNER/REPO.git` means `github.com/OWNER/REPO`. Pass `MODULE=` whenever that differs from the default (another owner, or a repository not named `NAME`). Off GitHub, the image is plain `NAME` and `APP_IMAGE` must be set for deploys. |
+| `MODULE` | a Go module path | none: required | Take it from `origin` when there is one: `git@github.com:OWNER/REPO.git` means `github.com/OWNER/REPO`. Otherwise ask; propose `github.com/OWNER/NAME` for them to confirm. Off GitHub, the image is plain `NAME` and `APP_IMAGE` must be set for deploys. |
 | `DB` | `sqlite`, `postgres` | `sqlite` | Below. |
 | `UI` | `html`, `api` | `html` | Below. |
 | `MODULES` | a comma-separated list, `all` or `none` | `none` | Below. |
@@ -148,7 +148,7 @@ decide.
 ### 4. Propose the command
 
 Give the exact command with one line per choice and its reason, for
-example `make init NAME=shop DB=postgres UI=api MODULES=workspaces,admin`,
+example `make init NAME=shop MODULE=github.com/acme/shop DB=postgres UI=api MODULES=workspaces,admin`,
 plus any port changes, and wait for the user's yes.
 
 ### 5. Run it and check the result
@@ -158,7 +158,7 @@ make init NAME=… MODULE=… DB=… UI=… MODULES=…
 cp .env.example .env
 ```
 
-Leave out `MODULE=` when it's the default. If step 1 found ports taken,
+If step 1 found ports taken,
 move them in `.env` now, as "Local ports" under "Commands" lists.
 
 Then:

@@ -236,6 +236,14 @@ func TestRecordInit(t *testing.T) {
 	}
 }
 
+func TestValidateRequiresModule(t *testing.T) {
+	t.Parallel()
+	o := options{name: "myapp", db: "sqlite", ui: "html"}
+	if err := o.validate(); err == nil || !strings.Contains(err.Error(), "MODULE is required") {
+		t.Errorf("err = %v", err)
+	}
+}
+
 func TestValidateRejectsTemplateName(t *testing.T) {
 	t.Parallel()
 	o := options{name: "readysetgo", db: "sqlite", ui: "html"}
