@@ -267,8 +267,9 @@ func transform(rel string, data []byte, o options) (string, []byte, bool, error)
 func keepPath(rel string, o options) bool {
 	dirs := strings.Split(path.Dir(rel), "/")
 	switch {
-	case strings.HasPrefix(rel, "tools/readysetgo/"), rel == ".github/workflows/template.yml", rel == "LICENSE":
-		return false // template-only; a project chooses its own licence
+	case strings.HasPrefix(rel, "tools/readysetgo/"), rel == ".github/workflows/template.yml", rel == "LICENSE",
+		strings.HasPrefix(rel, ".claude-plugin/"), strings.HasPrefix(rel, "plugins/readysetgo/"):
+		return false // template-only (a project chooses its own licence), and the /readysetgo:new plugin
 	case slices.Contains(dirs, otherDB(o.db)), strings.Contains(path.Base(rel), otherDB(o.db)):
 		return false // the other database's folder or file (backup-postgres.sh)
 	case !forUI(rel, o.ui):

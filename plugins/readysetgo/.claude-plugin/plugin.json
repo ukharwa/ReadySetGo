@@ -1,0 +1,9 @@
+{
+  "name": "readysetgo",
+  "description": "Create a new Go app from the ReadySetGo template and set it up for the app you describe",
+  "author": {
+    "name": "ukharwa"
+  },
+  "homepage": "https://github.com/ukharwa/ReadySetGo",
+  "license": "MIT"
+}

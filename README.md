@@ -100,6 +100,20 @@ uploads". `AGENTS.md` has it check your setup, ask about anything missing,
 tell you what the template doesn't do, and confirm the `make init` command
 with you before running it.
 
+With Claude Code you can skip the clone too. Add the plugin once:
+
+```bash
+claude plugin marketplace add ukharwa/ReadySetGo
+```
+
+```bash
+claude plugin install readysetgo@readysetgo
+```
+
+Then, in a session anywhere, run `/readysetgo:new` with a description of
+the app. It creates the repository from the template (with `gh`, or as a
+plain clone), then sets it up the same way.
+
 ## Choose your setup
 
 | Option | What it sets | Default |

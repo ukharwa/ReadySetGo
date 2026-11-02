@@ -1,0 +1,14 @@
+{
+  "name": "readysetgo",
+  "description": "Start a new Go app from the ReadySetGo template",
+  "owner": {
+    "name": "ukharwa"
+  },
+  "plugins": [
+    {
+      "name": "readysetgo",
+      "source": "./plugins/readysetgo",
+      "description": "/readysetgo:new creates a project from the ReadySetGo template and sets it up for the app you describe"
+    }
+  ]
+}

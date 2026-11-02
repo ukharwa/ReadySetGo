@@ -99,6 +99,8 @@ func TestPaths(t *testing.T) {
 	}{
 		{"tools/readysetgo/main.go", sqliteHTML, ""},
 		{"LICENSE", sqliteHTML, ""},
+		{".claude-plugin/marketplace.json", sqliteHTML, ""},
+		{"plugins/readysetgo/skills/new/SKILL.md", sqliteHTML, ""},
 		{"tools/removeexample/main.go", sqliteHTML, "tools/removeexample/main.go"},
 		{".github/workflows/template.yml", sqliteHTML, ""},
 		{"migrations/sqlite/00001_users.sql", sqliteHTML, "migrations/00001_users.sql"},

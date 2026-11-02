@@ -4,6 +4,11 @@ The init tool (`go run ./tools/readysetgo init`, behind `make init`) and the
 template check (`make template-check`) live here. Init deletes this folder
 from every project it creates.
 
+The Claude Code plugin behind `/readysetgo:new` lives in
+`plugins/readysetgo/`, listed by `.claude-plugin/marketplace.json`; init
+removes both. Its skill only makes the copy and then hands over to the
+copy's `AGENTS.md`, so keep the setup steps there, not in the skill.
+
 This repository is the ReadySetGo template. Before `make init`, it is a
 runnable SQLite app containing every option. `make init` keeps the options a
 new project picks and removes the rest:
