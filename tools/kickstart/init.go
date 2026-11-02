@@ -225,7 +225,7 @@ func transform(rel string, data []byte, o options) (string, []byte, bool, error)
 func keepPath(rel string, o options) bool {
 	dirs := strings.Split(path.Dir(rel), "/")
 	switch {
-	case dirs[0] == "tools", rel == ".github/workflows/template.yml":
+	case strings.HasPrefix(rel, "tools/kickstart/"), rel == ".github/workflows/template.yml":
 		return false // template-only
 	case slices.Contains(dirs, otherDB(o.db)), strings.Contains(path.Base(rel), otherDB(o.db)):
 		return false // the other database's folder or file (backup-postgres.sh)

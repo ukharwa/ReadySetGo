@@ -155,7 +155,7 @@ func TestSecurityHeaders(t *testing.T) {
 		}
 	}
 
-	api := serve(SecurityHeaders(false)(ok), httptest.NewRequest(http.MethodGet, "/api/notes", nil)).Header()
+	api := serve(SecurityHeaders(false)(ok), httptest.NewRequest(http.MethodGet, "/api/things", nil)).Header()
 	if got := api.Get("Content-Security-Policy"); got != apiCSP {
 		t.Errorf("API CSP = %q, want %q", got, apiCSP)
 	}

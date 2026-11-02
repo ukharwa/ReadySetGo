@@ -228,6 +228,10 @@ func popFlash(w http.ResponseWriter, r *http.Request) string {
 	return msg
 }
 
+// IsHTMX reports whether HTMX sent r, so a handler can answer with just the
+// part of the page that changed instead of redirecting.
+func IsHTMX(r *http.Request) bool { return r.Header.Get("HX-Request") == "true" }
+
 // SafeRedirect returns next if it is a path on this site, and fallback
 // otherwise, so a ?next= parameter can't send users to another site.
 func SafeRedirect(next, fallback string) string {

@@ -34,6 +34,10 @@ import (
 	// kickstart:begin module=workspaces
 	"github.com/ukharwa/kickstart/internal/workspaces"
 	// kickstart:end
+
+	// example:begin
+	"github.com/ukharwa/kickstart/internal/notes"
+	// example:end
 )
 
 // migrateTimeout bounds a migration run. It is generous because adding an
@@ -106,6 +110,9 @@ func closeDB(d *db.DB, logger *slog.Logger) {
 type services struct {
 	limiter  ratelimit.Limiter
 	accounts *auth.Service
+	// example:begin
+	notes *notes.Service
+	// example:end
 	// kickstart:begin module=workspaces
 	workspaces *workspaces.Service
 	// kickstart:end
@@ -135,6 +142,9 @@ func newServices(cfg config.Config, d *db.DB, logger *slog.Logger) (*services, e
 	if err != nil {
 		return nil, err
 	}
+	// example:begin
+	s.notes = notes.NewService(d, logger)
+	// example:end
 	// kickstart:begin module=workspaces
 	s.workspaces, err = workspaces.NewService(d, s.accounts, s.limiter, logger, workspaces.Options{
 		AppName: cfg.AppName,

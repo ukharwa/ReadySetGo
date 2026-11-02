@@ -17,13 +17,18 @@ permissions:
 
 jobs:
   combinations:
-    name: db=${{ matrix.db }} ui=${{ matrix.ui }} modules=${{ matrix.modules }}
+    name: db=${{ matrix.db }} ui=${{ matrix.ui }} modules=${{ matrix.modules }} example=${{ matrix.example }}
     strategy:
       fail-fast: false
       matrix:
         db: [sqlite, postgres]
         ui: [html, api]
         modules: [none, all]
+        example: [keep]
+        # Two more runs check `make remove-example` on a new project.
+        include:
+          - {db: sqlite, ui: html, modules: all, example: remove}
+          - {db: postgres, ui: api, modules: none, example: remove}
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -50,4 +55,6 @@ jobs:
         with:
           sqlc-version: "1.31.1"
       - name: Init and check
-        run: go run ./tools/kickstart check -db ${{ matrix.db }} -ui ${{ matrix.ui }} -modules ${{ matrix.modules }}
+        run: >-
+          go run ./tools/kickstart check -db ${{ matrix.db }} -ui ${{ matrix.ui }} -modules ${{ matrix.modules }}
+          ${{ matrix.example == 'remove' && '-remove-example' || '' }}

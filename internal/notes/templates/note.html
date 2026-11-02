@@ -1,0 +1,14 @@
+{{define "title"}}{{.Data.Title}}{{end}}
+
+{{define "content"}}
+<p class="muted"><a href="/notes">Notes</a></p>
+<h1>{{.Data.Title}}</h1>
+<p class="muted">Changed {{.Data.UpdatedAt.Format "2 Jan 2006 15:04"}} UTC</p>
+<div class="pre-wrap">{{.Data.Body}}</div>
+<div class="actions">
+  <a href="/notes/{{.Data.ID}}/edit" class="button">Edit</a>
+  <form method="post" action="/notes/{{.Data.ID}}/delete" class="inline">
+    <button type="submit" class="danger">Delete</button>
+  </form>
+</div>
+{{end}}

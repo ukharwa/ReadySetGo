@@ -655,7 +655,8 @@ deploys on tags, and `amd64`-only images.
 Every combination of database, UI mode and modules (all or none) is created
 with `make init` in a fresh copy and must pass lint and tests, which also
 tests init. Each run also fails if anything from an unchosen option is left
-behind.
+behind. Two more runs then apply `make remove-example` and check the
+project again.
 <!-- kickstart:end -->
 
 ### Not included
@@ -799,7 +800,21 @@ passwords are stripped.
 recovery middleware and the 500 path, which would miss failed jobs.
 <!-- kickstart:end -->
 
+<!-- example:begin -->
 ### Example feature: notes
 
 User-owned notes with create, read, update and delete show the whole
 pattern from route to test. `make remove-example` removes them.
+- Every project starts with it, whatever the options: it is the reference
+  for a new feature. Someone else's note answers 404, never 403.
+- In HTML mode, deleting from the list shows the HTMX pattern: the form
+  works as a plain post, and with HTMX the server answers with an empty
+  fragment that replaces the row (`web.IsHTMX`).
+- Its lines carry `example:begin`/`example:end` markers, which init leaves
+  alone. `make remove-example` runs a small Go program (`tools/removeexample`)
+  that deletes the folder, the marked blocks, files they leave empty
+  (the migration), and then itself, and formats the Go it changed. Like
+  init, it's Go rather than `sed`, which differs between Linux and macOS.
+- Removal is for before the first deploy: afterwards, the notes table goes
+  with a new migration, as any schema change does.
+<!-- example:end -->

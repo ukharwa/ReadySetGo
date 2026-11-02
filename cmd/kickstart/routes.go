@@ -24,6 +24,12 @@ import (
 	"github.com/ukharwa/kickstart/internal/workspaces"
 	// kickstart:end
 	// kickstart:end
+
+	// kickstart:begin ui=api
+	// example:begin
+	"github.com/ukharwa/kickstart/internal/notes"
+	// example:end
+	// kickstart:end
 )
 
 // routes returns the application's handler. Each feature registers its own
@@ -46,6 +52,9 @@ func routes(cfg config.Config, logger *slog.Logger, health *httpx.Health, svc *s
 	// kickstart:end
 	// kickstart:begin ui=api
 	auth.NewAPI(svc.accounts, svc.limiter).Routes(app)
+	// example:begin
+	notes.NewAPI(svc.notes).Routes(app)
+	// example:end
 	// kickstart:begin module=workspaces
 	workspaces.NewAPI(svc.workspaces).Routes(app)
 	// kickstart:end

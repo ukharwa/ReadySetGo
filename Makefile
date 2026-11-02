@@ -120,12 +120,18 @@ backup: ## write a database snapshot into backups/
 	go run ./cmd/kickstart backup
 # kickstart:end
 
+# example:begin
+.PHONY: remove-example
+remove-example: ## delete the notes example (before the first deploy)
+	go run ./tools/removeexample
+# example:end
+
 # kickstart:begin template
 .PHONY: init
 init: ## turn this template into a new project: make init NAME=myapp [MODULE=…] [DB=sqlite|postgres] [UI=html|api] [MODULES=a,b|all]
 	go run ./tools/kickstart init -name "$(NAME)" -module "$(MODULE)" -db "$(DB)" -ui "$(UI)" -modules "$(MODULES)"
 
 .PHONY: template-check
-template-check: ## init a temporary copy and run every check on it: make template-check [DB=…] [UI=…] [MODULES=…]
-	go run ./tools/kickstart check -db "$(DB)" -ui "$(UI)" -modules "$(MODULES)"
+template-check: ## init a temporary copy and run every check on it: make template-check [DB=…] [UI=…] [MODULES=…] [REMOVE_EXAMPLE=1]
+	go run ./tools/kickstart check -db "$(DB)" -ui "$(UI)" -modules "$(MODULES)" $(if $(REMOVE_EXAMPLE),-remove-example)
 # kickstart:end

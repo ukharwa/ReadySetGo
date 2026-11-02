@@ -22,6 +22,10 @@ import (
 	// kickstart:begin module=workspaces
 	"github.com/ukharwa/kickstart/internal/workspaces"
 	// kickstart:end
+
+	// example:begin
+	"github.com/ukharwa/kickstart/internal/notes"
+	// example:end
 )
 
 // mountPages registers the HTML pages: static files on root (outside the
@@ -45,6 +49,13 @@ func mountPages(cfg config.Config, logger *slog.Logger, root, app *http.ServeMux
 		return err
 	}
 	accountPages.Routes(app)
+	// example:begin
+	notePages, err := notes.NewWeb(svc.notes, pages)
+	if err != nil {
+		return err
+	}
+	notePages.Routes(app)
+	// example:end
 
 	// kickstart:begin module=workspaces
 	workspacePages, err := workspaces.NewWeb(svc.workspaces, pages)

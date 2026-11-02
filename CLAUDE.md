@@ -45,13 +45,17 @@ new project picks and removes the rest:
   `template` (always removed). A comma-separated list keeps the block if
   any of its conditions holds (`db=sqlite,module=uploads`). Blocks may
   nest. Markers are always removed.
+- The notes example's lines sit between `example:begin` and `example:end`
+  markers instead. Init keeps them, and the example, in every project;
+  `make remove-example` (`tools/removeexample/`) deletes them later.
 - Init renames `kickstart` to the project name everywhere except
   `DECISIONS.md`, and the module path everywhere.
 - After init, nothing from an unchosen option may remain: don't mention
   another database, UI mode or module outside its markers or paths.
 
 Test every combination with `make template-check DB=sqlite|postgres
-UI=html|api MODULES=none|all|a,b`. It copies
+UI=html|api MODULES=none|all|a,b`, adding `REMOVE_EXAMPLE=1` to check a
+project after `make remove-example`. It copies
 the working tree (uncommitted changes included) to a temporary folder, runs
 init, then tidy, vet, the tests, lint and sqlc, and fails on leftovers. The
 Postgres check needs `make services`. Set `TMPDIR` to choose where the copy
@@ -93,6 +97,10 @@ query that can't be shared goes in `internal/<feature>/sqlite/` and
   the password `dev-password-123` (dev only)
 - `go run ./cmd/kickstart user promote EMAIL`: make a user an admin (also
   `demote`, `disable`, `enable`, `delete`)
+<!-- example:begin -->
+- `make remove-example`: delete the notes example and every line marked
+  for it, before the first deploy
+<!-- example:end -->
 - `make up` / `make down`: run the production stack (`compose.yaml`: the
   app behind Caddy) locally at https://localhost:8443
 - `make deploy DEPLOY_HOST=user@server`: copy `compose.yaml` and `deploy/`
@@ -198,6 +206,10 @@ query that can't be shared goes in `internal/<feature>/sqlite/` and
 - `internal/web/`: the page layout, renderer, stylesheet, HTMX and flash
   messages.
 <!-- kickstart:end -->
+<!-- example:begin -->
+- `internal/notes/`: the example feature, notes that belong to the user who
+  wrote them. Copy its shape for a new feature.
+<!-- example:end -->
 - `internal/validate/`: input checks and `validate.Errors` (messages per
   field).
 - `internal/apptest/`: the end-to-end test harness.
@@ -240,6 +252,29 @@ query that can't be shared goes in `internal/<feature>/sqlite/` and
   <!-- kickstart:end -->
 - **Database-specific SQL** goes only in migrations and in queries that
   can't be shared; everything else stays portable.
+
+## Adding a feature
+
+1. `make migration NAME=create_things`: its tables, each with the owner's
+   `user_id` (`ON DELETE CASCADE`, indexed).
+2. Its queries in `internal/things/things.sql`, every one filtered by the
+   owner; list the file in `sqlc.yaml` and run `make generate`.
+3. `things.go`: a `Service` with the logic and validation, and no HTTP.
+<!-- kickstart:begin ui=html -->
+4. `web.go` and `templates/`: a `Web` type whose `Routes` lists the pages,
+   mounted in `cmd/kickstart/web.go`.
+<!-- kickstart:end -->
+<!-- kickstart:begin ui=api -->
+4. `api.go`: an `API` type whose `Routes` lists the endpoints, mounted in
+   `cmd/kickstart/routes.go`.
+<!-- kickstart:end -->
+5. Build the service in `newServices` (`cmd/kickstart/app.go`).
+6. End-to-end tests with `apptest`, including that someone else gets 404
+   for every route.
+<!-- example:begin -->
+
+`internal/notes/` does each step; copy it and rename.
+<!-- example:end -->
 
 ## Conventions
 

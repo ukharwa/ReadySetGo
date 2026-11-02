@@ -27,6 +27,7 @@ const defaultTestDatabaseURL = "postgres://kickstart:kickstart@localhost:5432/po
 func runCheck(args []string) error {
 	fs := flag.NewFlagSet("check", flag.ContinueOnError)
 	keep := fs.Bool("keep", false, "keep the temporary project even if every check passes")
+	removeExample := fs.Bool("remove-example", false, "run make remove-example after init and check the project without the example")
 	o, err := parseOptions(fs, args)
 	if err != nil {
 		return err
@@ -54,7 +55,8 @@ func runCheck(args []string) error {
 		_ = os.RemoveAll(tmp)
 	}()
 
-	fmt.Printf("==> checking db=%s ui=%s modules=%s in %s\n", o.db, o.ui, strings.Join(o.modules, ","), tmp)
+	fmt.Printf("==> checking db=%s ui=%s modules=%s remove-example=%t in %s\n",
+		o.db, o.ui, strings.Join(o.modules, ","), *removeExample, tmp)
 	if err := copyWorkingTree(repo, tmp); err != nil {
 		return fmt.Errorf("copy working tree: %w", err)
 	}
@@ -67,14 +69,22 @@ func runCheck(args []string) error {
 			return err
 		}
 	}
+	commit := func(msg string) []string {
+		return []string{"git", "-c", "user.name=check", "-c", "user.email=check@example.com", "commit", "-q", "-m", msg}
+	}
 	steps := [][]string{
 		{"go", "mod", "tidy"}, // as runInit does
 		{"git", "init", "-q"},
 		{"git", "add", "-A"},
-		{"git", "-c", "user.name=check", "-c", "user.email=check@example.com", "commit", "-q", "-m", "init"},
-		{"go", "vet", "./..."},
-		{"go", "test", "-race", "-count=1", "./..."},
+		commit("init"),
 	}
+	if *removeExample {
+		steps = append(steps, []string{"go", "run", "./tools/removeexample"}, []string{"git", "add", "-A"}, commit("remove example"))
+	}
+	steps = append(steps,
+		[]string{"go", "vet", "./..."},
+		[]string{"go", "test", "-race", "-count=1", "./..."},
+	)
 	if lint := findTool(repo, "golangci-lint"); lint != "" {
 		steps = append(steps, []string{lint, "run", "./..."})
 	}
@@ -105,7 +115,7 @@ func runCheck(args []string) error {
 		return fmt.Errorf("these files changed after init (run the step yourself to see why):\n%s", out)
 	}
 
-	if problems := leftovers(tmp, o); len(problems) > 0 {
+	if problems := leftovers(tmp, o, *removeExample); len(problems) > 0 {
 		return fmt.Errorf("leftovers found:\n  %s", strings.Join(problems, "\n  "))
 	}
 	fmt.Println("==> no leftovers from unchosen options")
@@ -148,7 +158,7 @@ func copyWorkingTree(repo, dst string) error {
 // leftovers lists anything in the project that belongs to an option that
 // wasn't chosen, or to the template itself. DECISIONS.md is exempt from the
 // name checks because it records the alternatives that were considered.
-func leftovers(root string, o options) []string {
+func leftovers(root string, o options, removedExample bool) []string {
 	otherDB := regexp.MustCompile(`(?i)\bpostgres(ql)?\b|\bpgx\b`)
 	if o.db == "postgres" {
 		otherDB = regexp.MustCompile(`(?i)\bsqlite3?\b|modernc\.org`)
@@ -169,6 +179,9 @@ func leftovers(root string, o options) []string {
 			unchosen = append(unchosen, re)
 		}
 	}
+	if removedExample {
+		unchosen = append(unchosen, regexp.MustCompile(`example:(begin|end)|internal/notes|/notes\b|remove-?example`))
+	}
 	var problems []string
 	report := func(where, what string) { problems = append(problems, where+": "+what) }
 
@@ -181,7 +194,8 @@ func leftovers(root string, o options) []string {
 		if d.IsDir() && rel == ".git" {
 			return filepath.SkipDir
 		}
-		if otherDB.MatchString(rel) || templateName.MatchString(rel) || !forUI(rel, o.ui) {
+		if otherDB.MatchString(rel) || templateName.MatchString(rel) || !forUI(rel, o.ui) ||
+			(removedExample && (strings.Contains(rel, "notes") || strings.HasPrefix(rel, "tools"))) {
 			report(rel, "path belongs to an unchosen option or the template")
 		}
 		if d.IsDir() {
@@ -211,7 +225,7 @@ func leftovers(root string, o options) []string {
 			case !exempt && templateName.MatchString(line):
 				report(where, "mentions the template's name: "+strings.TrimSpace(line))
 			case !exempt && !vendored && slices.ContainsFunc(unchosen, func(re *regexp.Regexp) bool { return re.MatchString(line) }):
-				report(where, "mentions a module that wasn't chosen: "+strings.TrimSpace(line))
+				report(where, "mentions a module (or example) that wasn't kept: "+strings.TrimSpace(line))
 			}
 		}
 		return nil

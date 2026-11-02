@@ -1,0 +1,17 @@
+{{define "title"}}{{.Data.Heading}}{{end}}
+
+{{define "content"}}
+<p class="muted"><a href="/notes">Notes</a></p>
+<h1>{{.Data.Heading}}</h1>
+<form method="post" action="{{.Data.Action}}" class="stack">
+  <label>Title
+    <input type="text" name="title" value="{{.Data.Form.Get "title"}}" maxlength="200" required autofocus>
+    {{with .Data.Form.Errors.title}}<span class="field-error">{{.}}</span>{{end}}
+  </label>
+  <label>Note
+    <textarea name="body" rows="10">{{.Data.Form.Get "body"}}</textarea>
+    {{with .Data.Form.Errors.body}}<span class="field-error">{{.}}</span>{{end}}
+  </label>
+  <button type="submit">Save</button>
+</form>
+{{end}}

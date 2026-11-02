@@ -48,6 +48,11 @@ sql:
   - <<: *sqlc
     queries: [internal/jobs/jobs.sql, internal/jobs/sqlite/claim.sql]
     gen: {go: {<<: *go, out: internal/jobs/store}}
+  # example:begin
+  - <<: *sqlc
+    queries: [internal/notes/notes.sql]
+    gen: {go: {<<: *go, out: internal/notes/store}}
+  # example:end
   # kickstart:begin module=workspaces
   - <<: *sqlc
     queries: [internal/workspaces/workspaces.sql]
@@ -87,6 +92,11 @@ sql:
   - <<: *sqlc
     queries: [internal/jobs/jobs.sql, internal/jobs/postgres/claim.sql]
     gen: {go: {<<: *go, out: internal/jobs/store/postgres}}
+  # example:begin
+  - <<: *sqlc
+    queries: [internal/notes/notes.sql]
+    gen: {go: {<<: *go, out: internal/notes/store/postgres}}
+  # example:end
   # kickstart:begin module=workspaces
   - <<: *sqlc
     queries: [internal/workspaces/workspaces.sql]
