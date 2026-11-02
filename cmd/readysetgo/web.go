@@ -5,26 +5,26 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/ukharwa/kickstart/internal/auth"
-	"github.com/ukharwa/kickstart/internal/config"
-	"github.com/ukharwa/kickstart/internal/httpx"
-	"github.com/ukharwa/kickstart/internal/web"
+	"github.com/ukharwa/readysetgo/internal/auth"
+	"github.com/ukharwa/readysetgo/internal/config"
+	"github.com/ukharwa/readysetgo/internal/httpx"
+	"github.com/ukharwa/readysetgo/internal/web"
 
-	// kickstart:begin module=admin
-	"github.com/ukharwa/kickstart/internal/admin"
-	// kickstart:end
-	// kickstart:begin module=audit
-	"github.com/ukharwa/kickstart/internal/audit"
-	// kickstart:end
-	// kickstart:begin module=uploads
-	"github.com/ukharwa/kickstart/internal/uploads"
-	// kickstart:end
-	// kickstart:begin module=workspaces
-	"github.com/ukharwa/kickstart/internal/workspaces"
-	// kickstart:end
+	// readysetgo:begin module=admin
+	"github.com/ukharwa/readysetgo/internal/admin"
+	// readysetgo:end
+	// readysetgo:begin module=audit
+	"github.com/ukharwa/readysetgo/internal/audit"
+	// readysetgo:end
+	// readysetgo:begin module=uploads
+	"github.com/ukharwa/readysetgo/internal/uploads"
+	// readysetgo:end
+	// readysetgo:begin module=workspaces
+	"github.com/ukharwa/readysetgo/internal/workspaces"
+	// readysetgo:end
 
 	// example:begin
-	"github.com/ukharwa/kickstart/internal/notes"
+	"github.com/ukharwa/readysetgo/internal/notes"
 	// example:end
 )
 
@@ -57,34 +57,34 @@ func mountPages(cfg config.Config, logger *slog.Logger, root, app *http.ServeMux
 	notePages.Routes(app)
 	// example:end
 
-	// kickstart:begin module=workspaces
+	// readysetgo:begin module=workspaces
 	workspacePages, err := workspaces.NewWeb(svc.workspaces, pages)
 	if err != nil {
 		return err
 	}
 	workspacePages.Routes(app)
-	// kickstart:end
-	// kickstart:begin module=audit
+	// readysetgo:end
+	// readysetgo:begin module=audit
 	auditPages, err := audit.NewWeb(svc.audit, pages)
 	if err != nil {
 		return err
 	}
 	auditPages.Routes(app)
-	// kickstart:end
-	// kickstart:begin module=admin
+	// readysetgo:end
+	// readysetgo:begin module=admin
 	adminPages, err := admin.NewWeb(svc.admin, pages)
 	if err != nil {
 		return err
 	}
 	adminPages.Routes(app)
-	// kickstart:end
-	// kickstart:begin module=uploads
+	// readysetgo:end
+	// readysetgo:begin module=uploads
 	uploadPages, err := uploads.NewWeb(svc.uploads, pages)
 	if err != nil {
 		return err
 	}
 	uploadPages.Routes(app)
-	// kickstart:end
+	// readysetgo:end
 	return nil
 }
 

@@ -38,7 +38,7 @@ func TestLoadDefaults(t *testing.T) {
 			}
 			want := Config{
 				Env:             tt.env,
-				AppName:         "kickstart",
+				AppName:         "readysetgo",
 				AppURL:          "http://localhost:8080",
 				HTTPAddr:        ":8080",
 				LogFormat:       tt.wantFormat,
@@ -47,19 +47,19 @@ func TestLoadDefaults(t *testing.T) {
 				ShutdownTimeout: 25 * time.Second,
 				DatabaseURL:     "db",
 				MigrateOnStart:  true,
-				// kickstart:begin db=postgres
+				// readysetgo:begin db=postgres
 				DBMaxOpenConns:    25,
 				DBConnMaxIdleTime: 5 * time.Minute,
 				DBConnMaxLifetime: 30 * time.Minute,
-				// kickstart:end
+				// readysetgo:end
 				SMTPPort:          587,
 				SMTPTLS:           "starttls",
 				WorkerEnabled:     true,
 				WorkerConcurrency: 4,
 				PasswordMinLength: 12,
-				// kickstart:begin module=uploads
+				// readysetgo:begin module=uploads
 				UploadsDir: "data/uploads",
-				// kickstart:end
+				// readysetgo:end
 			}
 			if tt.env == "prod" {
 				want.SMTPHost = "smtp.example.com"
@@ -87,12 +87,12 @@ func TestLoadOverrides(t *testing.T) {
 		"TRUSTED_PROXIES":  "172.16.0.0/12, 10.1.2.3",
 		"DATABASE_URL":     "db",
 		"MIGRATE_ON_START": "false",
-		// kickstart:begin db=postgres
+		// readysetgo:begin db=postgres
 		"DATABASE_READ_URL":     "replica",
 		"DB_MAX_OPEN_CONNS":     "10",
 		"DB_CONN_MAX_IDLE_TIME": "1m",
 		"DB_CONN_MAX_LIFETIME":  "1h",
-		// kickstart:end
+		// readysetgo:end
 		"SMTP_HOST":           "smtp.example.com",
 		"SMTP_PORT":           "465",
 		"SMTP_USERNAME":       "user",
@@ -102,15 +102,15 @@ func TestLoadOverrides(t *testing.T) {
 		"WORKER_ENABLED":      "false",
 		"WORKER_CONCURRENCY":  "2",
 		"PASSWORD_MIN_LENGTH": "15",
-		// kickstart:begin module=uploads
+		// readysetgo:begin module=uploads
 		"UPLOADS_DIR": "/srv/files",
-		// kickstart:end
-		// kickstart:begin module=metrics
+		// readysetgo:end
+		// readysetgo:begin module=metrics
 		"METRICS_ADDR": "localhost:9100",
-		// kickstart:end
-		// kickstart:begin module=errreport
+		// readysetgo:end
+		// readysetgo:begin module=errreport
 		"SENTRY_DSN": "https://key@errors.example.com/1",
-		// kickstart:end
+		// readysetgo:end
 	}))
 	if err != nil {
 		t.Fatalf("Load: %v", err)
@@ -130,12 +130,12 @@ func TestLoadOverrides(t *testing.T) {
 		},
 		DatabaseURL:    "db",
 		MigrateOnStart: false,
-		// kickstart:begin db=postgres
+		// readysetgo:begin db=postgres
 		DatabaseReadURL:   "replica",
 		DBMaxOpenConns:    10,
 		DBConnMaxIdleTime: time.Minute,
 		DBConnMaxLifetime: time.Hour,
-		// kickstart:end
+		// readysetgo:end
 		SMTPHost:          "smtp.example.com",
 		SMTPPort:          465,
 		SMTPUsername:      "user",
@@ -145,15 +145,15 @@ func TestLoadOverrides(t *testing.T) {
 		WorkerEnabled:     false,
 		WorkerConcurrency: 2,
 		PasswordMinLength: 15,
-		// kickstart:begin module=uploads
+		// readysetgo:begin module=uploads
 		UploadsDir: "/srv/files",
-		// kickstart:end
-		// kickstart:begin module=metrics
+		// readysetgo:end
+		// readysetgo:begin module=metrics
 		MetricsAddr: "localhost:9100",
-		// kickstart:end
-		// kickstart:begin module=errreport
+		// readysetgo:end
+		// readysetgo:begin module=errreport
 		SentryDSN: "https://key@errors.example.com/1",
-		// kickstart:end
+		// readysetgo:end
 	}
 	if !reflect.DeepEqual(c, want) {
 		t.Errorf("Load = %+v, want %+v", c, want)
@@ -192,9 +192,9 @@ func TestLoadReportsAllErrors(t *testing.T) {
 func TestLogValueHidesSecrets(t *testing.T) {
 	t.Parallel()
 	c := Config{DatabaseURL: "db://user:s3cret@host/db"}
-	// kickstart:begin db=postgres
+	// readysetgo:begin db=postgres
 	c.DatabaseReadURL = "db://user:s3cret@replica/db"
-	// kickstart:end
+	// readysetgo:end
 	if s := c.LogValue().String(); strings.Contains(s, "s3cret") {
 		t.Errorf("LogValue leaks a secret: %s", s)
 	}

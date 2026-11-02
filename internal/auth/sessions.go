@@ -6,8 +6,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/ukharwa/kickstart/internal/auth/store"
-	"github.com/ukharwa/kickstart/internal/db"
+	"github.com/ukharwa/readysetgo/internal/auth/store"
+	"github.com/ukharwa/readysetgo/internal/db"
 )
 
 // Session is a logged-in browser or an API token. Only a hash of its token

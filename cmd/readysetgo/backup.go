@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ukharwa/kickstart/internal/db"
+	"github.com/ukharwa/readysetgo/internal/db"
 )
 
 // backup writes a consistent, timestamped snapshot of the SQLite database

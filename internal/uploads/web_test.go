@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ukharwa/kickstart/internal/uploads"
+	"github.com/ukharwa/readysetgo/internal/uploads"
 )
 
 func TestWebUploads(t *testing.T) {

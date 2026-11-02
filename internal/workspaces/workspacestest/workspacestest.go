@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/ukharwa/kickstart/internal/apptest"
-	"github.com/ukharwa/kickstart/internal/auth"
-	"github.com/ukharwa/kickstart/internal/workspaces"
+	"github.com/ukharwa/readysetgo/internal/apptest"
+	"github.com/ukharwa/readysetgo/internal/auth"
+	"github.com/ukharwa/readysetgo/internal/workspaces"
 )
 
 // New starts an apptest.App with the workspaces service hooked into its

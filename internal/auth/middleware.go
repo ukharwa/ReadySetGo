@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ukharwa/kickstart/internal/httpx"
+	"github.com/ukharwa/readysetgo/internal/httpx"
 )
 
 // SessionCookie is the session cookie's name. The __Host- prefix makes
@@ -34,16 +34,16 @@ func tokenFrom(ctx context.Context) string {
 }
 
 // requestToken returns the session token sent with r: the session cookie,
-// kickstart:begin ui=api
+// readysetgo:begin ui=api
 // or an "Authorization: Bearer" header from a non-browser client,
-// kickstart:end
+// readysetgo:end
 // or "".
 func requestToken(r *http.Request) string {
-	// kickstart:begin ui=api
+	// readysetgo:begin ui=api
 	if token, ok := bearerToken(r); ok {
 		return token
 	}
-	// kickstart:end
+	// readysetgo:end
 	if c, err := r.Cookie(SessionCookie); err == nil {
 		return c.Value
 	}
@@ -76,9 +76,9 @@ func (s *Service) LoadUser(next http.Handler) http.Handler {
 }
 
 // RequireUser is middleware that lets only logged-in requests through.
-// kickstart:begin ui=html
+// readysetgo:begin ui=html
 // Pages redirect to the login page, which returns to the page afterwards;
-// kickstart:end
+// readysetgo:end
 // JSON requests get 401 Unauthorized.
 func RequireUser(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -86,11 +86,11 @@ func RequireUser(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-		// kickstart:begin ui=html
+		// readysetgo:begin ui=html
 		if redirectToLogin(w, r) {
 			return
 		}
-		// kickstart:end
+		// readysetgo:end
 		httpx.Error(w, r, http.StatusUnauthorized)
 	})
 }

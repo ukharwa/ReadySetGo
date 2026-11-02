@@ -20,8 +20,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"github.com/ukharwa/kickstart/internal/db"
-	"github.com/ukharwa/kickstart/internal/metrics/store"
+	"github.com/ukharwa/readysetgo/internal/db"
+	"github.com/ukharwa/readysetgo/internal/metrics/store"
 )
 
 // Metrics holds the app's measurements.

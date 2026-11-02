@@ -15,7 +15,7 @@ import (
 	"net/mail"
 	"strings"
 
-	"github.com/ukharwa/kickstart/internal/jobs"
+	"github.com/ukharwa/readysetgo/internal/jobs"
 )
 
 // Message is one plain-text email.

@@ -12,9 +12,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/ukharwa/kickstart/internal/db"
-	"github.com/ukharwa/kickstart/internal/db/dbtest"
-	"github.com/ukharwa/kickstart/internal/ratelimit"
+	"github.com/ukharwa/readysetgo/internal/db"
+	"github.com/ukharwa/readysetgo/internal/db/dbtest"
+	"github.com/ukharwa/readysetgo/internal/ratelimit"
 )
 
 func TestHasher(t *testing.T) {

@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ukharwa/kickstart/internal/apptest"
-	"github.com/ukharwa/kickstart/internal/notes"
+	"github.com/ukharwa/readysetgo/internal/apptest"
+	"github.com/ukharwa/readysetgo/internal/notes"
 )
 
 func newWebApp(t *testing.T) *apptest.App {

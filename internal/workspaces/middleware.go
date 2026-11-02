@@ -7,8 +7,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/ukharwa/kickstart/internal/auth"
-	"github.com/ukharwa/kickstart/internal/httpx"
+	"github.com/ukharwa/readysetgo/internal/auth"
+	"github.com/ukharwa/readysetgo/internal/httpx"
 )
 
 type contextKey struct{}

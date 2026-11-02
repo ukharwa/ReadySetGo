@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ukharwa/kickstart/internal/apptest"
-	"github.com/ukharwa/kickstart/internal/auth"
-	"github.com/ukharwa/kickstart/internal/httpx"
+	"github.com/ukharwa/readysetgo/internal/apptest"
+	"github.com/ukharwa/readysetgo/internal/auth"
+	"github.com/ukharwa/readysetgo/internal/httpx"
 )
 
 const apiPassword = "correct horse battery"

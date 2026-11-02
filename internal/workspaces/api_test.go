@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/ukharwa/kickstart/internal/apptest"
-	"github.com/ukharwa/kickstart/internal/workspaces"
-	"github.com/ukharwa/kickstart/internal/workspaces/workspacestest"
+	"github.com/ukharwa/readysetgo/internal/apptest"
+	"github.com/ukharwa/readysetgo/internal/workspaces"
+	"github.com/ukharwa/readysetgo/internal/workspaces/workspacestest"
 )
 
 func newAPIApp(t *testing.T) (*apptest.App, *workspaces.Service) {

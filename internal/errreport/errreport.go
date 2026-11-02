@@ -16,7 +16,7 @@ import (
 
 	"github.com/getsentry/sentry-go"
 
-	"github.com/ukharwa/kickstart/internal/logging"
+	"github.com/ukharwa/readysetgo/internal/logging"
 )
 
 // Handler is a slog.Handler that reports error records, then passes every

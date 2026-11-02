@@ -17,9 +17,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/ukharwa/kickstart/internal/admin/store"
-	"github.com/ukharwa/kickstart/internal/auth"
-	"github.com/ukharwa/kickstart/internal/db"
+	"github.com/ukharwa/readysetgo/internal/admin/store"
+	"github.com/ukharwa/readysetgo/internal/auth"
+	"github.com/ukharwa/readysetgo/internal/db"
 )
 
 // PageSize is how many users Users returns at a time.

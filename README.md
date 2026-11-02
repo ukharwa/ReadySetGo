@@ -1,6 +1,6 @@
-# kickstart
+# ReadySetGo
 
-<!-- kickstart:begin template -->
+<!-- readysetgo:begin template -->
 A starting point for Go web apps and APIs backed by SQLite or PostgreSQL:
 database, accounts, security, background jobs, email, Caddy, Docker,
 tooling and deployment, with no business logic. Copy it, run `make init`,
@@ -69,23 +69,23 @@ database or the app will take many writes from many users at once.
 
 ## Working on the template
 
-`tools/kickstart/README.md` explains the markers init uses. `make
+`tools/readysetgo/README.md` explains the markers init uses. `make
 template-check DB=… UI=… MODULES=…` initialises a temporary copy and runs
 every check on it; the Template workflow runs all combinations in CI.
 
 ---
 
 *The rest of this README becomes the new project's.*
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 
-<!-- kickstart:begin ui=html -->
+<!-- readysetgo:begin ui=html -->
 A Go web app: server-rendered pages with HTMX, accounts, background jobs and
 email, served behind Caddy.
-<!-- kickstart:end -->
-<!-- kickstart:begin ui=api -->
+<!-- readysetgo:end -->
+<!-- readysetgo:begin ui=api -->
 A Go JSON API: accounts with session cookies or bearer tokens, background
 jobs and email, served behind Caddy.
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 `DECISIONS.md` explains why it's built this way, `AGENTS.md` holds the
 conventions for working on it, and `SCALING.md` is the playbook for when it
 grows.
@@ -96,10 +96,10 @@ grows.
   verification, password reset, changing email and password, and account
   deletion. Passwords are hashed with argon2id; sessions live in the
   database.
-<!-- kickstart:begin ui=api -->
+<!-- readysetgo:begin ui=api -->
   Browsers use a session cookie; other clients get a bearer token from
   `POST /api/auth/token`.
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 - **Security:** CSRF protection, `__Host-` cookies, strict security headers
   (Content-Security-Policy included), rate limits on logins and emails,
   and security events (failed logins, role changes, …) in the logs.
@@ -108,45 +108,45 @@ grows.
 - **Background jobs** in the database, safe with several instances, and
   scheduled tasks that run once per interval.
 - **Email** through SMTP, sent by a job; Mailpit catches it in development.
-<!-- kickstart:begin db=sqlite -->
+<!-- readysetgo:begin db=sqlite -->
 - **SQLite** in WAL mode, with snapshot backups and optional Litestream
   replication.
-<!-- kickstart:end -->
-<!-- kickstart:begin db=postgres -->
+<!-- readysetgo:end -->
+<!-- readysetgo:begin db=postgres -->
 - **PostgreSQL 18**, with read-replica support and a backup script.
-<!-- kickstart:end -->
-<!-- kickstart:begin db=sqlite -->
+<!-- readysetgo:end -->
+<!-- readysetgo:begin db=sqlite -->
 - **Caddy** in front, with automatic HTTPS and compression.
-<!-- kickstart:end -->
-<!-- kickstart:begin db=postgres -->
+<!-- readysetgo:end -->
+<!-- readysetgo:begin db=postgres -->
 - **Caddy** in front, with automatic HTTPS, compression and load balancing
   across app instances.
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 - **Docker Compose** for development services and production; a small,
   non-root image published to GitHub's container registry by CI.
 - **Tooling:** Make, live reload (air), golangci-lint, sqlc, goose
   migrations, and GitHub Actions for lint, tests and images.
-<!-- kickstart:begin module=workspaces -->
+<!-- readysetgo:begin module=workspaces -->
 - **Workspaces:** shared workspaces with owners, admins and members, and
   emailed invitations.
-<!-- kickstart:end -->
-<!-- kickstart:begin module=admin -->
+<!-- readysetgo:end -->
+<!-- readysetgo:begin module=admin -->
 - **Admin:** find and manage users, and retry failed jobs.
-<!-- kickstart:end -->
-<!-- kickstart:begin module=audit -->
+<!-- readysetgo:end -->
+<!-- readysetgo:begin module=audit -->
 - **Audit log:** every security event kept in a table, with an admin-only
   log.
-<!-- kickstart:end -->
-<!-- kickstart:begin module=uploads -->
+<!-- readysetgo:end -->
+<!-- readysetgo:begin module=uploads -->
 - **Uploads:** users' files on local disk behind a storage interface, with
   type checks and owner-only downloads.
-<!-- kickstart:end -->
-<!-- kickstart:begin module=metrics -->
+<!-- readysetgo:end -->
+<!-- readysetgo:begin module=metrics -->
 - **Metrics:** Prometheus metrics and Go's profiler on an internal port.
-<!-- kickstart:end -->
-<!-- kickstart:begin module=errreport -->
+<!-- readysetgo:end -->
+<!-- readysetgo:begin module=errreport -->
 - **Error reports** to Sentry, GlitchTip or Bugsink.
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 <!-- example:begin -->
 - **The notes example:** a small feature showing the pattern from migration
   to test. `make remove-example` deletes it.
@@ -183,9 +183,9 @@ with, `admin@example.com` and `user@example.com`, both with the password
 `make services` starts:
 
 - Mailpit, which catches the app's email: read it at <http://localhost:8025>
-<!-- kickstart:begin db=postgres -->
+<!-- readysetgo:begin db=postgres -->
 - Postgres
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 
 If another project already uses one of these ports (or the app's 8080),
 change it in `.env`; AGENTS.md ("Local ports") lists the settings that move
@@ -202,27 +202,27 @@ make test
 
 runs every test with the race detector, against a real database: each test
 gets its own.
-<!-- kickstart:begin db=postgres -->
+<!-- readysetgo:begin db=postgres -->
 They need `make services` running and `TEST_DATABASE_URL` set (it is, in
 `.env.example`).
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 `make check` runs everything CI runs: lint, `go mod tidy`, generated code,
 known vulnerabilities and the tests. Run it before pushing.
 
 ## The database
 
-<!-- kickstart:begin db=sqlite -->
-The database is a SQLite file (`DATABASE_URL`, `data/kickstart.db` in
-development, `/data/kickstart.db` in the container). It runs in WAL mode
+<!-- readysetgo:begin db=sqlite -->
+The database is a SQLite file (`DATABASE_URL`, `data/readysetgo.db` in
+development, `/data/readysetgo.db` in the container). It runs in WAL mode
 with one writer at a time, which suits one server with modest writes very
 well. It can't be shared by two servers: when the app needs more than one,
 `SCALING.md` describes the move to a database server.
-<!-- kickstart:end -->
-<!-- kickstart:begin db=postgres -->
+<!-- readysetgo:end -->
+<!-- readysetgo:begin db=postgres -->
 The database is PostgreSQL 18 (`DATABASE_URL`). Each instance keeps a pool
 of up to `DB_MAX_OPEN_CONNS` connections (25), and `DATABASE_READ_URL` can
 point reads at a replica.
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 
 Migrations live in `migrations/` and are embedded in the binary; the app
 applies pending ones when it starts (`MIGRATE_ON_START`).
@@ -246,16 +246,16 @@ start.
 1. Point the domain's DNS at the server and open ports 80 and 443 (TCP,
    and UDP 443 for HTTP/3).
 2. Install Docker Engine with the Compose plugin on the server.
-3. Create the deployment folder (`/srv/kickstart` by default) and in it a
+3. Create the deployment folder (`/srv/readysetgo` by default) and in it a
    `.env` (`chmod 600`: it holds the secrets) with the production values of
    everything in `.env.example`: at least `APP_ENV=prod`, `APP_DOMAIN`, the
    `SMTP_` settings
-<!-- kickstart:begin db=postgres -->
+<!-- readysetgo:begin db=postgres -->
    and a strong `POSTGRES_PASSWORD`.
-<!-- kickstart:end -->
-<!-- kickstart:begin db=sqlite -->
+<!-- readysetgo:end -->
+<!-- readysetgo:begin db=sqlite -->
    and, for backups off the server, the `LITESTREAM_` settings.
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 4. CI pushes an image to `ghcr.io` on every push to `main`. If the
    repository is private, log the server in to read it:
    `docker login ghcr.io` with a token that can read packages.
@@ -276,15 +276,15 @@ start.
 
 7. Schedule backups (below), and point an uptime monitor such as Uptime
    Kuma or UptimeRobot at `https://your-domain/healthz`.
-<!-- kickstart:begin module=errreport -->
+<!-- readysetgo:begin module=errreport -->
 8. Set `SENTRY_DSN` in the server's `.env` to a Sentry, GlitchTip or
    Bugsink project to get every logged error as a report.
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 
 `/healthz` answers while the process runs; `/readyz` also checks the
 database, and fails during shutdown so Caddy stops sending requests first.
 
-<!-- kickstart:begin module=metrics -->
+<!-- readysetgo:begin module=metrics -->
 ### Collecting metrics
 
 Set `METRICS_ADDR=:9090` in the server's `.env`. Only containers on the
@@ -313,11 +313,11 @@ scrape_configs:
 Point Grafana (or Grafana Cloud, with Prometheus remote-write) at it for
 dashboards. `http://app:9090/debug/pprof/` serves Go's profiler on the same
 port.
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 
 ## Backups
 
-<!-- kickstart:begin db=sqlite -->
+<!-- readysetgo:begin db=sqlite -->
 `deploy/backup.cron.example` takes a snapshot every night (the app's
 `backup` command, which keeps the newest 7 in the data volume). For copies
 off the server, turn on Litestream: set `COMPOSE_PROFILES=litestream` and
@@ -336,16 +336,16 @@ Restore from Litestream, to the latest change it has:
 
 ```bash
 docker compose stop app
-docker compose run --rm litestream restore -o /data/restored.db /data/kickstart.db
+docker compose run --rm litestream restore -o /data/restored.db /data/readysetgo.db
 docker compose run --rm app restore -from /data/restored.db
 docker compose start app
 ```
 
 Every few months, practise: copy a snapshot down
 (`docker compose cp app:/data/backups/FILE.db .`) and check it opens
-(`APP_ENV=dev DATABASE_URL=FILE.db go run ./cmd/kickstart migrate status`).
-<!-- kickstart:end -->
-<!-- kickstart:begin db=postgres -->
+(`APP_ENV=dev DATABASE_URL=FILE.db go run ./cmd/readysetgo migrate status`).
+<!-- readysetgo:end -->
+<!-- readysetgo:begin db=postgres -->
 `deploy/backup.cron.example` runs `deploy/backup-postgres.sh` every night:
 it writes a compressed dump into `backups/`, keeps the newest 7, and copies
 it to S3-compatible storage with rclone when `BACKUP_REMOTE` names an
@@ -363,33 +363,33 @@ Every few months, practise: restore the latest dump into a scratch database
 and check it has recent data.
 
 ```bash
-docker compose exec postgres createdb -U kickstart drill
-docker compose exec -T postgres pg_restore -U kickstart -d drill < backups/FILE.dump
-docker compose exec postgres psql -U kickstart -d drill -c 'SELECT max(created_at) FROM users'
-docker compose exec postgres dropdb -U kickstart drill
+docker compose exec postgres createdb -U readysetgo drill
+docker compose exec -T postgres pg_restore -U readysetgo -d drill < backups/FILE.dump
+docker compose exec postgres psql -U readysetgo -d drill -c 'SELECT max(created_at) FROM users'
+docker compose exec postgres dropdb -U readysetgo drill
 ```
-<!-- kickstart:end -->
-<!-- kickstart:begin module=uploads -->
+<!-- readysetgo:end -->
+<!-- readysetgo:begin module=uploads -->
 
 Uploaded files are on the `data` volume (`/data/uploads`), which the
 database backups don't include. Back the volume up as well, for example
 with `rclone sync` from the volume's folder to the same storage.
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 
-<!-- kickstart:begin module=workspaces,module=admin,module=audit,module=uploads,module=metrics,module=errreport -->
+<!-- readysetgo:begin module=workspaces,module=admin,module=audit,module=uploads,module=metrics,module=errreport -->
 ## Removing a module
 
 Each module is a folder in `internal/` that the rest of the app reaches only
-from `cmd/kickstart/`. To remove one later, delete its folder, then let the
+from `cmd/readysetgo/`. To remove one later, delete its folder, then let the
 compiler (`go build ./...`) point at each line that used it: its field and
 setup in `app.go`, its routes, and any job it registered. Also remove its
 settings from `config` and `.env.example` and its entries in `sqlc.yaml`.
-<!-- kickstart:begin ui=html -->
+<!-- readysetgo:begin ui=html -->
 Take its link out of the nav in `internal/web/templates/layout.html`.
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 If its migration has already run anywhere, add a migration that drops its
 tables instead of deleting that one.
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 <!-- example:begin -->
 
 ## The notes example

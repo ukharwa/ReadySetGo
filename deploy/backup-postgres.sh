@@ -12,7 +12,7 @@ set -eu
 cd "$(dirname "$0")/.."
 keep=${KEEP:-7}
 mkdir -p backups
-file="backups/kickstart-$(date -u +%Y%m%dT%H%M%SZ).dump"
+file="backups/readysetgo-$(date -u +%Y%m%dT%H%M%SZ).dump"
 
 # pg_dump runs inside the database container with its own credentials.
 # Writing to a temporary name first means a failed dump never looks finished.
@@ -22,7 +22,7 @@ echo "backup written: $file"
 
 # Keep the newest $keep dumps. Names sort by time: the timestamp is UTC and
 # fixed-width.
-ls -1 backups/kickstart-*.dump | sort -r | tail -n +"$((keep + 1))" | while read -r old; do
+ls -1 backups/readysetgo-*.dump | sort -r | tail -n +"$((keep + 1))" | while read -r old; do
 	rm -- "$old"
 	echo "old backup deleted: $old"
 done

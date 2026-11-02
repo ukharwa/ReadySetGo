@@ -18,7 +18,7 @@ import (
 	"modernc.org/sqlite"
 	sqlite3 "modernc.org/sqlite/lib"
 
-	migrations "github.com/ukharwa/kickstart/migrations/sqlite"
+	migrations "github.com/ukharwa/readysetgo/migrations/sqlite"
 )
 
 const gooseDialect = goose.DialectSQLite3

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/ukharwa/kickstart/internal/logging"
+	"github.com/ukharwa/readysetgo/internal/logging"
 )
 
 // wantsPage reports whether r should get an HTML page rather than JSON:

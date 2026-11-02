@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ukharwa/kickstart/internal/validate"
+	"github.com/ukharwa/readysetgo/internal/validate"
 )
 
 //go:embed templates static

@@ -28,13 +28,13 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/ukharwa/kickstart/internal/auth"
-	"github.com/ukharwa/kickstart/internal/db"
-	"github.com/ukharwa/kickstart/internal/email"
-	"github.com/ukharwa/kickstart/internal/jobs"
-	"github.com/ukharwa/kickstart/internal/ratelimit"
-	"github.com/ukharwa/kickstart/internal/validate"
-	"github.com/ukharwa/kickstart/internal/workspaces/store"
+	"github.com/ukharwa/readysetgo/internal/auth"
+	"github.com/ukharwa/readysetgo/internal/db"
+	"github.com/ukharwa/readysetgo/internal/email"
+	"github.com/ukharwa/readysetgo/internal/jobs"
+	"github.com/ukharwa/readysetgo/internal/ratelimit"
+	"github.com/ukharwa/readysetgo/internal/validate"
+	"github.com/ukharwa/readysetgo/internal/workspaces/store"
 )
 
 //go:embed emails/*.txt
@@ -430,10 +430,10 @@ func (s *Service) Accept(ctx context.Context, user auth.User, token string) (Wor
 		if _, err := q.DeleteInvitation(ctx, store.DeleteInvitationParams{ID: inv.ID, WorkspaceID: inv.WorkspaceID}); err != nil {
 			return err
 		}
-		// kickstart:begin db=postgres
+		// readysetgo:begin db=postgres
 		// Checked rather than tried: a failed insert would abort the whole
 		// transaction.
-		// kickstart:end
+		// readysetgo:end
 		_, err = q.GetMembership(ctx, store.GetMembershipParams{WorkspaceID: inv.WorkspaceID, UserID: user.ID})
 		if errors.Is(db.Err(err), db.ErrNotFound) {
 			err = q.AddMember(ctx, store.AddMemberParams{WorkspaceID: inv.WorkspaceID, UserID: user.ID, Role: inv.Role, CreatedAt: s.now()})

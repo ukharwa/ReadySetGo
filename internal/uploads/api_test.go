@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/ukharwa/kickstart/internal/uploads"
+	"github.com/ukharwa/readysetgo/internal/uploads"
 )
 
 func TestAPIUploads(t *testing.T) {

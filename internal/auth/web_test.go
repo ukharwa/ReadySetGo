@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ukharwa/kickstart/internal/apptest"
-	"github.com/ukharwa/kickstart/internal/auth"
+	"github.com/ukharwa/readysetgo/internal/apptest"
+	"github.com/ukharwa/readysetgo/internal/auth"
 )
 
 const password = "correct horse battery"

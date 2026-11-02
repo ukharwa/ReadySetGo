@@ -1,10 +1,10 @@
 # Working on the template itself
 
-The init tool (`go run ./tools/kickstart init`, behind `make init`) and the
+The init tool (`go run ./tools/readysetgo init`, behind `make init`) and the
 template check (`make template-check`) live here. Init deletes this folder
 from every project it creates.
 
-This repository is the kickstart template. Before `make init`, it is a
+This repository is the ReadySetGo template. Before `make init`, it is a
 runnable SQLite app containing every option. `make init` keeps the options a
 new project picks and removes the rest:
 
@@ -34,9 +34,9 @@ new project picks and removes the rest:
   a line of its own:
 
   ```go
-  // kickstart:begin db=postgres
+  // readysetgo:begin db=postgres
   …
-  // kickstart:end
+  // readysetgo:end
   ```
 
   Conditions are `db=sqlite|postgres`, `ui=html|api`, `module=<name>`, and
@@ -46,7 +46,8 @@ new project picks and removes the rest:
 - The notes example's lines sit between `example:begin` and `example:end`
   markers instead. Init keeps them, and the example, in every project;
   `make remove-example` (`tools/removeexample/`) deletes them later.
-- Init renames `kickstart` to the project name everywhere except
+- Init renames `readysetgo` (in any letter case, so `ReadySetGo` too) to the
+  project name everywhere except
   `DECISIONS.md`, and the module path everywhere.
 - After init, nothing from an unchosen option may remain: don't mention
   another database, UI mode or module outside its markers or paths.
@@ -57,7 +58,7 @@ project after `make remove-example`. It copies
 the working tree (uncommitted changes included) to a temporary folder, runs
 init, then tidy, vet, the tests, lint and sqlc, and fails on leftovers. The
 Postgres check needs `make services`. Set `TMPDIR` to choose where the copy
-goes. The init program lives in `tools/kickstart/`; its unit tests run with
+goes. The init program lives in `tools/readysetgo/`; its unit tests run with
 `go test ./tools/...`.
 
 After changing a query or migration, run `make generate`: sqlc writes each

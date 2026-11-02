@@ -19,8 +19,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	_ "github.com/jackc/pgx/v5/stdlib" // registers the "pgx" driver
 
-	"github.com/ukharwa/kickstart/internal/db"
-	migrations "github.com/ukharwa/kickstart/migrations/postgres"
+	"github.com/ukharwa/readysetgo/internal/db"
+	migrations "github.com/ukharwa/readysetgo/migrations/postgres"
 )
 
 // URL returns the URL of a new database for this test, dropped when the test

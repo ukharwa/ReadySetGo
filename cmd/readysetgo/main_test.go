@@ -15,8 +15,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ukharwa/kickstart/internal/auth"
-	"github.com/ukharwa/kickstart/internal/db/dbtest"
+	"github.com/ukharwa/readysetgo/internal/auth"
+	"github.com/ukharwa/readysetgo/internal/db/dbtest"
 )
 
 // testEnv returns the settings a command runs with in a test: dev mode, a
@@ -25,9 +25,9 @@ func testEnv(t *testing.T, more map[string]string) func(string) string {
 	env := map[string]string{
 		"APP_ENV":      "dev",
 		"DATABASE_URL": dbtest.URL(t),
-		// kickstart:begin module=uploads
+		// readysetgo:begin module=uploads
 		"UPLOADS_DIR": t.TempDir(),
-		// kickstart:end
+		// readysetgo:end
 	}
 	maps.Copy(env, more)
 	return func(k string) string { return env[k] }

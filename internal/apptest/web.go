@@ -7,8 +7,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/ukharwa/kickstart/internal/auth"
-	"github.com/ukharwa/kickstart/internal/web"
+	"github.com/ukharwa/readysetgo/internal/auth"
+	"github.com/ukharwa/readysetgo/internal/web"
 )
 
 // Renderer returns a page renderer using the embedded templates.

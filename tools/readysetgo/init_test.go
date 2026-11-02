@@ -12,34 +12,34 @@ var withWorkspaces = options{name: "myapp", module: "github.com/me/myapp", db: "
 func TestApplyMarkers(t *testing.T) {
 	t.Parallel()
 	in := `a
-// kickstart:begin db=sqlite
+// readysetgo:begin db=sqlite
 sqlite
-// kickstart:end
-# kickstart:begin db=postgres
+// readysetgo:end
+# readysetgo:begin db=postgres
 postgres
-  # kickstart:begin module=uploads
+  # readysetgo:begin module=uploads
 nested uploads
-  # kickstart:end
-# kickstart:end
-<!-- kickstart:begin template -->
+  # readysetgo:end
+# readysetgo:end
+<!-- readysetgo:begin template -->
 template only
-<!-- kickstart:end -->
--- kickstart:begin ui=api
+<!-- readysetgo:end -->
+-- readysetgo:begin ui=api
 api
--- kickstart:end
-# kickstart:begin db=sqlite,module=uploads
+-- readysetgo:end
+# readysetgo:begin db=sqlite,module=uploads
 sqlite or uploads
-# kickstart:end
-prose mentioning kickstart:begin is not a marker
+# readysetgo:end
+prose mentioning readysetgo:begin is not a marker
 b
 `
 	tests := []struct {
 		o    options
 		want string
 	}{
-		{sqliteHTML, "a\nsqlite\nsqlite or uploads\nprose mentioning kickstart:begin is not a marker\nb\n"},
-		{postgresAPI, "a\npostgres\nnested uploads\napi\nsqlite or uploads\nprose mentioning kickstart:begin is not a marker\nb\n"},
-		{options{db: "postgres", ui: "html"}, "a\npostgres\nprose mentioning kickstart:begin is not a marker\nb\n"},
+		{sqliteHTML, "a\nsqlite\nsqlite or uploads\nprose mentioning readysetgo:begin is not a marker\nb\n"},
+		{postgresAPI, "a\npostgres\nnested uploads\napi\nsqlite or uploads\nprose mentioning readysetgo:begin is not a marker\nb\n"},
+		{options{db: "postgres", ui: "html"}, "a\npostgres\nprose mentioning readysetgo:begin is not a marker\nb\n"},
 	}
 	for _, tt := range tests {
 		got, err := applyMarkers(in, tt.o)
@@ -55,11 +55,11 @@ b
 func TestApplyMarkersErrors(t *testing.T) {
 	t.Parallel()
 	for name, in := range map[string]string{
-		"unclosed":          "// kickstart:begin db=sqlite\nx\n",
-		"unopened":          "x\n// kickstart:end\n",
-		"unknown condition": "// kickstart:begin db=oracle\n// kickstart:end\n",
-		"unknown in a list": "// kickstart:begin db=sqlite,db=oracle\n// kickstart:end\n",
-		"end with argument": "// kickstart:begin db=sqlite\n// kickstart:end db=sqlite\n",
+		"unclosed":          "// readysetgo:begin db=sqlite\nx\n",
+		"unopened":          "x\n// readysetgo:end\n",
+		"unknown condition": "// readysetgo:begin db=oracle\n// readysetgo:end\n",
+		"unknown in a list": "// readysetgo:begin db=sqlite,db=oracle\n// readysetgo:end\n",
+		"end with argument": "// readysetgo:begin db=sqlite\n// readysetgo:end db=sqlite\n",
 	} {
 		if _, err := applyMarkers(in, sqliteHTML); err == nil {
 			t.Errorf("%s: no error", name)
@@ -97,7 +97,7 @@ func TestPaths(t *testing.T) {
 		o    options
 		want string // "" means removed
 	}{
-		{"tools/kickstart/main.go", sqliteHTML, ""},
+		{"tools/readysetgo/main.go", sqliteHTML, ""},
 		{"tools/removeexample/main.go", sqliteHTML, "tools/removeexample/main.go"},
 		{".github/workflows/template.yml", sqliteHTML, ""},
 		{"migrations/sqlite/00001_users.sql", sqliteHTML, "migrations/00001_users.sql"},
@@ -110,7 +110,7 @@ func TestPaths(t *testing.T) {
 		{"internal/jobs/sqlite/claim.sql", sqliteHTML, "internal/jobs/claim.sql"},
 		{"internal/jobs/postgres/claim.sql", sqliteHTML, ""},
 		{"internal/jobs/jobs.sql", postgresAPI, "internal/jobs/jobs.sql"},
-		{"cmd/kickstart/main.go", sqliteHTML, "cmd/myapp/main.go"},
+		{"cmd/readysetgo/main.go", sqliteHTML, "cmd/myapp/main.go"},
 		{"internal/db/db.go", postgresAPI, "internal/db/db.go"},
 		{"deploy/backup-postgres.sh", sqliteHTML, ""},
 		{"deploy/backup-postgres.sh", postgresAPI, "deploy/backup-postgres.sh"},
@@ -151,13 +151,14 @@ func TestRewrite(t *testing.T) {
 	t.Parallel()
 	o := postgresAPI
 	o.dialectDirs = []string{"internal/store/postgres", "internal/jobs/postgres", "migrations/postgres"}
-	in := `import "github.com/ukharwa/kickstart/migrations/postgres"
+	in := `import "github.com/ukharwa/readysetgo/migrations/postgres"
 - internal/jobs/postgres/claim.sql
 image: postgres:18-alpine
 out: internal/store/postgres
-BIN := bin/kickstart
-name: kickstart-dev
-kickstarter stays`
+BIN := bin/readysetgo
+name: readysetgo-dev
+# ReadySetGo
+readysetgoer stays`
 	got := rewrite("Makefile", in, o)
 	for _, want := range []string{
 		`import "github.com/me/myapp/migrations"`,
@@ -166,21 +167,22 @@ kickstarter stays`
 		"out: internal/store\n",
 		"BIN := bin/myapp",
 		"name: myapp-dev",
-		"kickstarter stays",
+		"# myapp\n",
+		"readysetgoer stays",
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("rewrite result lacks %q:\n%s", want, got)
 		}
 	}
-	if got := rewrite("compose.yaml", "image: ghcr.io/ukharwa/kickstart:latest", postgresAPI); got != "image: ghcr.io/me/myapp:latest" {
+	if got := rewrite("compose.yaml", "image: ghcr.io/ukharwa/readysetgo:latest", postgresAPI); got != "image: ghcr.io/me/myapp:latest" {
 		t.Errorf("image for a GitHub module: %q", got)
 	}
 	other := postgresAPI
 	other.module = "example.com/myapp"
-	if got := rewrite("compose.yaml", "image: ghcr.io/ukharwa/kickstart:latest", other); got != "image: myapp:latest" {
+	if got := rewrite("compose.yaml", "image: ghcr.io/ukharwa/readysetgo:latest", other); got != "image: myapp:latest" {
 		t.Errorf("image for another module: %q", got)
 	}
-	if got := rewrite("DECISIONS.md", "the kickstart template", postgresAPI); got != "the kickstart template" {
+	if got := rewrite("DECISIONS.md", "the ReadySetGo template", postgresAPI); got != "the ReadySetGo template" {
 		t.Errorf("DECISIONS.md was renamed: %q", got)
 	}
 }
@@ -189,7 +191,7 @@ kickstarter stays`
 // option's blocks is dropped rather than left empty.
 func TestTransformDropsEmptiedFiles(t *testing.T) {
 	t.Parallel()
-	in := []byte("# kickstart:begin db=sqlite\ndbs: []\n# kickstart:end\n")
+	in := []byte("# readysetgo:begin db=sqlite\ndbs: []\n# readysetgo:end\n")
 	if _, _, keep, err := transform("deploy/litestream.yml", in, postgresAPI); err != nil || keep {
 		t.Errorf("keep = %v, err = %v; want the emptied file dropped", keep, err)
 	}
@@ -235,7 +237,7 @@ func TestRecordInit(t *testing.T) {
 
 func TestValidateRejectsTemplateName(t *testing.T) {
 	t.Parallel()
-	o := options{name: "kickstart", db: "sqlite", ui: "html"}
+	o := options{name: "readysetgo", db: "sqlite", ui: "html"}
 	if err := o.validate(); err == nil || !strings.Contains(err.Error(), "template's own name") {
 		t.Errorf("err = %v", err)
 	}

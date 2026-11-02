@@ -1,4 +1,4 @@
--- kickstart:begin module=uploads
+-- readysetgo:begin module=uploads
 -- +goose Up
 -- Uploaded files' details; the files themselves are in storage under
 -- storage_key, a random name, never the user's filename.
@@ -18,4 +18,4 @@ CREATE INDEX uploads_user_id_idx ON uploads (user_id);
 
 -- +goose Down
 DROP TABLE uploads;
--- kickstart:end
+-- readysetgo:end

@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/ukharwa/kickstart/internal/admin"
-	"github.com/ukharwa/kickstart/internal/apptest"
-	"github.com/ukharwa/kickstart/internal/auth"
+	"github.com/ukharwa/readysetgo/internal/admin"
+	"github.com/ukharwa/readysetgo/internal/apptest"
+	"github.com/ukharwa/readysetgo/internal/auth"
 )
 
 type userJSON struct {

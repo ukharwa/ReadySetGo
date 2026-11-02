@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ukharwa/kickstart/internal/logging"
+	"github.com/ukharwa/readysetgo/internal/logging"
 )
 
 func serve(h http.Handler, r *http.Request) *httptest.ResponseRecorder {

@@ -5,13 +5,13 @@ chosen, why, and what else was considered. Where the owner overrode a
 recommendation, the concern is noted once and the decision then stands.
 
 The decisions were made on 2026-10-30, in the design interview for the
-kickstart template.
+ReadySetGo template (first named kickstart).
 
-<!-- kickstart:begin template -->
-> **Template note.** Blocks marked `kickstart:begin … kickstart:end` are
+<!-- readysetgo:begin template -->
+> **Template note.** Blocks marked `readysetgo:begin … readysetgo:end` are
 > handled by `make init`: blocks for the options you don't choose are
 > removed, and the markers themselves are always removed.
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 
 ## Guiding principles
 
@@ -32,7 +32,7 @@ kickstart template.
 
 ## Database
 
-<!-- kickstart:begin template -->
+<!-- readysetgo:begin template -->
 ### Supported databases: SQLite and PostgreSQL
 
 SQLite covers single-server apps with no database server to run; Postgres is
@@ -59,9 +59,9 @@ For a few hundred to a few thousand users on one VPS it is fast, needs no
 server and backs up as a file. **Considered:** Postgres as the default, which
 avoids a database move under pressure if an app suddenly grows, at the cost
 of a database container for every small app.
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 
-<!-- kickstart:begin db=sqlite -->
+<!-- readysetgo:begin db=sqlite -->
 ### Database: SQLite
 
 Chosen at init. A single server with modest writes runs very well on SQLite
@@ -107,9 +107,9 @@ S3-compatible storage, configured by one `LITESTREAM_REPLICA_URL`; its
 restore produces a file that `app restore` then puts in place. Backups are
 scheduled by host cron, and the README has a restore drill. Copying the
 `.db` file while the app runs is not safe in WAL mode.
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 
-<!-- kickstart:begin db=postgres -->
+<!-- readysetgo:begin db=postgres -->
 ### Database: PostgreSQL 18
 
 Chosen at init. Version 18 is supported by every managed host; nothing here
@@ -138,7 +138,7 @@ and, when `BACKUP_REMOTE` is set, pushes the dump to S3-compatible storage
 with rclone. `pg_restore --clean` puts one back. Backups are scheduled by
 host cron, and the README has a restore drill. Managed Postgres hosts offer
 point-in-time restore instead.
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 
 ### Data access: `database/sql` + sqlc
 
@@ -222,7 +222,7 @@ conflicting routes panic at startup. Middleware is plain function wrapping.
 **Considered:** chi, which adds route groups and middleware stacks but is
 mostly convenience since Go 1.22; switching later keeps handlers unchanged.
 
-<!-- kickstart:begin template -->
+<!-- readysetgo:begin template -->
 ### UI mode: chosen at init
 
 `make init UI=html|api` keeps one handler layer. Authentication logic lives
@@ -230,9 +230,9 @@ in packages with no HTML or JSON in them; each mode is a thin layer on top.
 **Overridden:** yes. The recommendation was HTML pages plus small JSON
 helpers in every project; the owner chose an init option because they build
 both kinds of app. This fits the init-time pruning model, so no concern.
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 
-<!-- kickstart:begin ui=html -->
+<!-- readysetgo:begin ui=html -->
 ### Pages: server-rendered `html/template` + HTMX
 
 One codebase, no frontend build step, and cookie sessions plus CSRF
@@ -254,9 +254,9 @@ cache for a year and never see stale files. CSS is a small hand-written
 stylesheet with no Node or build step. **Considered:** Pico CSS (polished
 instantly, but its look has to be undone later) and Tailwind's standalone
 binary (utility classes, but a CSS build step).
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 
-<!-- kickstart:begin ui=api -->
+<!-- readysetgo:begin ui=api -->
 ### API: JSON
 
 JSON handlers under `/api/`. Errors use RFC 9457 problem details
@@ -267,7 +267,7 @@ frontend is served from the same domain as the API (Caddy sends `/api/*` to
 Go), so there is no CORS setup and cookies stay `SameSite=Lax`.
 **Considered:** a separate `APP_FRONTEND_URL` setting, which is redundant
 when the frontend and API share a domain.
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 
 ### Configuration: environment variables only
 
@@ -292,9 +292,9 @@ be the bottleneck.
 ### One binary with subcommands
 
 `serve`, `worker`, `migrate`, `seed` and `user`,
-<!-- kickstart:begin db=sqlite -->
+<!-- readysetgo:begin db=sqlite -->
 plus `backup` and `restore` for the database file,
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 parsed with the standard library, so the server, worker and migrations can
 run as one process now and separately later. No cobra.
 
@@ -312,7 +312,7 @@ every 5 minutes. The `SessionStore` interface in the auth package is the
 seam; its default keeps sessions in the database and reads them from the
 primary, never a replica, so a new session is found straight away.
 
-<!-- kickstart:begin ui=api -->
+<!-- readysetgo:begin ui=api -->
 ### API clients: cookies for browsers, bearer tokens for everything else
 
 Browser frontends use the same cookie sessions. Mobile apps, CLIs and
@@ -321,7 +321,7 @@ stored hashed in the same table and revocable the same way. The table is the
 same in both UI modes, so the schema doesn't depend on the mode.
 **Considered:** bearer tokens only, which means a browser app keeps its
 token where JavaScript (and any XSS bug) can read it.
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 
 ### No JWT
 
@@ -538,10 +538,10 @@ two app instances behind Caddy (`docker compose up --scale app=2`):
 - Requests were spread over both, and a session from one worked on the
   other. Stopping one lost no requests; a request during a single
   instance's restart waited about 6 seconds and succeeded.
-<!-- kickstart:begin module=uploads -->
+<!-- readysetgo:begin module=uploads -->
 - A file uploaded through one instance downloaded from both (the shared
   `data` volume; several servers need the S3 step).
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 - Migrations ran once, the other instance finding nothing to do (an
   advisory lock guards a simultaneous start, as `internal/db` tests).
   Scheduled tasks were enqueued once per period, and a job (an email) ran
@@ -608,7 +608,7 @@ everywhere); Go's `tool` directive (pulls sqlc's dependencies into
 `go.mod`); and, for golangci-lint, its install script piped into `sh`,
 which runs unreviewed remote code on every developer's machine.
 
-<!-- kickstart:begin template -->
+<!-- readysetgo:begin template -->
 ### `make init` is a Go program
 
 Shell scripts that rewrite files behave differently on Linux and macOS; a Go
@@ -630,7 +630,7 @@ added) then means running init on two scratch copies of that commit, with
 the old options and the new, and applying their difference. **Considered:**
 a separate tool for each kind of change, which would have to stay in step
 with init.
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 
 ### Instructions for coding agents: `AGENTS.md`
 
@@ -638,11 +638,11 @@ The conventions, and in the template the guide to starting a project, are
 in `AGENTS.md`, the file OpenAI Codex and other coding agents read.
 `CLAUDE.md`, which Claude Code reads, only imports it (`@AGENTS.md`), so
 there is one copy to keep accurate.
-<!-- kickstart:begin template -->
-The notes on maintaining the template live in `tools/kickstart/README.md`,
+<!-- readysetgo:begin template -->
+The notes on maintaining the template live in `tools/readysetgo/README.md`,
 which keeps the template's `AGENTS.md` under Codex's default 32 KiB limit
 for instruction files.
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 **Considered:** two copies, which drift apart, and a symlink, which some
 tools and Windows checkouts don't follow.
 
@@ -678,7 +678,7 @@ checked with actionlint. Deploys are
 run by hand so GitHub never holds a server key. **Considered:** automatic
 deploys on tags, and `amd64`-only images.
 
-<!-- kickstart:begin template -->
+<!-- readysetgo:begin template -->
 ### Template CI matrix
 
 Every combination of database, UI mode and modules (all or none) is created
@@ -686,7 +686,7 @@ with `make init` in a fresh copy and must pass lint and tests, which also
 tests init. Each run also fails if anything from an unchosen option is left
 behind. Two more runs then apply `make remove-example` and check the
 project again.
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 
 ### Not included
 
@@ -696,12 +696,12 @@ app.
 
 ## Optional modules
 
-<!-- kickstart:begin template -->
+<!-- readysetgo:begin template -->
 Modules are chosen with `make init MODULES=…` (default: none) and depend
 only on the core, never on each other, so any combination is valid.
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 
-<!-- kickstart:begin module=workspaces -->
+<!-- readysetgo:begin module=workspaces -->
 ### Workspaces
 
 Most of these apps are business tools where people share data, so the
@@ -734,9 +734,9 @@ design is settled up front:
 workspace-owned data (every query becomes "this user or a workspace they're
 in"); storing the current workspace in the session (two tabs can't use
 different workspaces).
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 
-<!-- kickstart:begin module=uploads -->
+<!-- readysetgo:begin module=uploads -->
 ### Uploads: local disk
 
 A storage seam with a local-disk implementation. Size limits per route, an
@@ -761,9 +761,9 @@ that point. `SCALING.md` covers it.
   a file.
 - Files live on the `data` volume (`/data/uploads`). The database backups
   don't include them: back up that volume as well.
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 
-<!-- kickstart:begin module=admin -->
+<!-- readysetgo:begin module=admin -->
 ### Admin pages
 
 User search and detail, role changes, disabling and deleting users,
@@ -777,9 +777,9 @@ resending verification, and a failed-jobs list with retry, behind
   tokens included. Retrying gives a job a fresh set of attempts.
 
 **Considered:** CLI subcommands only.
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 
-<!-- kickstart:begin module=audit -->
+<!-- readysetgo:begin module=audit -->
 ### Audit log
 
 Security events always go to the logs; this module also keeps them, for
@@ -793,9 +793,9 @@ account, 50 a page).
 
 **Considered:** making the table part of the core, and writing events after
 the change commits, which could lose some.
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 
-<!-- kickstart:begin module=metrics -->
+<!-- readysetgo:begin module=metrics -->
 ### Metrics
 
 Prometheus's `client_golang` and Go's `pprof` on an internal port that Caddy
@@ -811,9 +811,9 @@ service is split out.
 
 **Considered:** OpenTelemetry for metrics and tracing, which is
 vendor-neutral but much heavier.
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 
-<!-- kickstart:begin module=errreport -->
+<!-- readysetgo:begin module=errreport -->
 ### Error reporting
 
 `sentry-go`, enabled by `SENTRY_DSN`, works with Sentry, GlitchTip or
@@ -827,7 +827,7 @@ passwords are stripped.
 
 **Considered:** logs plus an uptime monitor only, and reporting from the
 recovery middleware and the 500 path, which would miss failed jobs.
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 
 <!-- example:begin -->
 ### Example feature: notes

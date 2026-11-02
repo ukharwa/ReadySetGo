@@ -9,9 +9,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/ukharwa/kickstart/internal/httpx"
-	"github.com/ukharwa/kickstart/internal/ratelimit"
-	"github.com/ukharwa/kickstart/internal/validate"
+	"github.com/ukharwa/readysetgo/internal/httpx"
+	"github.com/ukharwa/readysetgo/internal/ratelimit"
+	"github.com/ukharwa/readysetgo/internal/validate"
 )
 
 // API serves the account endpoints as JSON under /api/auth/.

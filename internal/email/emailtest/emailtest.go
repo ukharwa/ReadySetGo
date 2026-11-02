@@ -6,7 +6,7 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/ukharwa/kickstart/internal/email"
+	"github.com/ukharwa/readysetgo/internal/email"
 )
 
 // Recorder is an email.Sender that keeps every message for tests to

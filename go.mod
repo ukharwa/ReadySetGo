@@ -1,4 +1,4 @@
-module github.com/ukharwa/kickstart
+module github.com/ukharwa/readysetgo
 
 go 1.27.3
 

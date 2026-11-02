@@ -1,4 +1,4 @@
-// Command kickstart is the application binary. Each subcommand is one way of
+// Command readysetgo is the application binary. Each subcommand is one way of
 // running the app; they share configuration and can run as one process or
 // as separate processes. Run it with -h to list the subcommands.
 package main
@@ -41,10 +41,10 @@ func commands() []command {
 		{"migrate", "manage the database schema: up, down, status, or create NAME", migrate},
 		{"user", "manage a user: promote, demote, disable, enable or delete EMAIL", user},
 		{"seed", "add sample users for development (dev only)", seed},
-		// kickstart:begin db=sqlite
+		// readysetgo:begin db=sqlite
 		{"backup", "write a snapshot of the database (-dir, -keep)", backup},
 		{"restore", "replace the database with a snapshot (-from FILE; stop the app first)", restore},
-		// kickstart:end
+		// readysetgo:end
 	}
 }
 
@@ -70,7 +70,7 @@ func run(ctx context.Context, args []string, getenv func(string) string, stdout 
 
 func usage() string {
 	var b strings.Builder
-	b.WriteString("Usage: kickstart <command> [arguments]\n\nCommands:\n")
+	b.WriteString("Usage: readysetgo <command> [arguments]\n\nCommands:\n")
 	for _, c := range commands() {
 		fmt.Fprintf(&b, "  %-8s %s\n", c.name, c.usage)
 	}

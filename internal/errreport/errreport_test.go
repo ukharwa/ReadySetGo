@@ -11,7 +11,7 @@ import (
 
 	"github.com/getsentry/sentry-go"
 
-	"github.com/ukharwa/kickstart/internal/logging"
+	"github.com/ukharwa/readysetgo/internal/logging"
 )
 
 // transport keeps the events it is given instead of sending them.

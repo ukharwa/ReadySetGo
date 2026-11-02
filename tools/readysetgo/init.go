@@ -233,7 +233,7 @@ func transform(rel string, data []byte, o options) (string, []byte, bool, error)
 		}
 		text = rest
 	}
-	marked := strings.Contains(text, "kickstart:begin")
+	marked := strings.Contains(text, "readysetgo:begin")
 	text, err := applyMarkers(text, o)
 	if err != nil {
 		return "", nil, false, err
@@ -267,7 +267,7 @@ func transform(rel string, data []byte, o options) (string, []byte, bool, error)
 func keepPath(rel string, o options) bool {
 	dirs := strings.Split(path.Dir(rel), "/")
 	switch {
-	case strings.HasPrefix(rel, "tools/kickstart/"), rel == ".github/workflows/template.yml":
+	case strings.HasPrefix(rel, "tools/readysetgo/"), rel == ".github/workflows/template.yml":
 		return false // template-only
 	case slices.Contains(dirs, otherDB(o.db)), strings.Contains(path.Base(rel), otherDB(o.db)):
 		return false // the other database's folder or file (backup-postgres.sh)
@@ -297,7 +297,7 @@ func forUI(rel, ui string) bool {
 func movePath(rel string, o options) string {
 	dirs := strings.Split(path.Dir(rel), "/")
 	dirs = slices.DeleteFunc(dirs, func(d string) bool { return d == o.db })
-	if len(dirs) >= 2 && dirs[0] == "cmd" && dirs[1] == "kickstart" {
+	if len(dirs) >= 2 && dirs[0] == "cmd" && dirs[1] == "readysetgo" {
 		dirs[1] = o.name
 	}
 	return path.Join(append(dirs, path.Base(rel))...)
@@ -366,12 +366,12 @@ func applyBuildConstraint(text string, o options) (keep bool, rest string) {
 
 // markerLine matches a marker comment on a line of its own, in any of the
 // comment styles the template uses: //, #, -- or <!-- -->.
-var markerLine = regexp.MustCompile(`^\s*(?://|#|--|<!--)\s*kickstart:(begin|end)\b\s*(\S*?)\s*(?:-->)?\s*$`)
+var markerLine = regexp.MustCompile(`^\s*(?://|#|--|<!--)\s*readysetgo:(begin|end)\b\s*(\S*?)\s*(?:-->)?\s*$`)
 
 var blankLines = regexp.MustCompile(`\n{3,}`)
 
-// applyMarkers keeps or drops each `kickstart:begin <condition>` …
-// `kickstart:end` block and removes the marker lines. Blocks may nest. A
+// applyMarkers keeps or drops each `readysetgo:begin <condition>` …
+// `readysetgo:end` block and removes the marker lines. Blocks may nest. A
 // comma-separated list of conditions keeps the block if any of them holds.
 func applyMarkers(text string, o options) (string, error) {
 	var out strings.Builder
@@ -395,15 +395,15 @@ func applyMarkers(text string, o options) (string, error) {
 			continue
 		}
 		if m[2] != "" {
-			return "", fmt.Errorf("line %d: kickstart:end takes no condition", i+1)
+			return "", fmt.Errorf("line %d: readysetgo:end takes no condition", i+1)
 		}
 		if len(stack) == 0 {
-			return "", fmt.Errorf("line %d: kickstart:end without a matching begin", i+1)
+			return "", fmt.Errorf("line %d: readysetgo:end without a matching begin", i+1)
 		}
 		stack = stack[:len(stack)-1]
 	}
 	if len(stack) > 0 {
-		return "", errors.New("kickstart:begin without a matching end")
+		return "", errors.New("readysetgo:begin without a matching end")
 	}
 	if !changed {
 		return text, nil
@@ -441,7 +441,9 @@ func evalOne(cond string, o options) (bool, error) {
 	return false, fmt.Errorf("unknown marker condition %q", cond)
 }
 
-var templateName = regexp.MustCompile(`\bkickstart\b`)
+// templateName matches the template's name in any letter case: readysetgo
+// in code and paths, ReadySetGo in prose.
+var templateName = regexp.MustCompile(`(?i)\breadysetgo\b`)
 
 // redundantAlias matches an import whose alias is just its last path
 // element, like `migrations ".../migrations"`: needed before init, when the
@@ -473,7 +475,7 @@ func dropRedundantAliases(text string) string {
 }
 
 // rewrite updates references to paths that moved and to the template's name.
-// DECISIONS.md keeps "kickstart": there it names the template itself.
+// DECISIONS.md keeps the template's name: there it names the template itself.
 // command is the make init command that produces o.
 func (o options) command() string {
 	modules := cmp.Or(strings.Join(o.modules, ","), "none")
@@ -500,7 +502,7 @@ func rewrite(rel, text string, o options) string {
 }
 
 // templateImage is the template's container image name.
-const templateImage = "ghcr.io/ukharwa/kickstart"
+const templateImage = "ghcr.io/ukharwa/readysetgo"
 
 // imageFor names the project's image after its module: GitHub's container
 // registry for a GitHub module, otherwise a plain local name (set APP_IMAGE).

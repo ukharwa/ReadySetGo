@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ukharwa/kickstart/internal/db/dbtest"
-	"github.com/ukharwa/kickstart/internal/jobs"
-	"github.com/ukharwa/kickstart/internal/metrics"
+	"github.com/ukharwa/readysetgo/internal/db/dbtest"
+	"github.com/ukharwa/readysetgo/internal/jobs"
+	"github.com/ukharwa/readysetgo/internal/metrics"
 )
 
 func TestMetrics(t *testing.T) {

@@ -8,35 +8,35 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ukharwa/kickstart/internal/auth"
-	"github.com/ukharwa/kickstart/internal/config"
-	"github.com/ukharwa/kickstart/internal/db"
-	"github.com/ukharwa/kickstart/internal/email"
-	"github.com/ukharwa/kickstart/internal/jobs"
-	"github.com/ukharwa/kickstart/internal/logging"
-	"github.com/ukharwa/kickstart/internal/ratelimit"
+	"github.com/ukharwa/readysetgo/internal/auth"
+	"github.com/ukharwa/readysetgo/internal/config"
+	"github.com/ukharwa/readysetgo/internal/db"
+	"github.com/ukharwa/readysetgo/internal/email"
+	"github.com/ukharwa/readysetgo/internal/jobs"
+	"github.com/ukharwa/readysetgo/internal/logging"
+	"github.com/ukharwa/readysetgo/internal/ratelimit"
 
-	// kickstart:begin module=admin
-	"github.com/ukharwa/kickstart/internal/admin"
-	// kickstart:end
-	// kickstart:begin module=audit
-	"github.com/ukharwa/kickstart/internal/audit"
-	// kickstart:end
-	// kickstart:begin module=errreport
-	"github.com/ukharwa/kickstart/internal/errreport"
-	// kickstart:end
-	// kickstart:begin module=metrics
-	"github.com/ukharwa/kickstart/internal/metrics"
-	// kickstart:end
-	// kickstart:begin module=uploads
-	"github.com/ukharwa/kickstart/internal/uploads"
-	// kickstart:end
-	// kickstart:begin module=workspaces
-	"github.com/ukharwa/kickstart/internal/workspaces"
-	// kickstart:end
+	// readysetgo:begin module=admin
+	"github.com/ukharwa/readysetgo/internal/admin"
+	// readysetgo:end
+	// readysetgo:begin module=audit
+	"github.com/ukharwa/readysetgo/internal/audit"
+	// readysetgo:end
+	// readysetgo:begin module=errreport
+	"github.com/ukharwa/readysetgo/internal/errreport"
+	// readysetgo:end
+	// readysetgo:begin module=metrics
+	"github.com/ukharwa/readysetgo/internal/metrics"
+	// readysetgo:end
+	// readysetgo:begin module=uploads
+	"github.com/ukharwa/readysetgo/internal/uploads"
+	// readysetgo:end
+	// readysetgo:begin module=workspaces
+	"github.com/ukharwa/readysetgo/internal/workspaces"
+	// readysetgo:end
 
 	// example:begin
-	"github.com/ukharwa/kickstart/internal/notes"
+	"github.com/ukharwa/readysetgo/internal/notes"
 	// example:end
 )
 
@@ -52,7 +52,7 @@ func setup(getenv func(string) string, stdout io.Writer) (config.Config, *slog.L
 		return config.Config{}, nil, err
 	}
 	logger := logging.New(stdout, cfg.LogFormat, cfg.LogLevel)
-	// kickstart:begin module=errreport
+	// readysetgo:begin module=errreport
 	if cfg.SentryDSN != "" {
 		h, err := errreport.NewHandler(logger.Handler(), cfg.SentryDSN, cfg.Env)
 		if err != nil {
@@ -60,7 +60,7 @@ func setup(getenv func(string) string, stdout io.Writer) (config.Config, *slog.L
 		}
 		logger = slog.New(h)
 	}
-	// kickstart:end
+	// readysetgo:end
 	slog.SetDefault(logger)
 	return cfg, logger, nil
 }
@@ -71,12 +71,12 @@ func openDB(ctx context.Context, cfg config.Config) (*db.DB, error) {
 	defer cancel()
 	d, err := db.Open(ctx, db.Options{
 		URL: cfg.DatabaseURL,
-		// kickstart:begin db=postgres
+		// readysetgo:begin db=postgres
 		ReadURL:         cfg.DatabaseReadURL,
 		MaxOpenConns:    cfg.DBMaxOpenConns,
 		ConnMaxIdleTime: cfg.DBConnMaxIdleTime,
 		ConnMaxLifetime: cfg.DBConnMaxLifetime,
-		// kickstart:end
+		// readysetgo:end
 	})
 	if err != nil {
 		return nil, fmt.Errorf("open database: %w", err)
@@ -113,21 +113,21 @@ type services struct {
 	// example:begin
 	notes *notes.Service
 	// example:end
-	// kickstart:begin module=workspaces
+	// readysetgo:begin module=workspaces
 	workspaces *workspaces.Service
-	// kickstart:end
-	// kickstart:begin module=audit
+	// readysetgo:end
+	// readysetgo:begin module=audit
 	audit *audit.Service
-	// kickstart:end
-	// kickstart:begin module=admin
+	// readysetgo:end
+	// readysetgo:begin module=admin
 	admin *admin.Service
-	// kickstart:end
-	// kickstart:begin module=uploads
+	// readysetgo:end
+	// readysetgo:begin module=uploads
 	uploads *uploads.Service
-	// kickstart:end
-	// kickstart:begin module=metrics
+	// readysetgo:end
+	// readysetgo:begin module=metrics
 	metrics *metrics.Metrics
-	// kickstart:end
+	// readysetgo:end
 }
 
 // newServices builds the services, with sessions in the database.
@@ -145,7 +145,7 @@ func newServices(cfg config.Config, d *db.DB, logger *slog.Logger) (*services, e
 	// example:begin
 	s.notes = notes.NewService(d, logger)
 	// example:end
-	// kickstart:begin module=workspaces
+	// readysetgo:begin module=workspaces
 	s.workspaces, err = workspaces.NewService(d, s.accounts, s.limiter, logger, workspaces.Options{
 		AppName: cfg.AppName,
 		BaseURL: cfg.AppURL,
@@ -153,23 +153,23 @@ func newServices(cfg config.Config, d *db.DB, logger *slog.Logger) (*services, e
 	if err != nil {
 		return nil, err
 	}
-	// kickstart:end
-	// kickstart:begin module=audit
+	// readysetgo:end
+	// readysetgo:begin module=audit
 	s.audit = audit.NewService(d, s.accounts, logger)
-	// kickstart:end
-	// kickstart:begin module=admin
+	// readysetgo:end
+	// readysetgo:begin module=admin
 	s.admin = admin.NewService(d, s.accounts, logger)
-	// kickstart:end
-	// kickstart:begin module=uploads
+	// readysetgo:end
+	// readysetgo:begin module=uploads
 	files, err := uploads.NewDisk(cfg.UploadsDir)
 	if err != nil {
 		return nil, err
 	}
 	s.uploads = uploads.NewService(d, files, s.accounts, logger)
-	// kickstart:end
-	// kickstart:begin module=metrics
+	// readysetgo:end
+	// readysetgo:begin module=metrics
 	s.metrics = metrics.New(d, logger)
-	// kickstart:end
+	// readysetgo:end
 	return s, nil
 }
 
@@ -202,19 +202,19 @@ func startJobs(ctx context.Context, cfg config.Config, d *db.DB, svc *services, 
 	worker.Handle(email.JobKind, email.Handler(sender))
 	worker.Handle(jobs.CleanupKind, jobs.Cleanup(d, logger))
 	worker.Handle(auth.CleanupKind, svc.accounts.Cleanup())
-	// kickstart:begin module=workspaces
+	// readysetgo:begin module=workspaces
 	worker.Handle(workspaces.CleanupKind, svc.workspaces.Cleanup())
-	// kickstart:end
-	// kickstart:begin module=uploads
+	// readysetgo:end
+	// readysetgo:begin module=uploads
 	worker.Handle(uploads.DeleteFilesKind, svc.uploads.DeleteFiles())
-	// kickstart:end
+	// readysetgo:end
 
 	scheduler := jobs.NewScheduler(d, logger)
 	scheduler.Every(24*time.Hour, jobs.CleanupKind)
 	scheduler.Every(time.Hour, auth.CleanupKind)
-	// kickstart:begin module=workspaces
+	// readysetgo:begin module=workspaces
 	scheduler.Every(24*time.Hour, workspaces.CleanupKind)
-	// kickstart:end
+	// readysetgo:end
 
 	var wg sync.WaitGroup
 	wg.Go(func() { scheduler.Run(ctx) })

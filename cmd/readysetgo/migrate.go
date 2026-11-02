@@ -82,12 +82,12 @@ func migrate(ctx context.Context, args []string, getenv func(string) string, std
 // repository root.
 func migrationDirs() []string {
 	return []string{
-		// kickstart:begin db=sqlite
+		// readysetgo:begin db=sqlite
 		"migrations/sqlite",
-		// kickstart:end
-		// kickstart:begin db=postgres
+		// readysetgo:end
+		// readysetgo:begin db=postgres
 		"migrations/postgres",
-		// kickstart:end
+		// readysetgo:end
 	}
 }
 

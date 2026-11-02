@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"testing"
 
-	"github.com/ukharwa/kickstart/internal/db"
+	"github.com/ukharwa/readysetgo/internal/db"
 )
 
 // New returns a migrated database for this test. It is closed when the test
@@ -15,9 +15,9 @@ func New(t testing.TB) *db.DB {
 	t.Helper()
 	d, err := db.Open(t.Context(), db.Options{
 		URL: URL(t),
-		// kickstart:begin db=postgres
+		// readysetgo:begin db=postgres
 		MaxOpenConns: 4,
-		// kickstart:end
+		// readysetgo:end
 	})
 	if err != nil {
 		t.Fatalf("open test database: %v", err)

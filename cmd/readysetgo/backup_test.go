@@ -10,7 +10,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/ukharwa/kickstart/internal/db/dbtest"
+	"github.com/ukharwa/readysetgo/internal/db/dbtest"
 )
 
 func TestBackupCommand(t *testing.T) {

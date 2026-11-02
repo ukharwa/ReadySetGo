@@ -6,7 +6,7 @@ root = "."
 tmp_dir = "tmp"
 
 [build]
-  cmd = "go build -o ./tmp/app ./cmd/kickstart"
+  cmd = "go build -o ./tmp/app ./cmd/readysetgo"
   entrypoint = ["./tmp/app", "serve"]
   include_ext = ["go", "sql", "txt"]
   exclude_dir = ["tmp", "bin", "data", "backups", "deploy"]

@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ukharwa/kickstart/internal/httpx"
-	"github.com/ukharwa/kickstart/internal/ratelimit"
-	"github.com/ukharwa/kickstart/internal/web"
+	"github.com/ukharwa/readysetgo/internal/httpx"
+	"github.com/ukharwa/readysetgo/internal/ratelimit"
+	"github.com/ukharwa/readysetgo/internal/web"
 )
 
 //go:embed templates

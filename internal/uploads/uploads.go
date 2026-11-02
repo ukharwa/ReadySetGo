@@ -33,11 +33,11 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/ukharwa/kickstart/internal/auth"
-	"github.com/ukharwa/kickstart/internal/db"
-	"github.com/ukharwa/kickstart/internal/jobs"
-	"github.com/ukharwa/kickstart/internal/uploads/store"
-	"github.com/ukharwa/kickstart/internal/validate"
+	"github.com/ukharwa/readysetgo/internal/auth"
+	"github.com/ukharwa/readysetgo/internal/db"
+	"github.com/ukharwa/readysetgo/internal/jobs"
+	"github.com/ukharwa/readysetgo/internal/uploads/store"
+	"github.com/ukharwa/readysetgo/internal/validate"
 )
 
 // MaxSize is the largest file Save accepts.

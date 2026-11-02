@@ -18,7 +18,7 @@ import (
 )
 
 // defaultTestDatabaseURL is the Postgres started by `make services`.
-const defaultTestDatabaseURL = "postgres://kickstart:kickstart@localhost:5432/postgres?sslmode=disable"
+const defaultTestDatabaseURL = "postgres://readysetgo:readysetgo@localhost:5432/postgres?sslmode=disable"
 
 // runCheck copies the working tree (uncommitted changes included) to a
 // temporary folder, runs init there, and then checks the result the way a
@@ -42,7 +42,7 @@ func runCheck(args []string) error {
 	if err != nil {
 		return err
 	}
-	tmp, err := os.MkdirTemp("", "kickstart-check-")
+	tmp, err := os.MkdirTemp("", "readysetgo-check-")
 	if err != nil {
 		return err
 	}
@@ -221,7 +221,7 @@ func leftovers(root string, o options, removedExample bool) []string {
 			line := sc.Text()
 			where := fmt.Sprintf("%s:%d", rel, n)
 			switch {
-			case strings.Contains(line, "kickstart:begin"), strings.Contains(line, "kickstart:end"):
+			case strings.Contains(line, "readysetgo:begin"), strings.Contains(line, "readysetgo:end"):
 				report(where, "init marker left behind")
 			case strings.Contains(line, "INIT_COMMAND"), strings.Contains(line, "INIT_COMMIT"):
 				report(where, "init's record of itself not filled in")

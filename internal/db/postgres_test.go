@@ -7,8 +7,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/ukharwa/kickstart/internal/db"
-	"github.com/ukharwa/kickstart/internal/db/dbtest"
+	"github.com/ukharwa/readysetgo/internal/db"
+	"github.com/ukharwa/readysetgo/internal/db/dbtest"
 )
 
 // TestConcurrentMigrations starts several migration runs at once against an

@@ -8,9 +8,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/ukharwa/kickstart/internal/auth"
-	"github.com/ukharwa/kickstart/internal/httpx"
-	"github.com/ukharwa/kickstart/internal/validate"
+	"github.com/ukharwa/readysetgo/internal/auth"
+	"github.com/ukharwa/readysetgo/internal/httpx"
+	"github.com/ukharwa/readysetgo/internal/validate"
 )
 
 // API serves the admin endpoints under /api/admin/, for admins only.

@@ -4,11 +4,11 @@
 # in one folder; `make deploy` updates them and restarts. Locally,
 # `make up` runs the same stack at https://localhost (APP_DOMAIN=localhost
 # makes Caddy use its own local certificate authority).
-name: kickstart
+name: readysetgo
 
 services:
   app:
-    image: ${APP_IMAGE:-ghcr.io/ukharwa/kickstart:latest}
+    image: ${APP_IMAGE:-ghcr.io/ukharwa/readysetgo:latest}
     build: .
     restart: unless-stopped
     env_file: .env
@@ -19,28 +19,28 @@ services:
       # port), so the private ranges Docker assigns can be trusted to be
       # Caddy.
       - TRUSTED_PROXIES=10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
-      # kickstart:begin db=postgres
-      - DATABASE_URL=postgres://${POSTGRES_USER:-kickstart}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-kickstart}?sslmode=disable
-      # kickstart:end
-      # kickstart:begin db=sqlite
-      - DATABASE_URL=/data/kickstart.db
-      # kickstart:end
-      # kickstart:begin template
+      # readysetgo:begin db=postgres
+      - DATABASE_URL=postgres://${POSTGRES_USER:-readysetgo}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-readysetgo}?sslmode=disable
+      # readysetgo:end
+      # readysetgo:begin db=sqlite
+      - DATABASE_URL=/data/readysetgo.db
+      # readysetgo:end
+      # readysetgo:begin template
       # (Template only: both DATABASE_URL lines are present until `make
       # init`; the last one wins, so the unpruned template runs on SQLite.)
-      # kickstart:end
-      # kickstart:begin module=uploads
+      # readysetgo:end
+      # readysetgo:begin module=uploads
       - UPLOADS_DIR=/data/uploads
-      # kickstart:end
-    # kickstart:begin db=sqlite,module=uploads
+      # readysetgo:end
+    # readysetgo:begin db=sqlite,module=uploads
     volumes:
       - data:/data
-    # kickstart:end
-    # kickstart:begin db=postgres
+    # readysetgo:end
+    # readysetgo:begin db=postgres
     depends_on:
       postgres:
         condition: service_healthy
-    # kickstart:end
+    # readysetgo:end
     # Longer than SHUTDOWN_TIMEOUT, so shutdown finishes before Docker kills
     # the process.
     stop_grace_period: 30s
@@ -59,14 +59,14 @@ services:
       - caddy_data:/data # certificates: keep this volume
       - caddy_config:/config
 
-  # kickstart:begin db=postgres
+  # readysetgo:begin db=postgres
   postgres:
     image: postgres:18-alpine@sha256:10a5c69a83035ab5239f5620d708520e8b28f5aa1f2b20143e6024532edadfb5
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-kickstart}
+      POSTGRES_USER: ${POSTGRES_USER:-readysetgo}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
-      POSTGRES_DB: ${POSTGRES_DB:-kickstart}
+      POSTGRES_DB: ${POSTGRES_DB:-readysetgo}
     volumes:
       - postgres:/var/lib/postgresql
     healthcheck:
@@ -74,9 +74,9 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-  # kickstart:end
+  # readysetgo:end
 
-  # kickstart:begin db=sqlite
+  # readysetgo:begin db=sqlite
   # Continuous copies of the database to S3-compatible storage. Opt in with
   # COMPOSE_PROFILES=litestream in .env; see deploy/litestream.yml.
   litestream:
@@ -88,14 +88,14 @@ services:
     volumes:
       - data:/data
       - ./deploy/litestream.yml:/etc/litestream.yml:ro
-  # kickstart:end
+  # readysetgo:end
 
 volumes:
   caddy_data:
   caddy_config:
-  # kickstart:begin db=sqlite,module=uploads
+  # readysetgo:begin db=sqlite,module=uploads
   data:
-  # kickstart:end
-  # kickstart:begin db=postgres
+  # readysetgo:end
+  # readysetgo:begin db=postgres
   postgres:
-  # kickstart:end
+  # readysetgo:end

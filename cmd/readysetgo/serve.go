@@ -10,11 +10,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ukharwa/kickstart/internal/httpx"
+	"github.com/ukharwa/readysetgo/internal/httpx"
 
-	// kickstart:begin module=errreport
-	"github.com/ukharwa/kickstart/internal/errreport"
-	// kickstart:end
+	// readysetgo:begin module=errreport
+	"github.com/ukharwa/readysetgo/internal/errreport"
+	// readysetgo:end
 )
 
 // serve runs the HTTP server, and the job worker unless WORKER_ENABLED is
@@ -32,9 +32,9 @@ func serve(ctx context.Context, args []string, getenv func(string) string, stdou
 		return err
 	}
 	logger.Info("starting", "config", cfg)
-	// kickstart:begin module=errreport
+	// readysetgo:begin module=errreport
 	defer errreport.Flush(logger)
-	// kickstart:end
+	// readysetgo:end
 
 	database, err := openDB(ctx, cfg)
 	if err != nil {
@@ -67,13 +67,13 @@ func serve(ctx context.Context, args []string, getenv func(string) string, stdou
 	}
 	srv := httpx.NewServer(handler, logger)
 
-	// kickstart:begin module=metrics
+	// readysetgo:begin module=metrics
 	if cfg.MetricsAddr != "" {
 		if err := svc.metrics.Start(ctx, cfg.MetricsAddr, logger); err != nil {
 			return err
 		}
 	}
-	// kickstart:end
+	// readysetgo:end
 	ln, err := (&net.ListenConfig{}).Listen(ctx, "tcp", cfg.HTTPAddr)
 	if err != nil {
 		return fmt.Errorf("listen on %s: %w", cfg.HTTPAddr, err)

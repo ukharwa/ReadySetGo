@@ -27,7 +27,7 @@
 		header_up X-Request-ID {http.request.uuid}
 	}
 
-	# kickstart:begin ui=api
+	# readysetgo:begin ui=api
 	# A browser frontend on the same domain: put its built files in
 	# ./frontend, mount it in compose.yaml (- ./frontend:/srv:ro under
 	# caddy's volumes), wrap the reverse_proxy above in `handle /api/* { … }`,
@@ -38,5 +38,5 @@
 	# 	try_files {path} /index.html
 	# 	file_server
 	# }
-	# kickstart:end
+	# readysetgo:end
 }

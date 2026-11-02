@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ukharwa/kickstart/internal/db"
-	"github.com/ukharwa/kickstart/internal/jobs/store"
+	"github.com/ukharwa/readysetgo/internal/db"
+	"github.com/ukharwa/readysetgo/internal/jobs/store"
 )
 
 const (

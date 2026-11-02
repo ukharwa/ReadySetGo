@@ -6,10 +6,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ukharwa/kickstart/internal/admin"
-	"github.com/ukharwa/kickstart/internal/apptest"
-	"github.com/ukharwa/kickstart/internal/auth"
-	"github.com/ukharwa/kickstart/internal/jobs"
+	"github.com/ukharwa/readysetgo/internal/admin"
+	"github.com/ukharwa/readysetgo/internal/apptest"
+	"github.com/ukharwa/readysetgo/internal/auth"
+	"github.com/ukharwa/readysetgo/internal/jobs"
 )
 
 func newWebApp(t *testing.T) *apptest.App {

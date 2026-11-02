@@ -30,12 +30,12 @@ type Config struct {
 
 	DatabaseURL    string // DATABASE_URL (secret: may hold a password)
 	MigrateOnStart bool   // MIGRATE_ON_START
-	// kickstart:begin db=postgres
+	// readysetgo:begin db=postgres
 	DatabaseReadURL   string        // DATABASE_READ_URL (secret)
 	DBMaxOpenConns    int           // DB_MAX_OPEN_CONNS
 	DBConnMaxIdleTime time.Duration // DB_CONN_MAX_IDLE_TIME
 	DBConnMaxLifetime time.Duration // DB_CONN_MAX_LIFETIME
-	// kickstart:end
+	// readysetgo:end
 
 	SMTPHost     string // SMTP_HOST: empty in dev means emails are logged, not sent
 	SMTPPort     int    // SMTP_PORT
@@ -48,18 +48,18 @@ type Config struct {
 	WorkerConcurrency int  // WORKER_CONCURRENCY
 
 	PasswordMinLength int // PASSWORD_MIN_LENGTH
-	// kickstart:begin module=uploads
+	// readysetgo:begin module=uploads
 
 	UploadsDir string // UPLOADS_DIR
-	// kickstart:end
-	// kickstart:begin module=metrics
+	// readysetgo:end
+	// readysetgo:begin module=metrics
 
 	MetricsAddr string // METRICS_ADDR: empty turns metrics off
-	// kickstart:end
-	// kickstart:begin module=errreport
+	// readysetgo:end
+	// readysetgo:begin module=errreport
 
 	SentryDSN string // SENTRY_DSN (secret): empty turns error reporting off
-	// kickstart:end
+	// readysetgo:end
 }
 
 // Dev reports whether the application runs in development mode.
@@ -79,27 +79,27 @@ func (c Config) LogValue() slog.Value {
 		slog.Duration("shutdown_timeout", c.ShutdownTimeout),
 		slog.Any("trusted_proxies", c.TrustedProxies),
 		slog.Bool("migrate_on_start", c.MigrateOnStart),
-		// kickstart:begin db=postgres
+		// readysetgo:begin db=postgres
 		slog.Bool("read_replica", c.DatabaseReadURL != ""),
 		slog.Int("db_max_open_conns", c.DBMaxOpenConns),
 		slog.Duration("db_conn_max_idle_time", c.DBConnMaxIdleTime),
 		slog.Duration("db_conn_max_lifetime", c.DBConnMaxLifetime),
-		// kickstart:end
+		// readysetgo:end
 		slog.String("smtp_host", c.SMTPHost),
 		slog.Int("smtp_port", c.SMTPPort),
 		slog.String("smtp_tls", c.SMTPTLS),
 		slog.Bool("worker_enabled", c.WorkerEnabled),
 		slog.Int("worker_concurrency", c.WorkerConcurrency),
 		slog.Int("password_min_length", c.PasswordMinLength),
-		// kickstart:begin module=uploads
+		// readysetgo:begin module=uploads
 		slog.String("uploads_dir", c.UploadsDir),
-		// kickstart:end
-		// kickstart:begin module=metrics
+		// readysetgo:end
+		// readysetgo:begin module=metrics
 		slog.String("metrics_addr", c.MetricsAddr),
-		// kickstart:end
-		// kickstart:begin module=errreport
+		// readysetgo:end
+		// readysetgo:begin module=errreport
 		slog.Bool("error_reporting", c.SentryDSN != ""),
-		// kickstart:end
+		// readysetgo:end
 	)
 }
 
@@ -110,7 +110,7 @@ func Load(getenv func(string) string) (Config, error) {
 
 	var c Config
 	c.Env = l.oneOf("APP_ENV", "", "dev", "prod")
-	c.AppName = l.str("APP_NAME", "kickstart")
+	c.AppName = l.str("APP_NAME", "readysetgo")
 	defaultURL := ""
 	if c.Dev() {
 		defaultURL = "http://localhost:8080"
@@ -133,7 +133,7 @@ func Load(getenv func(string) string) (Config, error) {
 
 	c.DatabaseURL = l.required("DATABASE_URL")
 	c.MigrateOnStart = l.boolean("MIGRATE_ON_START", true)
-	// kickstart:begin db=postgres
+	// readysetgo:begin db=postgres
 	c.DatabaseReadURL = l.str("DATABASE_READ_URL", "")
 	c.DBMaxOpenConns = l.integer("DB_MAX_OPEN_CONNS", 25)
 	c.DBConnMaxIdleTime = l.duration("DB_CONN_MAX_IDLE_TIME", 5*time.Minute)
@@ -141,7 +141,7 @@ func Load(getenv func(string) string) (Config, error) {
 	if c.DBMaxOpenConns < 1 {
 		l.fail("DB_MAX_OPEN_CONNS", "must be at least 1")
 	}
-	// kickstart:end
+	// readysetgo:end
 
 	c.SMTPHost = l.str("SMTP_HOST", "")
 	c.SMTPPort = l.integer("SMTP_PORT", 587)
@@ -174,18 +174,18 @@ func Load(getenv func(string) string) (Config, error) {
 	if c.PasswordMinLength < 8 || c.PasswordMinLength > 64 {
 		l.fail("PASSWORD_MIN_LENGTH", "must be between 8 and 64")
 	}
-	// kickstart:begin module=uploads
+	// readysetgo:begin module=uploads
 
 	c.UploadsDir = l.str("UPLOADS_DIR", "data/uploads")
-	// kickstart:end
-	// kickstart:begin module=metrics
+	// readysetgo:end
+	// readysetgo:begin module=metrics
 
 	c.MetricsAddr = l.str("METRICS_ADDR", "")
-	// kickstart:end
-	// kickstart:begin module=errreport
+	// readysetgo:end
+	// readysetgo:begin module=errreport
 
 	c.SentryDSN = l.str("SENTRY_DSN", "")
-	// kickstart:end
+	// readysetgo:end
 
 	if c.ShutdownDrain < 0 {
 		l.fail("SHUTDOWN_DRAIN", "must not be negative")

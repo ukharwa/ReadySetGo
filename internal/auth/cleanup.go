@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ukharwa/kickstart/internal/auth/store"
-	"github.com/ukharwa/kickstart/internal/jobs"
+	"github.com/ukharwa/readysetgo/internal/auth/store"
+	"github.com/ukharwa/readysetgo/internal/jobs"
 )
 
 // CleanupKind is the scheduled job that deletes expired sessions and links.

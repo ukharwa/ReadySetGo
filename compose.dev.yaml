@@ -2,7 +2,7 @@
 # `make run`; these are what it talks to. Start them with `make services`.
 # Host ports can be changed in .env when another project's services already
 # use them.
-name: kickstart-dev
+name: readysetgo-dev
 
 services:
   # Catches every email the app sends; read them at http://localhost:8025.
@@ -12,25 +12,25 @@ services:
       - "127.0.0.1:${MAILPIT_SMTP_PORT:-1025}:1025" # SMTP
       - "127.0.0.1:${MAILPIT_PORT:-8025}:8025" # web inbox
 
-  # kickstart:begin db=postgres
+  # readysetgo:begin db=postgres
   postgres:
     image: postgres:18-alpine
     environment:
-      POSTGRES_USER: kickstart
-      POSTGRES_PASSWORD: kickstart
-      POSTGRES_DB: kickstart
+      POSTGRES_USER: readysetgo
+      POSTGRES_PASSWORD: readysetgo
+      POSTGRES_DB: readysetgo
     ports:
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U kickstart -d kickstart"]
+      test: ["CMD-SHELL", "pg_isready -U readysetgo -d readysetgo"]
       interval: 2s
       timeout: 5s
       retries: 15
-  # kickstart:end
+  # readysetgo:end
 
-# kickstart:begin db=postgres
+# readysetgo:begin db=postgres
 volumes:
   postgres:
-# kickstart:end
+# readysetgo:end

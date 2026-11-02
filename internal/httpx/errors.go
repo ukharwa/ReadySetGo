@@ -3,8 +3,8 @@ package httpx
 import (
 	"net/http"
 
-	"github.com/ukharwa/kickstart/internal/logging"
-	"github.com/ukharwa/kickstart/internal/validate"
+	"github.com/ukharwa/readysetgo/internal/logging"
+	"github.com/ukharwa/readysetgo/internal/validate"
 )
 
 // Error responds with a minimal page or JSON problem for an error status.
@@ -17,12 +17,12 @@ func Error(w http.ResponseWriter, r *http.Request, status int) {
 // ErrorMessage is Error with a message for the user. The message must be
 // safe to show: never pass an error's text.
 func ErrorMessage(w http.ResponseWriter, r *http.Request, status int, message string) {
-	// kickstart:begin ui=html
+	// readysetgo:begin ui=html
 	if wantsPage(r) {
 		writeErrorPage(w, r, status, message)
 		return
 	}
-	// kickstart:end
+	// readysetgo:end
 	writeProblem(w, r, status, message, nil)
 }
 

@@ -4,32 +4,32 @@ import (
 	"log/slog"
 	"net/http"
 
-	// kickstart:begin ui=api
-	"github.com/ukharwa/kickstart/internal/auth"
-	// kickstart:end
-	"github.com/ukharwa/kickstart/internal/config"
-	"github.com/ukharwa/kickstart/internal/httpx"
+	// readysetgo:begin ui=api
+	"github.com/ukharwa/readysetgo/internal/auth"
+	// readysetgo:end
+	"github.com/ukharwa/readysetgo/internal/config"
+	"github.com/ukharwa/readysetgo/internal/httpx"
 
-	// kickstart:begin ui=api
-	// kickstart:begin module=admin
-	"github.com/ukharwa/kickstart/internal/admin"
-	// kickstart:end
-	// kickstart:begin module=audit
-	"github.com/ukharwa/kickstart/internal/audit"
-	// kickstart:end
-	// kickstart:begin module=uploads
-	"github.com/ukharwa/kickstart/internal/uploads"
-	// kickstart:end
-	// kickstart:begin module=workspaces
-	"github.com/ukharwa/kickstart/internal/workspaces"
-	// kickstart:end
-	// kickstart:end
+	// readysetgo:begin ui=api
+	// readysetgo:begin module=admin
+	"github.com/ukharwa/readysetgo/internal/admin"
+	// readysetgo:end
+	// readysetgo:begin module=audit
+	"github.com/ukharwa/readysetgo/internal/audit"
+	// readysetgo:end
+	// readysetgo:begin module=uploads
+	"github.com/ukharwa/readysetgo/internal/uploads"
+	// readysetgo:end
+	// readysetgo:begin module=workspaces
+	"github.com/ukharwa/readysetgo/internal/workspaces"
+	// readysetgo:end
+	// readysetgo:end
 
-	// kickstart:begin ui=api
+	// readysetgo:begin ui=api
 	// example:begin
-	"github.com/ukharwa/kickstart/internal/notes"
+	"github.com/ukharwa/readysetgo/internal/notes"
 	// example:end
-	// kickstart:end
+	// readysetgo:end
 )
 
 // routes returns the application's handler. Each feature registers its own
@@ -45,34 +45,34 @@ func routes(cfg config.Config, logger *slog.Logger, health *httpx.Health, svc *s
 	root.HandleFunc("GET /healthz", health.Live)
 	root.HandleFunc("GET /readyz", health.Ready)
 
-	// kickstart:begin ui=html
+	// readysetgo:begin ui=html
 	if err := mountPages(cfg, logger, root, app, svc); err != nil {
 		return nil, err
 	}
-	// kickstart:end
-	// kickstart:begin ui=api
+	// readysetgo:end
+	// readysetgo:begin ui=api
 	auth.NewAPI(svc.accounts, svc.limiter).Routes(app)
 	// example:begin
 	notes.NewAPI(svc.notes).Routes(app)
 	// example:end
-	// kickstart:begin module=workspaces
+	// readysetgo:begin module=workspaces
 	workspaces.NewAPI(svc.workspaces).Routes(app)
-	// kickstart:end
-	// kickstart:begin module=audit
+	// readysetgo:end
+	// readysetgo:begin module=audit
 	audit.NewAPI(svc.audit).Routes(app)
-	// kickstart:end
-	// kickstart:begin module=admin
+	// readysetgo:end
+	// readysetgo:begin module=admin
 	admin.NewAPI(svc.admin).Routes(app)
-	// kickstart:end
-	// kickstart:begin module=uploads
+	// readysetgo:end
+	// readysetgo:begin module=uploads
 	uploads.NewAPI(svc.uploads).Routes(app)
-	// kickstart:end
-	// kickstart:end
+	// readysetgo:end
+	// readysetgo:end
 
 	stack := append(httpx.Stack(logger, cfg.TrustedProxies, !cfg.Dev()), svc.accounts.LoadUser)
-	// kickstart:begin module=metrics
+	// readysetgo:begin module=metrics
 	stack = append(stack, svc.metrics.Middleware) // last: it reads the route the router matched
-	// kickstart:end
+	// readysetgo:end
 	root.Handle("/", httpx.Chain(app, stack...))
 	return root, nil
 }

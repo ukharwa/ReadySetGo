@@ -17,8 +17,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ukharwa/kickstart/internal/db"
-	"github.com/ukharwa/kickstart/internal/jobs/store"
+	"github.com/ukharwa/readysetgo/internal/db"
+	"github.com/ukharwa/readysetgo/internal/jobs/store"
 )
 
 // maxAttempts is how often a job runs before it is marked failed. With the

@@ -6,8 +6,8 @@ import (
 	"flag"
 	"io"
 
-	"github.com/ukharwa/kickstart/internal/auth"
-	"github.com/ukharwa/kickstart/internal/db"
+	"github.com/ukharwa/readysetgo/internal/auth"
+	"github.com/ukharwa/readysetgo/internal/db"
 )
 
 // seedPassword is the password of every seeded user. Seeding refuses to run

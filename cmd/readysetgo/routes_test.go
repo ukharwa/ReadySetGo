@@ -6,18 +6,18 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/ukharwa/kickstart/internal/apptest"
-	"github.com/ukharwa/kickstart/internal/config"
-	"github.com/ukharwa/kickstart/internal/httpx"
+	"github.com/ukharwa/readysetgo/internal/apptest"
+	"github.com/ukharwa/readysetgo/internal/config"
+	"github.com/ukharwa/readysetgo/internal/httpx"
 )
 
 // testConfig returns the settings the routes tests run with.
 func testConfig(t *testing.T) config.Config {
 	return config.Config{
 		Env: "prod", AppName: "Test", AppURL: apptest.BaseURL, PasswordMinLength: 12,
-		// kickstart:begin module=uploads
+		// readysetgo:begin module=uploads
 		UploadsDir: t.TempDir(),
-		// kickstart:end
+		// readysetgo:end
 	}
 }
 

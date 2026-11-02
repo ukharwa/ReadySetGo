@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ukharwa/kickstart/internal/db/dbtest"
-	"github.com/ukharwa/kickstart/internal/email"
-	"github.com/ukharwa/kickstart/internal/email/emailtest"
-	"github.com/ukharwa/kickstart/internal/jobs"
+	"github.com/ukharwa/readysetgo/internal/db/dbtest"
+	"github.com/ukharwa/readysetgo/internal/email"
+	"github.com/ukharwa/readysetgo/internal/email/emailtest"
+	"github.com/ukharwa/readysetgo/internal/jobs"
 )
 
 func TestValidate(t *testing.T) {

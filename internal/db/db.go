@@ -32,12 +32,12 @@ type DB struct {
 // Options configures Open.
 type Options struct {
 	URL string // DATABASE_URL
-	// kickstart:begin db=postgres
+	// readysetgo:begin db=postgres
 	ReadURL         string // DATABASE_READ_URL: optional read replica
 	MaxOpenConns    int
 	ConnMaxIdleTime time.Duration
 	ConnMaxLifetime time.Duration
-	// kickstart:end
+	// readysetgo:end
 }
 
 // Ping checks that both handles can reach the database.

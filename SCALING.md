@@ -7,9 +7,9 @@ the configuration to change, and the code (if any) to touch.
 The app is built for this path: it keeps no user state in memory, and the
 pieces that change when it grows sit behind small interfaces (sessions,
 rate limiting, jobs, email,
-<!-- kickstart:begin module=uploads -->
+<!-- readysetgo:begin module=uploads -->
 file storage,
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 and the database's read and write handles). Migrations and scheduled tasks
 already run once however many instances start.
 
@@ -21,15 +21,15 @@ below.
 Find out where the time goes before changing anything. Every request is
 logged with its route, status and duration, and the request ID ties a
 request's log lines together.
-<!-- kickstart:begin module=metrics -->
+<!-- readysetgo:begin module=metrics -->
 Turn on metrics (`METRICS_ADDR`, README) for request rates and durations
 per route, database pool use and the job queue, and use the profiler at
 `/debug/pprof/` for CPU and memory.
-<!-- kickstart:end -->
-<!-- kickstart:begin db=postgres -->
+<!-- readysetgo:end -->
+<!-- readysetgo:begin db=postgres -->
 In Postgres, the `pg_stat_statements` extension shows which queries take the
 most time.
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 
 ## Add indexes and tune the pool
 
@@ -37,25 +37,25 @@ most time.
 connection.
 
 - Look at the slow queries' plans
-<!-- kickstart:begin db=sqlite -->
+<!-- readysetgo:begin db=sqlite -->
   (`EXPLAIN QUERY PLAN`)
-<!-- kickstart:end -->
-<!-- kickstart:begin db=postgres -->
+<!-- readysetgo:end -->
+<!-- readysetgo:begin db=postgres -->
   (`EXPLAIN ANALYZE`)
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
   and add the indexes they lack, in a migration. Every foreign key already
   has one.
-<!-- kickstart:begin db=postgres -->
+<!-- readysetgo:begin db=postgres -->
 - `DB_MAX_OPEN_CONNS` (default 25 per instance) caps each instance's
   connections. Raise it if requests wait for one; keep the total across
   instances under the server's `max_connections` (100 by default).
   `DB_CONN_MAX_IDLE_TIME` and `DB_CONN_MAX_LIFETIME` rarely need changing.
-<!-- kickstart:end -->
-<!-- kickstart:begin db=sqlite -->
+<!-- readysetgo:end -->
+<!-- readysetgo:begin db=sqlite -->
 - SQLite writes one transaction at a time; the write pool has one
   connection on purpose. Keep write transactions short: do slow work
   (hashing, calling other services) before opening one.
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 
 **Code:** a migration per index; nothing else.
 
@@ -67,7 +67,7 @@ Resize the VPS. It's the cheapest step that buys a lot: one modern server
 runs an app like this for tens of thousands of users. Nothing in the app
 changes.
 
-<!-- kickstart:begin db=sqlite -->
+<!-- readysetgo:begin db=sqlite -->
 ## Move from SQLite to PostgreSQL
 
 **Signs:** you need a second app server (for capacity or to deploy without
@@ -97,7 +97,7 @@ rewrite.
 
 The steps after this one assume PostgreSQL.
 
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 ## Run the worker as its own process
 
 **Signs:** background jobs (emails, cleanups, your own) slow down requests,
@@ -108,7 +108,7 @@ to `compose.yaml` running the same image with the `worker` command:
 
 ```yaml
   worker:
-    image: ${APP_IMAGE:-ghcr.io/ukharwa/kickstart:latest}
+    image: ${APP_IMAGE:-ghcr.io/ukharwa/readysetgo:latest}
     restart: unless-stopped
     command: worker
     env_file: .env
@@ -122,10 +122,10 @@ workers can run, since each job is claimed by one.
 
 **Signs:** one instance's CPU is the limit, or you want to deploy without
 a moment's downtime.
-<!-- kickstart:begin db=sqlite -->
+<!-- readysetgo:begin db=sqlite -->
 It needs PostgreSQL first (earlier in this playbook): SQLite can't be
 shared.
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 
 **Config:** `docker compose up -d --scale app=3`. Caddy already finds every
 instance, balances requests by fewest connections and stops sending to an
@@ -140,11 +140,11 @@ What changes with more than one:
 - **Rate limits are per instance** (the in-memory limiter): N instances
   allow up to N times the attempts. Fine for a few instances; see the next
   step beyond that.
-<!-- kickstart:begin module=uploads -->
+<!-- readysetgo:begin module=uploads -->
 - **Uploads** live on the `data` volume, which every instance on the same
   server shares. On more than one server, move them to object storage
   (below).
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 - On **several servers**, put a load balancer (or Caddy on its own server)
   in front, pointing at each server's app instances.
 
@@ -158,13 +158,13 @@ across them.
 **Code:** implement `ratelimit.Limiter` (`Allow` and `Reset`) on a shared
 store, such as Valkey or Redis (`INCR` with an expiry per key and window),
 in `internal/ratelimit/`, and build it instead of `ratelimit.NewMemory()`
-in `newServices` (`cmd/kickstart/app.go`). Add a setting choosing between
+in `newServices` (`cmd/readysetgo/app.go`). Add a setting choosing between
 the two (say `RATE_LIMIT_STORE=memory|valkey` and its address) in
 `internal/config` and `.env.example`, since there are then two
 implementations. If the store is unreachable, limits fail closed (`503`),
 as they do now.
 
-<!-- kickstart:begin module=uploads -->
+<!-- readysetgo:begin module=uploads -->
 ## Move uploads to object storage
 
 **Signs:** app instances on more than one server, or the uploads volume
@@ -180,7 +180,7 @@ streaming through the app.
 **Data:** copy the existing files to the bucket under the same keys (for
 example `rclone copy /data/uploads remote:bucket`) before switching.
 
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 ## Run migrations as a deploy step
 
 **Signs:** a migration that takes minutes (a big index), or a database user
@@ -277,7 +277,7 @@ spans around database calls, and an exporter set by the standard
 cadence, or its own team.
 
 **Code:** features are self-contained packages under `internal/` that
-reach each other only through `cmd/kickstart/` and the core's seams, so a
+reach each other only through `cmd/readysetgo/` and the core's seams, so a
 feature can move to its own binary (another command in this repository) or
 its own service with its own tables. Do it for one feature at a time, and
 only when this step's signs are real.

@@ -1,4 +1,4 @@
-# kickstart:begin db=sqlite
+# readysetgo:begin db=sqlite
 # Litestream streams every change to the SQLite database to another place,
 # within seconds, and can restore the database to any point in time. Turn it
 # on with COMPOSE_PROFILES=litestream in .env.
@@ -11,9 +11,9 @@
 #
 # Restore (the README walks through it):
 #   docker compose stop app
-#   docker compose run --rm litestream restore -o /data/restored.db /data/kickstart.db
+#   docker compose run --rm litestream restore -o /data/restored.db /data/readysetgo.db
 dbs:
-  - path: /data/kickstart.db
+  - path: /data/readysetgo.db
     replica:
       url: ${LITESTREAM_REPLICA_URL}
-# kickstart:end
+# readysetgo:end

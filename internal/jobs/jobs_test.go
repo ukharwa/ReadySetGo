@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ukharwa/kickstart/internal/db"
-	"github.com/ukharwa/kickstart/internal/db/dbtest"
-	"github.com/ukharwa/kickstart/internal/jobs/store"
+	"github.com/ukharwa/readysetgo/internal/db"
+	"github.com/ukharwa/readysetgo/internal/db/dbtest"
+	"github.com/ukharwa/readysetgo/internal/jobs/store"
 )
 
 var discard = slog.New(slog.DiscardHandler)

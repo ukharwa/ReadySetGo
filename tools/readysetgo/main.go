@@ -1,9 +1,9 @@
-// Command kickstart turns this template into a new project, and checks that
+// Command readysetgo turns this template into a new project, and checks that
 // every combination of options still produces a working one. It exists only
 // in the template: init deletes it.
 //
-//	go run ./tools/kickstart init -name myapp [-module path] [-db sqlite|postgres]
-//	go run ./tools/kickstart check [-db sqlite|postgres] [-keep]
+//	go run ./tools/readysetgo init -name myapp [-module path] [-db sqlite|postgres]
+//	go run ./tools/readysetgo check [-db sqlite|postgres] [-keep]
 //
 // The Makefile's `init` and `template-check` targets wrap these.
 package main
@@ -18,7 +18,7 @@ import (
 	"strings"
 )
 
-const templateModule = "github.com/ukharwa/kickstart"
+const templateModule = "github.com/ukharwa/readysetgo"
 
 var (
 	databases  = []string{"sqlite", "postgres"}
@@ -42,7 +42,7 @@ type options struct {
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Fprintln(os.Stderr, "usage: kickstart init|check [flags]")
+		fmt.Fprintln(os.Stderr, "usage: readysetgo init|check [flags]")
 		os.Exit(2)
 	}
 	var err error
@@ -95,8 +95,8 @@ func (o *options) validate() error {
 	if !validName.MatchString(o.name) {
 		errs = append(errs, fmt.Errorf("NAME %q: use lowercase letters, digits and hyphens, starting with a letter", o.name))
 	}
-	if o.name == "kickstart" {
-		errs = append(errs, errors.New("NAME kickstart: that's the template's own name; give the project its own"))
+	if o.name == "readysetgo" {
+		errs = append(errs, errors.New("NAME readysetgo: that's the template's own name; give the project its own"))
 	}
 	if o.module == "" {
 		o.module = "github.com/ukharwa/" + o.name

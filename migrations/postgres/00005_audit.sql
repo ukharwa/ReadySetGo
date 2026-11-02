@@ -1,4 +1,4 @@
--- kickstart:begin module=audit
+-- readysetgo:begin module=audit
 -- +goose Up
 -- Security events, kept for good. Deleting a user clears the references to
 -- them and keeps the events.
@@ -21,4 +21,4 @@ CREATE INDEX audit_events_created_at_idx ON audit_events (created_at);
 
 -- +goose Down
 DROP TABLE audit_events;
--- kickstart:end
+-- readysetgo:end

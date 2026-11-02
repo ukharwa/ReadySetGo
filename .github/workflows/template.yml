@@ -2,7 +2,7 @@
 # copies the repository, runs init with its options in the copy, then checks
 # the result like a new project: tidy, vet, the tests, lint, sqlc, and a scan
 # for anything left over from options that weren't chosen. See
-# tools/kickstart/check.go; `make template-check DB=… UI=…` runs one locally.
+# tools/readysetgo/check.go; `make template-check DB=… UI=…` runs one locally.
 #
 # This workflow belongs to the template only: make init deletes it.
 name: Template
@@ -56,5 +56,5 @@ jobs:
           sqlc-version: "1.31.1"
       - name: Init and check
         run: >-
-          go run ./tools/kickstart check -db ${{ matrix.db }} -ui ${{ matrix.ui }} -modules ${{ matrix.modules }}
+          go run ./tools/readysetgo check -db ${{ matrix.db }} -ui ${{ matrix.ui }} -modules ${{ matrix.modules }}
           ${{ matrix.example == 'remove' && '-remove-example' || '' }}

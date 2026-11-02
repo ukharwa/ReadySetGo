@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/ukharwa/kickstart/internal/apptest"
-	"github.com/ukharwa/kickstart/internal/audit"
-	"github.com/ukharwa/kickstart/internal/auth"
+	"github.com/ukharwa/readysetgo/internal/apptest"
+	"github.com/ukharwa/readysetgo/internal/audit"
+	"github.com/ukharwa/readysetgo/internal/auth"
 )
 
 func TestAPIAuditLog(t *testing.T) {

@@ -15,14 +15,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ukharwa/kickstart/internal/auth"
-	"github.com/ukharwa/kickstart/internal/db"
-	"github.com/ukharwa/kickstart/internal/db/dbtest"
-	"github.com/ukharwa/kickstart/internal/email"
-	"github.com/ukharwa/kickstart/internal/email/emailtest"
-	"github.com/ukharwa/kickstart/internal/httpx"
-	"github.com/ukharwa/kickstart/internal/jobs"
-	"github.com/ukharwa/kickstart/internal/ratelimit"
+	"github.com/ukharwa/readysetgo/internal/auth"
+	"github.com/ukharwa/readysetgo/internal/db"
+	"github.com/ukharwa/readysetgo/internal/db/dbtest"
+	"github.com/ukharwa/readysetgo/internal/email"
+	"github.com/ukharwa/readysetgo/internal/email/emailtest"
+	"github.com/ukharwa/readysetgo/internal/httpx"
+	"github.com/ukharwa/readysetgo/internal/jobs"
+	"github.com/ukharwa/readysetgo/internal/ratelimit"
 )
 
 // BaseURL is the address emailed links point at in tests.

@@ -5,11 +5,11 @@ convention changes. `DECISIONS.md` explains why things are the way they
 are, `README.md` how to run and deploy the app, and `SCALING.md` what to do
 as it grows.
 
-<!-- kickstart:begin template -->
+<!-- readysetgo:begin template -->
 ## Read first: this is the uninitialised template
 
-This repository is the kickstart template, not yet an app. It stays that
-way until `make init` runs, which deletes `tools/kickstart/`: while that
+This repository is the ReadySetGo template, not yet an app. It stays that
+way until `make init` runs, which deletes `tools/readysetgo/`: while that
 folder exists, you are in the template. A user who opens a session here and
 describes an app ("set this up with Postgres and an API") is starting a new
 project, so follow "Starting a new project" below before anything else.
@@ -28,7 +28,8 @@ command you propose. Nothing runs until they answer.
 
 Run these; don't assume.
 
-- `git remote -v`. If `origin` is the template (`ukharwa/kickstart`), the
+- `git remote -v`. If `origin` is the template (`ukharwa/ReadySetGo`, in
+  any letter case, or its old name `ukharwa/kickstart`), the
   new project would push into the template, so nothing may run until
   that's fixed (asking the other questions meanwhile is fine). Two ways:
   - **Recommended:** GitHub's "Use this template" button makes a separate
@@ -65,7 +66,7 @@ still open, recommending an answer for each.
 
 | Option | Values | Default | Notes |
 |---|---|---|---|
-| `NAME` | lowercase letters, digits and hyphens, starting with a letter | none | Names the command (`cmd/NAME`), containers, database and image. Use the user's name for it; proposing the repository's name for them to confirm is fine, picking one silently isn't. Init refuses `kickstart`, the template's own name. |
+| `NAME` | lowercase letters, digits and hyphens, starting with a letter | none | Names the command (`cmd/NAME`), containers, database and image. Use the user's name for it; proposing the repository's name for them to confirm is fine, picking one silently isn't. Init refuses `readysetgo`, the template's own name. |
 | `MODULE` | a Go module path | `github.com/ukharwa/NAME` | Take it from `origin` when there is one: `git@github.com:OWNER/REPO.git` means `github.com/OWNER/REPO`. Pass `MODULE=` whenever that differs from the default (another owner, or a repository not named `NAME`). Off GitHub, the image is plain `NAME` and `APP_IMAGE` must be set for deploys. |
 | `DB` | `sqlite`, `postgres` | `sqlite` | Below. |
 | `UI` | `html`, `api` | `html` | Below. |
@@ -191,10 +192,10 @@ then on this file describes the project itself: follow it.
 
 ## Working on the template itself
 
-Read `tools/kickstart/README.md` first. It explains the markers init uses,
+Read `tools/readysetgo/README.md` first. It explains the markers init uses,
 keeping the two databases' code in step, and testing every combination of
 options.
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 
 ## This project
 
@@ -202,38 +203,38 @@ It was created from a template by `INIT_COMMAND`, run on commit
 `INIT_COMMIT`: the template as it was just before init, which this
 repository's history keeps. That chose:
 
-<!-- kickstart:begin db=sqlite -->
+<!-- readysetgo:begin db=sqlite -->
 - **Database:** SQLite, on one server. SCALING.md covers moving to a
   database server when the app needs more than one.
-<!-- kickstart:end -->
-<!-- kickstart:begin db=postgres -->
+<!-- readysetgo:end -->
+<!-- readysetgo:begin db=postgres -->
 - **Database:** PostgreSQL.
-<!-- kickstart:end -->
-<!-- kickstart:begin ui=html -->
+<!-- readysetgo:end -->
+<!-- readysetgo:begin ui=html -->
 - **UI:** server-rendered pages with HTMX.
-<!-- kickstart:end -->
-<!-- kickstart:begin ui=api -->
+<!-- readysetgo:end -->
+<!-- readysetgo:begin ui=api -->
 - **UI:** a JSON API under `/api/`, for a separate frontend or a mobile
   app.
-<!-- kickstart:end -->
-<!-- kickstart:begin module=workspaces -->
+<!-- readysetgo:end -->
+<!-- readysetgo:begin module=workspaces -->
 - **Module:** workspaces (teams sharing data).
-<!-- kickstart:end -->
-<!-- kickstart:begin module=admin -->
+<!-- readysetgo:end -->
+<!-- readysetgo:begin module=admin -->
 - **Module:** admin (managing users and failed jobs).
-<!-- kickstart:end -->
-<!-- kickstart:begin module=audit -->
+<!-- readysetgo:end -->
+<!-- readysetgo:begin module=audit -->
 - **Module:** audit (security events kept in a table).
-<!-- kickstart:end -->
-<!-- kickstart:begin module=uploads -->
+<!-- readysetgo:end -->
+<!-- readysetgo:begin module=uploads -->
 - **Module:** uploads (users' files).
-<!-- kickstart:end -->
-<!-- kickstart:begin module=metrics -->
+<!-- readysetgo:end -->
+<!-- readysetgo:begin module=metrics -->
 - **Module:** metrics (Prometheus and the profiler).
-<!-- kickstart:end -->
-<!-- kickstart:begin module=errreport -->
+<!-- readysetgo:end -->
+<!-- readysetgo:begin module=errreport -->
 - **Module:** errreport (error reports to Sentry and compatible services).
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 
 The init step deleted itself, so these can't be changed by a setting.
 Asked to change one, say what it involves first, then follow "Changing
@@ -264,31 +265,31 @@ optional modules, let init work out the change:
 
 Moving an existing database's data into a new one is a separate step:
 SCALING.md covers it.
-<!-- kickstart:begin module=workspaces,module=admin,module=audit,module=uploads,module=metrics,module=errreport -->
+<!-- readysetgo:begin module=workspaces,module=admin,module=audit,module=uploads,module=metrics,module=errreport -->
 README.md ("Removing a module") explains taking a module out.
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 
 ## Commands
 
 - `make services`: start the dev services. Mailpit's inbox at
   <http://localhost:8025> catches every email the app sends.
-  <!-- kickstart:begin db=postgres -->
+  <!-- readysetgo:begin db=postgres -->
   Postgres is needed by `run` and `test`.
-  <!-- kickstart:end -->
+  <!-- readysetgo:end -->
 - **Local ports:** the app uses 8080 and Mailpit 1025 and 8025
-  <!-- kickstart:begin db=postgres -->
+  <!-- readysetgo:begin db=postgres -->
   (Postgres 5432)
-  <!-- kickstart:end -->
+  <!-- readysetgo:end -->
   in development. When another project already holds one (`ss -ltn`,
   `docker ps`), move it in `.env`, taking the next free port, rather than
   stopping that project. These settings move together:
   - the app: `HTTP_ADDR` and `APP_URL`
   - Mailpit: `MAILPIT_SMTP_PORT` with `SMTP_PORT`, and `MAILPIT_PORT` (its
     inbox)
-  <!-- kickstart:begin db=postgres -->
+  <!-- readysetgo:begin db=postgres -->
   - Postgres: `POSTGRES_PORT`, with the port in `DATABASE_URL` and
     `TEST_DATABASE_URL`
-  <!-- kickstart:end -->
+  <!-- readysetgo:end -->
 - `make run`: run the HTTP server and job worker (reads `.env`; copy
   `.env.example` first)
 - `make worker`: run only the job worker
@@ -301,12 +302,12 @@ README.md ("Removing a module") explains taking a module out.
   creates a new one
 - `make generate`: regenerate each feature's `store` package after
   changing SQL (`make tools` installs sqlc first)
-<!-- kickstart:begin db=sqlite -->
+<!-- readysetgo:begin db=sqlite -->
 - `make backup`: write a database snapshot into `backups/`
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 - `make seed`: add `admin@example.com` and `user@example.com`, both with
   the password `dev-password-123` (dev only)
-- `go run ./cmd/kickstart user promote EMAIL`: make a user an admin (also
+- `go run ./cmd/readysetgo user promote EMAIL`: make a user an admin (also
   `demote`, `disable`, `enable`, `delete`)
 <!-- example:begin -->
 - `make remove-example`: delete the notes example and every line marked
@@ -316,29 +317,29 @@ README.md ("Removing a module") explains taking a module out.
   app behind Caddy) locally at https://localhost (`HTTPS_PORT` moves it)
 - `make deploy DEPLOY_HOST=user@server`: copy `compose.yaml` and `deploy/`
   to the server, pull the new image and restart
-<!-- kickstart:begin db=sqlite -->
+<!-- readysetgo:begin db=sqlite -->
 - `docker compose exec app /app backup -dir /data/backups` takes a snapshot
   on the server; to restore one, stop the app, then
   `docker compose run --rm app restore -from /data/backups/FILE.db`
-<!-- kickstart:end -->
-<!-- kickstart:begin db=postgres -->
+<!-- readysetgo:end -->
+<!-- readysetgo:begin db=postgres -->
 - `./deploy/backup-postgres.sh` dumps the database into `backups/` on the
   server; its header shows how to restore a dump
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 - `make build`, `make fmt`, `make vet`; `make help` lists everything
 
 ## Layout
 
-- `cmd/kickstart/`: the only `main` package and the only place dependencies
+- `cmd/readysetgo/`: the only `main` package and the only place dependencies
   are wired together.
   - `main.go` lists the subcommands; each has its own file, such as
     `serve.go` and `migrate.go`.
   - `app.go` holds the setup they share: config, logger, database,
     `newServices` (the services every command uses) and `startJobs`.
   - `routes.go` mounts every feature's routes, one line per feature.
-  <!-- kickstart:begin ui=html -->
+  <!-- readysetgo:begin ui=html -->
   - `web.go` sets up the page renderer and mounts the HTML pages.
-  <!-- kickstart:end -->
+  <!-- readysetgo:end -->
 - `internal/config/`: reads every environment variable. Nothing else calls
   `os.Getenv` (test helpers excepted).
 - `internal/logging/`: builds the slog logger.
@@ -360,63 +361,63 @@ README.md ("Removing a module") explains taking a module out.
 - `internal/auth/`: accounts. `auth.go` is the `Service` with every flow and
   no HTTP; `sessions.go` the session-store seam; `middleware.go` loads the
   user and guards routes; `emails/` holds the email templates.
-  <!-- kickstart:begin ui=html -->
+  <!-- readysetgo:begin ui=html -->
   `web.go` and `templates/` are the account pages.
-  <!-- kickstart:end -->
-  <!-- kickstart:begin ui=api -->
+  <!-- readysetgo:end -->
+  <!-- readysetgo:begin ui=api -->
   `api.go` is the JSON API under `/api/auth/`.
-  <!-- kickstart:end -->
+  <!-- readysetgo:end -->
   Other features react to accounts through `OnUserCreated` and
   `OnUserDeleting` hooks, and to security events (failed logins, role
   changes, …) through `OnEvent`; all run inside the same transaction.
-<!-- kickstart:begin module=workspaces -->
+<!-- readysetgo:begin module=workspaces -->
 - `internal/workspaces/`: workspaces, their members (owner, admin, member)
   and email invitations. `middleware.go` resolves `{workspaceID}` and
   answers 404 to non-members; `workspacestest/` signs people in with their
   personal workspace for tests.
-<!-- kickstart:end -->
-<!-- kickstart:begin module=admin -->
-<!-- kickstart:begin ui=html -->
+<!-- readysetgo:end -->
+<!-- readysetgo:begin module=admin -->
+<!-- readysetgo:begin ui=html -->
 - `internal/admin/`: the admin pages under `/admin/`: users (role,
   disabling, deleting, verification links) and failed jobs to retry.
-<!-- kickstart:end -->
-<!-- kickstart:begin ui=api -->
+<!-- readysetgo:end -->
+<!-- readysetgo:begin ui=api -->
 - `internal/admin/`: the admin endpoints under `/api/admin/`: users (role,
   disabling, deleting, verification links) and failed jobs to retry.
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
   Account changes go through `auth.Service`, like the CLI's; admins can't
   change their own account there.
-<!-- kickstart:end -->
-<!-- kickstart:begin module=audit -->
+<!-- readysetgo:end -->
+<!-- readysetgo:begin module=audit -->
 - `internal/audit/`: keeps every security event in the `audit_events`
   table (an `OnEvent` hook) and lists them for admins
-  <!-- kickstart:begin ui=html -->
+  <!-- readysetgo:begin ui=html -->
   at `/admin/audit`.
-  <!-- kickstart:end -->
-  <!-- kickstart:begin ui=api -->
+  <!-- readysetgo:end -->
+  <!-- readysetgo:begin ui=api -->
   at `/api/admin/audit-events`.
-  <!-- kickstart:end -->
-<!-- kickstart:end -->
-<!-- kickstart:begin module=uploads -->
+  <!-- readysetgo:end -->
+<!-- readysetgo:end -->
+<!-- readysetgo:begin module=uploads -->
 - `internal/uploads/`: users' files. `storage.go` is the `Storage` seam and
   its local-disk implementation (`UPLOADS_DIR`); `uploads.go` checks each
   file's type from its contents and size, and deletes stored files through
   a job once their records are gone; `http.go` streams uploads and serves
   downloads to their owner only.
-<!-- kickstart:end -->
-<!-- kickstart:begin module=metrics -->
+<!-- readysetgo:end -->
+<!-- readysetgo:begin module=metrics -->
 - `internal/metrics/`: Prometheus metrics (requests per route, database
   pools, job queue, Go runtime) and Go's profiler, served by `serve` on
   `METRICS_ADDR`, never publicly.
-<!-- kickstart:end -->
-<!-- kickstart:begin module=errreport -->
+<!-- readysetgo:end -->
+<!-- readysetgo:begin module=errreport -->
 - `internal/errreport/`: a slog handler that reports every error-level log
   record to Sentry (or GlitchTip or Bugsink) when `SENTRY_DSN` is set.
-<!-- kickstart:end -->
-<!-- kickstart:begin ui=html -->
+<!-- readysetgo:end -->
+<!-- readysetgo:begin ui=html -->
 - `internal/web/`: the page layout, renderer, stylesheet, HTMX and flash
   messages.
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 <!-- example:begin -->
 - `internal/notes/`: the example feature, notes that belong to the user who
   wrote them. Copy its shape for a new feature.
@@ -448,22 +449,22 @@ README.md ("Removing a module") explains taking a module out.
   `db.ErrConflict` with `errors.Is`; never check driver error types.
 - **IDs:** UUIDv7 from `db.NewID()`, generated in Go before the insert.
   Name UUID columns `id` or `<thing>_id`.
-  <!-- kickstart:begin db=sqlite -->
+  <!-- readysetgo:begin db=sqlite -->
   A nullable UUID column needs its own entry in `sqlc.yaml`'s overrides
   (see the comment there).
-  <!-- kickstart:end -->
+  <!-- readysetgo:end -->
 - **Timestamps:** set from Go with `db.Now()` (UTC, microseconds), never by
   database defaults.
 - **Emails and usernames:** trim and lowercase in Go before saving or
   looking up, with a unique index on the cleaned value.
 - **Other types:** strings are `TEXT`; money is whole cents in an integer;
   every foreign key has an explicit `ON DELETE` rule and an index.
-  <!-- kickstart:begin db=sqlite -->
+  <!-- readysetgo:begin db=sqlite -->
   Integers are `INTEGER` (`int64` in Go).
-  <!-- kickstart:end -->
-  <!-- kickstart:begin db=postgres -->
+  <!-- readysetgo:end -->
+  <!-- readysetgo:begin db=postgres -->
   Integers are `bigint` (`int64` in Go; `integer` would be `int32`).
-  <!-- kickstart:end -->
+  <!-- readysetgo:end -->
 - **Database-specific SQL** goes only in migrations and in queries that
   can't be shared; everything else stays portable.
 
@@ -474,15 +475,15 @@ README.md ("Removing a module") explains taking a module out.
 2. Its queries in `internal/things/things.sql`, every one filtered by the
    owner; list the file in `sqlc.yaml` and run `make generate`.
 3. `things.go`: a `Service` with the logic and validation, and no HTTP.
-<!-- kickstart:begin ui=html -->
+<!-- readysetgo:begin ui=html -->
 4. `web.go` and `templates/`: a `Web` type whose `Routes` lists the pages,
-   mounted in `cmd/kickstart/web.go`.
-<!-- kickstart:end -->
-<!-- kickstart:begin ui=api -->
+   mounted in `cmd/readysetgo/web.go`.
+<!-- readysetgo:end -->
+<!-- readysetgo:begin ui=api -->
 4. `api.go`: an `API` type whose `Routes` lists the endpoints, mounted in
-   `cmd/kickstart/routes.go`.
-<!-- kickstart:end -->
-5. Build the service in `newServices` (`cmd/kickstart/app.go`).
+   `cmd/readysetgo/routes.go`.
+<!-- readysetgo:end -->
+5. Build the service in `newServices` (`cmd/readysetgo/app.go`).
 6. End-to-end tests with `apptest`, including that someone else gets 404
    for every route.
 <!-- example:begin -->
@@ -495,11 +496,11 @@ is never removed by mistake.
 
 A feature may use the project's modules; the modules themselves still
 don't depend on each other.
-<!-- kickstart:begin module=uploads -->
+<!-- readysetgo:begin module=uploads -->
 Files attached to a feature's records go through `uploads.Service`, with
 `uploads.Limit`, `uploads.RequestContext` and `uploads.FilePart` in the
 handlers and a link table from the feature's rows to `uploads(id)`.
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 
 ## Conventions
 
@@ -518,29 +519,29 @@ handlers and a link table from the feature's rows to `uploads(id)`.
   cookies, emails, query strings or database URLs. Changes to accounts go
   through `auth.Service`, which logs each as a security event with the
   user, the acting user, the IP address and the request ID.
-  <!-- kickstart:begin module=errreport -->
+  <!-- readysetgo:begin module=errreport -->
   Every error-level record is also reported as an error to fix, so log at
   error level only what someone should look at, and only once.
-  <!-- kickstart:end -->
+  <!-- readysetgo:end -->
 - **State:** no package-level mutable state; dependencies are built in
   `main` and passed explicitly. Nothing may assume a single instance.
 - **Background work:**
   - Enqueue jobs with `jobs.Enqueue(ctx, store.New(tx), kind, payload)`
     inside the same `db.InTx` as the change that caused them.
   - Register a job's handler, and any recurring task
-    (`scheduler.Every`), in `startJobs` in `cmd/kickstart/app.go`.
+    (`scheduler.Every`), in `startJobs` in `cmd/readysetgo/app.go`.
   - Handlers must be safe to run twice and must respect their context.
   - Never send email during a request: build an `email.Message` and
     `email.Enqueue` it. Tests use `emailtest.Recorder` and run queued jobs
     with `worker.RunOne`.
 - **Interfaces:** only for the agreed seams (sessions, rate limiting, jobs,
   email), defined where they're used.
-  <!-- kickstart:begin module=uploads -->
+  <!-- readysetgo:begin module=uploads -->
   File storage (`uploads.Storage`) is one too.
-  <!-- kickstart:end -->
+  <!-- readysetgo:end -->
 - **HTTP:**
   - Each feature has a handler type with a `Routes(mux)` method listing its
-    routes; mount it in `cmd/kickstart/routes.go`. Every request reaches
+    routes; mount it in `cmd/readysetgo/routes.go`. Every request reaches
     them through the middleware stack (`httpx.Stack`), outermost first: real
     client IP, request ID, access log, panic recovery, security headers,
     cross-origin (CSRF) check, 1 MiB body limit, 25-second request timeout,
@@ -551,12 +552,12 @@ handlers and a link table from the feature's rows to `uploads(id)`.
     `ratelimit.PerIP`.
   - Services return `validate.Errors` for bad input and named errors for
     other expected failures; handlers turn them into responses.
-  <!-- kickstart:begin ui=html -->
+  <!-- readysetgo:begin ui=html -->
   - Pages: parse a feature's `templates/` with `renderer.Pages` and
     `Render` them. Forms post, then redirect with `web.SetFlash`; on bad
     input re-render with `web.Form` and status 422. Use
     `web.SafeRedirect` for any `?next=`.
-  <!-- kickstart:end -->
+  <!-- readysetgo:end -->
   - JSON: decode with `httpx.ReadJSON`, respond with `httpx.WriteJSON`,
     `httpx.WriteInvalid` (422 with field errors) or `httpx.ErrorMessage`.
     Errors are RFC 9457 problem details.
@@ -579,10 +580,10 @@ handlers and a link table from the feature's rows to `uploads(id)`.
   its HTTPS `Server` with `Client()`, reading emails with `TokenFrom`.
   `SignIn(client, email)` signs a client in as a new verified user. Tests
   that need a folder use `t.TempDir()`, so nothing is left behind.
-  <!-- kickstart:begin db=postgres -->
+  <!-- readysetgo:begin db=postgres -->
   It needs `make services` running and `TEST_DATABASE_URL` set.
-  <!-- kickstart:end -->
-<!-- kickstart:begin module=workspaces -->
+  <!-- readysetgo:end -->
+<!-- readysetgo:begin module=workspaces -->
 
 ## Workspace-owned data
 
@@ -593,17 +594,17 @@ data shared by a workspace instead:
   ON DELETE CASCADE`, with an index, and scope every query by it
   (`WHERE workspace_id = @workspace_id AND id = @id`), so one workspace can
   never reach another's rows.
-<!-- kickstart:begin ui=html -->
+<!-- readysetgo:begin ui=html -->
 - Put its pages under `/w/{workspaceID}/…` and guard each route with
   `auth.RequireUser(workspacesService.Require(handler))`.
-<!-- kickstart:end -->
-<!-- kickstart:begin ui=api -->
+<!-- readysetgo:end -->
+<!-- readysetgo:begin ui=api -->
 - Put its endpoints under `/api/workspaces/{workspaceID}/…` and guard each
   with `auth.RequireUser(workspacesService.Require(handler))`.
-<!-- kickstart:end -->
+<!-- readysetgo:end -->
 - In the handler, `workspaces.From(ctx)` is the workspace with the user's
   role in it. Outsiders already got 404 from `Require`; answer 403 when a
   member's role doesn't allow an action (`ws.CanManage()`, `ws.IsOwner()`).
 - Test that someone outside the workspace gets 404 for every route, using
   `workspacestest.SignIn` for each person.
-<!-- kickstart:end -->
+<!-- readysetgo:end -->

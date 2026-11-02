@@ -10,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ukharwa/kickstart/internal/apptest"
-	"github.com/ukharwa/kickstart/internal/uploads"
-	"github.com/ukharwa/kickstart/internal/validate"
+	"github.com/ukharwa/readysetgo/internal/apptest"
+	"github.com/ukharwa/readysetgo/internal/uploads"
+	"github.com/ukharwa/readysetgo/internal/validate"
 )
 
 // Files whose type http.DetectContentType recognises from the first bytes.

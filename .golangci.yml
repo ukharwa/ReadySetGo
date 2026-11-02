@@ -32,11 +32,11 @@ linters:
       # without a deadline.
       - path: _test\.go
         linters: [gosec, noctx]
-      # kickstart:begin template
+      # readysetgo:begin template
       # The init tool prints its progress to the terminal.
       - path: ^tools/
         linters: [forbidigo, gosec]
-      # kickstart:end
+      # readysetgo:end
 
 formatters:
   enable:
@@ -45,4 +45,4 @@ formatters:
   settings:
     goimports:
       local-prefixes:
-        - github.com/ukharwa/kickstart
+        - github.com/ukharwa/readysetgo

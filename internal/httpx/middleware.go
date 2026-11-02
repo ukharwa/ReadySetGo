@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ukharwa/kickstart/internal/logging"
+	"github.com/ukharwa/readysetgo/internal/logging"
 )
 
 // Middleware wraps a handler with behaviour shared by many routes.

@@ -25,13 +25,13 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/ukharwa/kickstart/internal/auth/store"
-	"github.com/ukharwa/kickstart/internal/db"
-	"github.com/ukharwa/kickstart/internal/email"
-	"github.com/ukharwa/kickstart/internal/httpx"
-	"github.com/ukharwa/kickstart/internal/logging"
-	"github.com/ukharwa/kickstart/internal/ratelimit"
-	"github.com/ukharwa/kickstart/internal/validate"
+	"github.com/ukharwa/readysetgo/internal/auth/store"
+	"github.com/ukharwa/readysetgo/internal/db"
+	"github.com/ukharwa/readysetgo/internal/email"
+	"github.com/ukharwa/readysetgo/internal/httpx"
+	"github.com/ukharwa/readysetgo/internal/logging"
+	"github.com/ukharwa/readysetgo/internal/ratelimit"
+	"github.com/ukharwa/readysetgo/internal/validate"
 )
 
 //go:embed emails/*.txt
@@ -84,9 +84,9 @@ type Lifetime struct {
 var (
 	BrowserSession    = Lifetime{Idle: 24 * time.Hour, Max: 7 * 24 * time.Hour}
 	RememberedSession = Lifetime{Idle: 30 * 24 * time.Hour, Max: 30 * 24 * time.Hour}
-	// kickstart:begin ui=api
+	// readysetgo:begin ui=api
 	APIToken = Lifetime{Idle: 30 * 24 * time.Hour, Max: 90 * 24 * time.Hour}
-	// kickstart:end
+	// readysetgo:end
 )
 
 // How long emailed links work.

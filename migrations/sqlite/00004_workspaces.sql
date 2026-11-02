@@ -1,4 +1,4 @@
--- kickstart:begin module=workspaces
+-- readysetgo:begin module=workspaces
 -- +goose Up
 CREATE TABLE workspaces (
     id         TEXT PRIMARY KEY,
@@ -36,4 +36,4 @@ CREATE INDEX workspace_invitations_email_idx ON workspace_invitations (email);
 DROP TABLE workspace_invitations;
 DROP TABLE workspace_members;
 DROP TABLE workspaces;
--- kickstart:end
+-- readysetgo:end

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ukharwa/kickstart/internal/httpx"
+	"github.com/ukharwa/readysetgo/internal/httpx"
 )
 
 // clock is a settable time source for tests.

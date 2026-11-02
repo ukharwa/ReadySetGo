@@ -16,9 +16,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/ukharwa/kickstart/internal/db"
-	"github.com/ukharwa/kickstart/internal/notes/store"
-	"github.com/ukharwa/kickstart/internal/validate"
+	"github.com/ukharwa/readysetgo/internal/db"
+	"github.com/ukharwa/readysetgo/internal/notes/store"
+	"github.com/ukharwa/readysetgo/internal/validate"
 )
 
 // ErrNotFound means there is no such note, or it belongs to someone else:

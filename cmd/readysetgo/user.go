@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/ukharwa/kickstart/internal/auth"
+	"github.com/ukharwa/readysetgo/internal/auth"
 )
 
 const userUsage = "usage: user promote | demote | disable | enable | delete EMAIL"

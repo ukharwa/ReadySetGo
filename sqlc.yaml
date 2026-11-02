@@ -7,14 +7,14 @@
 # Write parameters as @name. The first entry holds the shared settings
 # (&sqlc); the others reuse them with `<<:` and set only their queries and
 # output folder.
-# kickstart:begin template
+# readysetgo:begin template
 # (Shared query files are read by both engines, which both accept @name.
 # Queries that must differ live in internal/<feature>/<db>/; init flattens
 # the chosen database's folder into its feature folder.)
-# kickstart:end
+# readysetgo:end
 version: "2"
 sql:
-  # kickstart:begin db=sqlite
+  # readysetgo:begin db=sqlite
   - &sqlc
     engine: sqlite
     schema: migrations/sqlite
@@ -29,18 +29,18 @@ sql:
         # entry wins, whether or not the column is nullable, so a nullable
         # UUID column (uuid.NullUUID) or a non-UUID `_id` column is listed
         # by name, above the patterns.
-        # kickstart:begin template
+        # readysetgo:begin template
         # (This keeps the generated Go identical to the Postgres version.)
-        # kickstart:end
+        # readysetgo:end
         overrides:
-          # kickstart:begin module=audit
+          # readysetgo:begin module=audit
           - column: "audit_events.user_id"
             go_type: github.com/google/uuid.NullUUID
           - column: "audit_events.actor_id"
             go_type: github.com/google/uuid.NullUUID
           - column: "audit_events.request_id"
             go_type: string
-          # kickstart:end
+          # readysetgo:end
           - column: "*.id"
             go_type: github.com/google/uuid.UUID
           - column: "*.*_id"
@@ -53,33 +53,33 @@ sql:
     queries: [internal/notes/notes.sql]
     gen: {go: {<<: *go, out: internal/notes/store}}
   # example:end
-  # kickstart:begin module=workspaces
+  # readysetgo:begin module=workspaces
   - <<: *sqlc
     queries: [internal/workspaces/workspaces.sql]
     gen: {go: {<<: *go, out: internal/workspaces/store}}
-  # kickstart:end
-  # kickstart:begin module=audit
+  # readysetgo:end
+  # readysetgo:begin module=audit
   - <<: *sqlc
     queries: [internal/audit/audit.sql]
     gen: {go: {<<: *go, out: internal/audit/store}}
-  # kickstart:end
-  # kickstart:begin module=admin
+  # readysetgo:end
+  # readysetgo:begin module=admin
   - <<: *sqlc
     queries: [internal/admin/admin.sql]
     gen: {go: {<<: *go, out: internal/admin/store}}
-  # kickstart:end
-  # kickstart:begin module=uploads
+  # readysetgo:end
+  # readysetgo:begin module=uploads
   - <<: *sqlc
     queries: [internal/uploads/uploads.sql]
     gen: {go: {<<: *go, out: internal/uploads/store}}
-  # kickstart:end
-  # kickstart:begin module=metrics
+  # readysetgo:end
+  # readysetgo:begin module=metrics
   - <<: *sqlc
     queries: [internal/metrics/metrics.sql]
     gen: {go: {<<: *go, out: internal/metrics/store}}
-  # kickstart:end
-  # kickstart:end
-  # kickstart:begin db=postgres
+  # readysetgo:end
+  # readysetgo:end
+  # readysetgo:begin db=postgres
   - &sqlc
     engine: postgresql
     schema: migrations/postgres
@@ -97,29 +97,29 @@ sql:
     queries: [internal/notes/notes.sql]
     gen: {go: {<<: *go, out: internal/notes/store/postgres}}
   # example:end
-  # kickstart:begin module=workspaces
+  # readysetgo:begin module=workspaces
   - <<: *sqlc
     queries: [internal/workspaces/workspaces.sql]
     gen: {go: {<<: *go, out: internal/workspaces/store/postgres}}
-  # kickstart:end
-  # kickstart:begin module=audit
+  # readysetgo:end
+  # readysetgo:begin module=audit
   - <<: *sqlc
     queries: [internal/audit/audit.sql]
     gen: {go: {<<: *go, out: internal/audit/store/postgres}}
-  # kickstart:end
-  # kickstart:begin module=admin
+  # readysetgo:end
+  # readysetgo:begin module=admin
   - <<: *sqlc
     queries: [internal/admin/admin.sql]
     gen: {go: {<<: *go, out: internal/admin/store/postgres}}
-  # kickstart:end
-  # kickstart:begin module=uploads
+  # readysetgo:end
+  # readysetgo:begin module=uploads
   - <<: *sqlc
     queries: [internal/uploads/uploads.sql]
     gen: {go: {<<: *go, out: internal/uploads/store/postgres}}
-  # kickstart:end
-  # kickstart:begin module=metrics
+  # readysetgo:end
+  # readysetgo:begin module=metrics
   - <<: *sqlc
     queries: [internal/metrics/metrics.sql]
     gen: {go: {<<: *go, out: internal/metrics/store/postgres}}
-  # kickstart:end
-  # kickstart:end
+  # readysetgo:end
+  # readysetgo:end
