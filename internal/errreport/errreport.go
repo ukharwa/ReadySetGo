@@ -3,7 +3,7 @@
 // its error, attributes and request ID.
 //
 // Logging an error once, where it's handled, is the convention everywhere
-// (CLAUDE.md), so this one hook covers panics in requests, 500 responses and
+// (AGENTS.md), so this one hook covers panics in requests, 500 responses and
 // failed jobs. Requests themselves are never sent, so cookies, passwords and
 // other form fields can't leak into reports.
 package errreport

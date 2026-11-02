@@ -242,7 +242,7 @@ func transform(rel string, data []byte, o options) (string, []byte, bool, error)
 		return "", nil, false, nil // every line belonged to an unchosen option
 	}
 	text = rewrite(rel, text, o)
-	if rel == "CLAUDE.md" {
+	if rel == "AGENTS.md" {
 		text = recordInit(text, o)
 	}
 
@@ -480,7 +480,7 @@ func (o options) command() string {
 	return fmt.Sprintf("make init NAME=%s MODULE=%s DB=%s UI=%s MODULES=%s", o.name, o.module, o.db, o.ui, modules)
 }
 
-// recordInit fills in CLAUDE.md's record of how the project was made: the
+// recordInit fills in AGENTS.md's record of how the project was made: the
 // command, and the template commit it ran on, which later changes start
 // from.
 func recordInit(text string, o options) string {

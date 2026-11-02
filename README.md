@@ -26,15 +26,16 @@ and start on the features.
 
    Init renames everything to `NAME`, keeps only the chosen database, UI mode
    and modules, deletes the template's own tooling, runs `go mod tidy`, and
-   leaves a project whose README, `CLAUDE.md` and `SCALING.md` describe only
+   leaves a project whose README, `AGENTS.md` and `SCALING.md` describe only
    what it uses. Nothing from an unchosen option remains: CI checks that for
    every combination.
 3. Commit, push, and follow the rest of this README, which is now the
    project's own.
 
-Or let Claude Code do steps 2 and 3: open it in the new repository and
-describe the app ("a Postgres API for a mobile app, with teams and file
-uploads"). `CLAUDE.md` tells it to check the checkout, ask about anything
+Or let a coding agent do steps 2 and 3: open Claude Code, OpenAI Codex or
+another agent that reads `AGENTS.md` in the new repository and describe the
+app ("a Postgres API for a mobile app, with teams and file uploads").
+`AGENTS.md` tells it to check the checkout, ask about anything
 missing, point out what the template doesn't support, and confirm the
 `make init` command with you before running it.
 
@@ -68,10 +69,9 @@ database or the app will take many writes from many users at once.
 
 ## Working on the template
 
-`CLAUDE.md` (its "Working on the template itself" section) explains the
-markers init uses. `make template-check DB=… UI=… MODULES=…` initialises a
-temporary copy and runs every check on it; the Template workflow runs all
-combinations in CI.
+`tools/kickstart/README.md` explains the markers init uses. `make
+template-check DB=… UI=… MODULES=…` initialises a temporary copy and runs
+every check on it; the Template workflow runs all combinations in CI.
 
 ---
 
@@ -86,7 +86,7 @@ email, served behind Caddy.
 A Go JSON API: accounts with session cookies or bearer tokens, background
 jobs and email, served behind Caddy.
 <!-- kickstart:end -->
-`DECISIONS.md` explains why it's built this way, `CLAUDE.md` holds the
+`DECISIONS.md` explains why it's built this way, `AGENTS.md` holds the
 conventions for working on it, and `SCALING.md` is the playbook for when it
 grows.
 
@@ -188,7 +188,7 @@ with, `admin@example.com` and `user@example.com`, both with the password
 <!-- kickstart:end -->
 
 If another project already uses one of these ports (or the app's 8080),
-change it in `.env`; CLAUDE.md ("Local ports") lists the settings that move
+change it in `.env`; AGENTS.md ("Local ports") lists the settings that move
 together.
 
 `make up` runs the production stack (the app behind Caddy) on your machine

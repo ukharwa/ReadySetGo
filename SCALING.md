@@ -78,7 +78,7 @@ The queries are portable and sqlc generates the same Go functions for both
 databases, so this is a configuration and data-copy job rather than a
 rewrite.
 
-1. Switch the code with CLAUDE.md's "Changing what init chose": init on
+1. Switch the code with AGENTS.md's "Changing what init chose": init on
    two scratch copies of the template commit, the recorded command and the
    same with `DB=postgres`, and their diff is the whole change (the
    driver, the database code and its tests, migrations, generated queries,

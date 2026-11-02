@@ -625,12 +625,26 @@ both databases in place with build tags, which would need build-tagged
 generated code and every shared file to compile both ways.
 
 Init writes its own command and the template commit it ran on into the
-project's `CLAUDE.md`. Changing a choice later (another database, a module
+project's `AGENTS.md`. Changing a choice later (another database, a module
 added) then means running init on two scratch copies of that commit, with
 the old options and the new, and applying their difference. **Considered:**
 a separate tool for each kind of change, which would have to stay in step
 with init.
 <!-- kickstart:end -->
+
+### Instructions for coding agents: `AGENTS.md`
+
+The conventions, and in the template the guide to starting a project, are
+in `AGENTS.md`, the file OpenAI Codex and other coding agents read.
+`CLAUDE.md`, which Claude Code reads, only imports it (`@AGENTS.md`), so
+there is one copy to keep accurate.
+<!-- kickstart:begin template -->
+The notes on maintaining the template live in `tools/kickstart/README.md`,
+which keeps the template's `AGENTS.md` under Codex's default 32 KiB limit
+for instruction files.
+<!-- kickstart:end -->
+**Considered:** two copies, which drift apart, and a symlink, which some
+tools and Windows checkouts don't follow.
 
 ### Linting: golangci-lint v2
 

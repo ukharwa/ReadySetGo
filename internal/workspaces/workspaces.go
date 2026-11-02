@@ -8,7 +8,7 @@
 // Features whose data belongs to a workspace put their routes under
 // /w/{workspaceID}/ (pages) or /api/workspaces/{workspaceID}/ (JSON), guard
 // them with Service.Require, and scope every query by From(ctx).ID. See
-// CLAUDE.md.
+// AGENTS.md.
 package workspaces
 
 import (
