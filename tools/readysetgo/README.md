@@ -46,6 +46,7 @@ new project picks and removes the rest:
 - The notes example's lines sit between `example:begin` and `example:end`
   markers instead. Init keeps them, and the example, in every project;
   `make remove-example` (`tools/removeexample/`) deletes them later.
+- Init deletes `LICENSE`: the template's licence isn't the project's.
 - Init renames `readysetgo` (in any letter case, so `ReadySetGo` too) to the
   project name everywhere except
   `DECISIONS.md`, and the module path everywhere.

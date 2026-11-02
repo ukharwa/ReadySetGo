@@ -135,6 +135,9 @@ database, or many users will be writing at once.
   the template itself. `make template-check DB=… UI=… MODULES=…` tests one
   combination; CI tests them all.
 
+ReadySetGo is MIT licensed ([`LICENSE`](LICENSE)). `make init` removes
+that file, so the app you build from it is yours to license as you choose.
+
 ---
 
 *Everything below this line becomes your project's README.*

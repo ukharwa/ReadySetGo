@@ -98,6 +98,7 @@ func TestPaths(t *testing.T) {
 		want string // "" means removed
 	}{
 		{"tools/readysetgo/main.go", sqliteHTML, ""},
+		{"LICENSE", sqliteHTML, ""},
 		{"tools/removeexample/main.go", sqliteHTML, "tools/removeexample/main.go"},
 		{".github/workflows/template.yml", sqliteHTML, ""},
 		{"migrations/sqlite/00001_users.sql", sqliteHTML, "migrations/00001_users.sql"},
