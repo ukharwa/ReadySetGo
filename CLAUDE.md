@@ -1,7 +1,9 @@
 # CLAUDE.md
 
 Conventions for working in this repository. Keep this file accurate when a
-convention changes. `DECISIONS.md` explains why things are the way they are.
+convention changes. `DECISIONS.md` explains why things are the way they
+are, `README.md` how to run and deploy the app, and `SCALING.md` what to do
+as it grows.
 
 <!-- kickstart:begin template -->
 ## Working on the template itself
@@ -11,7 +13,7 @@ runnable SQLite app containing every option. `make init` keeps the options a
 new project picks and removes the rest:
 
 - Paths belonging to one option are removed whole when that option isn't
-  chosen (`migrations/postgres/`, `internal/store/postgres/`). The chosen
+  chosen (`migrations/postgres/`, `internal/<feature>/store/postgres/`). The chosen
   database's folders are flattened: `migrations/<db>/` becomes
   `migrations/`.
 - An optional module lives in `internal/<module>/`, removed whole when it
@@ -62,9 +64,12 @@ Postgres check needs `make services`. Set `TMPDIR` to choose where the copy
 goes. The init program lives in `tools/kickstart/`; its unit tests run with
 `go test ./tools/...`.
 
-After changing a query or migration, run `make generate`: sqlc writes the
-SQLite code to `internal/store/` and the Postgres code to
-`internal/store/postgres/`, and the two must have identical Go signatures.
+After changing a query or migration, run `make generate`: sqlc writes each
+feature's SQLite code to `internal/<feature>/store/` and its Postgres code
+to `internal/<feature>/store/postgres/`, and the two must have identical Go
+signatures. Where sqlc infers a parameter's type differently per database
+(`LIMIT`, `OFFSET`, a parameter compared with a literal), cast it:
+`CAST(@skip AS BIGINT)`, `CAST(@email AS TEXT)`.
 Keep migrations for both databases in step (same numbers and names). A
 query that can't be shared goes in `internal/<feature>/sqlite/` and
 `internal/<feature>/postgres/` under the same file name, both listed in
@@ -88,8 +93,8 @@ query that can't be shared goes in `internal/<feature>/sqlite/` and
 - `make tools`: install the pinned sqlc, air and golangci-lint into `bin/`
 - `make migrate`: apply pending migrations; `make migration NAME=add_x`
   creates a new one
-- `make generate`: regenerate `internal/store` after changing SQL
-  (`make tools` installs sqlc first)
+- `make generate`: regenerate each feature's `store` package after
+  changing SQL (`make tools` installs sqlc first)
 <!-- kickstart:begin db=sqlite -->
 - `make backup`: write a database snapshot into `backups/`
 <!-- kickstart:end -->
@@ -102,7 +107,7 @@ query that can't be shared goes in `internal/<feature>/sqlite/` and
   for it, before the first deploy
 <!-- example:end -->
 - `make up` / `make down`: run the production stack (`compose.yaml`: the
-  app behind Caddy) locally at https://localhost:8443
+  app behind Caddy) locally at https://localhost (`HTTPS_PORT` moves it)
 - `make deploy DEPLOY_HOST=user@server`: copy `compose.yaml` and `deploy/`
   to the server, pull the new image and restart
 <!-- kickstart:begin db=sqlite -->
@@ -216,6 +221,9 @@ query that can't be shared goes in `internal/<feature>/sqlite/` and
 - `migrations/`: goose SQL migrations, embedded into the binary.
 - `Dockerfile`, `compose.yaml` (production stack), `compose.dev.yaml` (dev
   services), `deploy/` (Caddyfile, backups).
+<!-- example:begin -->
+- `tools/removeexample/`: what `make remove-example` runs.
+<!-- example:end -->
 
 ## Database conventions
 

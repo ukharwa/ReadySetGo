@@ -291,9 +291,12 @@ be the bottleneck.
 
 ### One binary with subcommands
 
-`serve`, `worker`, `migrate`, `seed`, `backup` and `user`, parsed with the
-standard library, so the server, worker and migrations can run as one
-process now and separately later. No cobra.
+`serve`, `worker`, `migrate`, `seed` and `user`,
+<!-- kickstart:begin db=sqlite -->
+plus `backup` and `restore` for the database file,
+<!-- kickstart:end -->
+parsed with the standard library, so the server, worker and migrations can
+run as one process now and separately later. No cobra.
 
 ## Authentication
 
@@ -349,7 +352,7 @@ factor. A breached-password check (Have I Been Pwned) is skipped for now.
 - Login and logout, with "remember me": unchecked ends with the browser and
   expires after a day idle; checked lasts 30 days.
 - Email verification doesn't block login; features opt in with
-  `requireVerified`. **Considered:** blocking login until verified, which
+  `auth.RequireVerified`. **Considered:** blocking login until verified, which
   suits apps where fake accounts do damage.
 - Password reset: a single-use link valid for 1 hour, the same reply whether
   or not the email exists, and every session logged out afterwards.
@@ -469,8 +472,8 @@ installed and upgraded by hand, and dev differs from production).
 
 ### Image: two-stage build, distroless static, non-root
 
-About 27 MB (the pure-Go SQLite driver is most of it) on distroless
-Debian 13, with no shell or package manager; maintenance runs as app
+A few tens of megabytes on distroless Debian 13, with no shell or package
+manager; maintenance runs as app
 subcommands. Every base image is pinned by digest and kept current by
 Dependabot. The build stage cross-compiles, so `amd64` and `arm64` images
 build without emulation. **Considered:** `scratch` (copy
@@ -491,8 +494,7 @@ Let's Encrypt stopped sending expiry notices in 2025. In dev the app runs
 directly on `localhost`, which Chrome and Firefox treat as secure. To test
 the full stack over HTTPS (or in Safari), `make up` runs the production
 stack locally with `APP_DOMAIN=localhost`, for which Caddy uses its own
-certificate authority. This replaces the separate dev Caddy profile
-planned earlier. Rootless Docker can't bind ports below 1024, so locally
+certificate authority. Rootless Docker can't bind ports below 1024, so locally
 `HTTP_PORT` and `HTTPS_PORT` move Caddy to 8081 and 8443. **Considered:**
 Caddy for local HTTPS by default, which matches production exactly but
 needs every machine to trust Caddy's local certificate.
@@ -531,8 +533,8 @@ every seam now, accepting a single value.
 
 ### Checked with two instances
 
-Milestone 11 ran a Postgres project with every module as two app
-instances behind Caddy (`docker compose up --scale app=2`):
+The template's scaling check ran a Postgres project with every module as
+two app instances behind Caddy (`docker compose up --scale app=2`):
 - Requests were spread over both, and a session from one worked on the
   other. Stopping one lost no requests; a request during a single
   instance's restart waited about 6 seconds and succeeded.
@@ -583,9 +585,15 @@ different lock per database.
 ### `SCALING.md`
 
 A playbook ordered cheapest first: measure; indexes and pool tuning; a
-bigger server; SQLite to Postgres; a separate worker; several app instances
-(shared rate limits, object storage for uploads); managed Postgres with
-pgbouncer; read replicas; a cache.
+bigger server; SQLite to Postgres; a separate worker; several app
+instances; shared rate limits; object storage for uploads; migrations as a
+deploy step; managed Postgres with a pooler; read replicas; a cache; then,
+rarely, sessions in a shared store, a dedicated job queue, an email
+provider's API, tracing, and splitting out a feature. Each step gives its
+signs, the configuration to change and the code to touch. Init keeps the
+steps that apply (the move to Postgres only in SQLite projects), so the
+steps aren't numbered. Because it describes what the app may grow into, the
+leftover check lets it name the other database and modules.
 
 ## Developer experience
 
@@ -716,7 +724,7 @@ downloads through the app with a permission check, and non-images sent as
 attachments. **Overridden:** yes. The recommendation was to ship an
 S3-compatible implementation too. Concern: the S3 code gets written under
 scaling pressure, and existing files must be copied to object storage at
-that point. `SCALING.md` step 6 covers it.
+that point. `SCALING.md` covers it.
 - Files belong to the user who uploaded them; anyone else gets 404. A
   "Files" page (or `/api/uploads`) lists, uploads, downloads and deletes
   them.

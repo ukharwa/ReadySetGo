@@ -210,6 +210,9 @@ func leftovers(root string, o options, removedExample bool) []string {
 		}
 		exempt := rel == "DECISIONS.md" || rel == "go.sum"
 		vendored := strings.HasSuffix(rel, ".min.js") // someone else's words
+		// The growth path names what the app may grow into: the other
+		// database, modules it could add.
+		growth := rel == "SCALING.md"
 		sc := bufio.NewScanner(bytes.NewReader(data))
 		sc.Buffer(nil, 1<<20)
 		for n := 1; sc.Scan(); n++ {
@@ -220,11 +223,11 @@ func leftovers(root string, o options, removedExample bool) []string {
 				report(where, "init marker left behind")
 			case strings.HasPrefix(line, "//go:build postgres"), strings.HasPrefix(line, "//go:build !postgres"):
 				report(where, "database build constraint left behind")
-			case !exempt && otherDB.MatchString(line):
+			case !exempt && !growth && otherDB.MatchString(line):
 				report(where, "mentions the database that wasn't chosen: "+strings.TrimSpace(line))
 			case !exempt && templateName.MatchString(line):
 				report(where, "mentions the template's name: "+strings.TrimSpace(line))
-			case !exempt && !vendored && slices.ContainsFunc(unchosen, func(re *regexp.Regexp) bool { return re.MatchString(line) }):
+			case !exempt && !vendored && !growth && slices.ContainsFunc(unchosen, func(re *regexp.Regexp) bool { return re.MatchString(line) }):
 				report(where, "mentions a module (or example) that wasn't kept: "+strings.TrimSpace(line))
 			}
 		}

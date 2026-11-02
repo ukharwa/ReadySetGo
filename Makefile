@@ -71,7 +71,7 @@ tools: ## install the pinned dev tools into bin/ (sqlc needs a C compiler)
 	GOBIN=$(CURDIR)/bin go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 
 .PHONY: generate
-generate: ## regenerate internal/store from the SQL queries
+generate: ## regenerate each feature's store package from its SQL queries
 	$(SQLC) generate
 
 .PHONY: services
