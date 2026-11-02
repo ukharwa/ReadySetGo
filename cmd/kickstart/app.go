@@ -22,6 +22,15 @@ import (
 	// kickstart:begin module=audit
 	"github.com/ukharwa/kickstart/internal/audit"
 	// kickstart:end
+	// kickstart:begin module=errreport
+	"github.com/ukharwa/kickstart/internal/errreport"
+	// kickstart:end
+	// kickstart:begin module=metrics
+	"github.com/ukharwa/kickstart/internal/metrics"
+	// kickstart:end
+	// kickstart:begin module=uploads
+	"github.com/ukharwa/kickstart/internal/uploads"
+	// kickstart:end
 	// kickstart:begin module=workspaces
 	"github.com/ukharwa/kickstart/internal/workspaces"
 	// kickstart:end
@@ -39,6 +48,15 @@ func setup(getenv func(string) string, stdout io.Writer) (config.Config, *slog.L
 		return config.Config{}, nil, err
 	}
 	logger := logging.New(stdout, cfg.LogFormat, cfg.LogLevel)
+	// kickstart:begin module=errreport
+	if cfg.SentryDSN != "" {
+		h, err := errreport.NewHandler(logger.Handler(), cfg.SentryDSN, cfg.Env)
+		if err != nil {
+			return config.Config{}, nil, fmt.Errorf("error reporting: %w", err)
+		}
+		logger = slog.New(h)
+	}
+	// kickstart:end
 	slog.SetDefault(logger)
 	return cfg, logger, nil
 }
@@ -97,6 +115,12 @@ type services struct {
 	// kickstart:begin module=admin
 	admin *admin.Service
 	// kickstart:end
+	// kickstart:begin module=uploads
+	uploads *uploads.Service
+	// kickstart:end
+	// kickstart:begin module=metrics
+	metrics *metrics.Metrics
+	// kickstart:end
 }
 
 // newServices builds the services, with sessions in the database.
@@ -125,6 +149,16 @@ func newServices(cfg config.Config, d *db.DB, logger *slog.Logger) (*services, e
 	// kickstart:end
 	// kickstart:begin module=admin
 	s.admin = admin.NewService(d, s.accounts, logger)
+	// kickstart:end
+	// kickstart:begin module=uploads
+	files, err := uploads.NewDisk(cfg.UploadsDir)
+	if err != nil {
+		return nil, err
+	}
+	s.uploads = uploads.NewService(d, files, s.accounts, logger)
+	// kickstart:end
+	// kickstart:begin module=metrics
+	s.metrics = metrics.New(d, logger)
 	// kickstart:end
 	return s, nil
 }
@@ -160,6 +194,9 @@ func startJobs(ctx context.Context, cfg config.Config, d *db.DB, svc *services, 
 	worker.Handle(auth.CleanupKind, svc.accounts.Cleanup())
 	// kickstart:begin module=workspaces
 	worker.Handle(workspaces.CleanupKind, svc.workspaces.Cleanup())
+	// kickstart:end
+	// kickstart:begin module=uploads
+	worker.Handle(uploads.DeleteFilesKind, svc.uploads.DeleteFiles())
 	// kickstart:end
 
 	scheduler := jobs.NewScheduler(d, logger)

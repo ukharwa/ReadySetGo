@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"maps"
 	"net"
 	"net/http"
 	"os"
@@ -17,6 +18,20 @@ import (
 	"github.com/ukharwa/kickstart/internal/auth"
 	"github.com/ukharwa/kickstart/internal/db/dbtest"
 )
+
+// testEnv returns the settings a command runs with in a test: dev mode, a
+// database and folders of its own, and the values in more.
+func testEnv(t *testing.T, more map[string]string) func(string) string {
+	env := map[string]string{
+		"APP_ENV":      "dev",
+		"DATABASE_URL": dbtest.URL(t),
+		// kickstart:begin module=uploads
+		"UPLOADS_DIR": t.TempDir(),
+		// kickstart:end
+	}
+	maps.Copy(env, more)
+	return func(k string) string { return env[k] }
+}
 
 func TestRunUnknownCommand(t *testing.T) {
 	t.Parallel()
@@ -45,16 +60,11 @@ func TestUsageListsCommands(t *testing.T) {
 func TestServe(t *testing.T) {
 	t.Parallel()
 	addr := freeAddr(t)
-	env := map[string]string{
-		"APP_ENV":      "dev",
-		"HTTP_ADDR":    addr,
-		"LOG_LEVEL":    "error",
-		"DATABASE_URL": dbtest.URL(t),
-	}
+	getenv := testEnv(t, map[string]string{"HTTP_ADDR": addr, "LOG_LEVEL": "error"})
 
 	ctx, cancel := context.WithCancel(t.Context())
 	done := make(chan error, 1)
-	go func() { done <- run(ctx, []string{"serve"}, func(k string) string { return env[k] }, io.Discard) }()
+	go func() { done <- run(ctx, []string{"serve"}, getenv, io.Discard) }()
 
 	waitFor(t, "http://"+addr+"/healthz", http.StatusOK)
 	waitFor(t, "http://"+addr+"/readyz", http.StatusOK)
@@ -74,11 +84,11 @@ func TestServe(t *testing.T) {
 // on cancellation.
 func TestWorker(t *testing.T) {
 	t.Parallel()
-	env := map[string]string{"APP_ENV": "dev", "DATABASE_URL": dbtest.URL(t)}
+	getenv := testEnv(t, nil)
 	ctx, cancel := context.WithCancel(t.Context())
 	var out syncBuffer
 	done := make(chan error, 1)
-	go func() { done <- run(ctx, []string{"worker"}, func(k string) string { return env[k] }, &out) }()
+	go func() { done <- run(ctx, []string{"worker"}, getenv, &out) }()
 
 	deadline := time.Now().Add(10 * time.Second)
 	for !strings.Contains(out.String(), "job worker started") {
@@ -100,8 +110,7 @@ func TestWorker(t *testing.T) {
 
 func TestMigrateStatus(t *testing.T) {
 	t.Parallel()
-	env := map[string]string{"APP_ENV": "dev", "LOG_LEVEL": "error", "DATABASE_URL": dbtest.URL(t)}
-	getenv := func(k string) string { return env[k] }
+	getenv := testEnv(t, map[string]string{"LOG_LEVEL": "error"})
 
 	if err := run(t.Context(), []string{"migrate", "up"}, getenv, io.Discard); err != nil {
 		t.Fatalf("migrate up: %v", err)
@@ -117,8 +126,7 @@ func TestMigrateStatus(t *testing.T) {
 
 func TestUserCommand(t *testing.T) {
 	t.Parallel()
-	env := map[string]string{"APP_ENV": "dev", "LOG_LEVEL": "error", "DATABASE_URL": dbtest.URL(t)}
-	getenv := func(k string) string { return env[k] }
+	getenv := testEnv(t, map[string]string{"LOG_LEVEL": "error"})
 	user := func(args ...string) error {
 		return run(t.Context(), append([]string{"user"}, args...), getenv, io.Discard)
 	}

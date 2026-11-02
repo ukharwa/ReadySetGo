@@ -57,6 +57,9 @@ func TestLoadDefaults(t *testing.T) {
 				WorkerEnabled:     true,
 				WorkerConcurrency: 4,
 				PasswordMinLength: 12,
+				// kickstart:begin module=uploads
+				UploadsDir: "data/uploads",
+				// kickstart:end
 			}
 			if tt.env == "prod" {
 				want.SMTPHost = "smtp.example.com"
@@ -99,6 +102,15 @@ func TestLoadOverrides(t *testing.T) {
 		"WORKER_ENABLED":      "false",
 		"WORKER_CONCURRENCY":  "2",
 		"PASSWORD_MIN_LENGTH": "15",
+		// kickstart:begin module=uploads
+		"UPLOADS_DIR": "/srv/files",
+		// kickstart:end
+		// kickstart:begin module=metrics
+		"METRICS_ADDR": "localhost:9100",
+		// kickstart:end
+		// kickstart:begin module=errreport
+		"SENTRY_DSN": "https://key@errors.example.com/1",
+		// kickstart:end
 	}))
 	if err != nil {
 		t.Fatalf("Load: %v", err)
@@ -133,6 +145,15 @@ func TestLoadOverrides(t *testing.T) {
 		WorkerEnabled:     false,
 		WorkerConcurrency: 2,
 		PasswordMinLength: 15,
+		// kickstart:begin module=uploads
+		UploadsDir: "/srv/files",
+		// kickstart:end
+		// kickstart:begin module=metrics
+		MetricsAddr: "localhost:9100",
+		// kickstart:end
+		// kickstart:begin module=errreport
+		SentryDSN: "https://key@errors.example.com/1",
+		// kickstart:end
 	}
 	if !reflect.DeepEqual(c, want) {
 		t.Errorf("Load = %+v, want %+v", c, want)

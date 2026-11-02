@@ -690,6 +690,21 @@ attachments. **Overridden:** yes. The recommendation was to ship an
 S3-compatible implementation too. Concern: the S3 code gets written under
 scaling pressure, and existing files must be copied to object storage at
 that point. `SCALING.md` step 6 covers it.
+- Files belong to the user who uploaded them; anyone else gets 404. A
+  "Files" page (or `/api/uploads`) lists, uploads, downloads and deletes
+  them.
+- Accepted: PNG, JPEG, GIF and WebP images and PDFs, up to 10 MiB, judged
+  by `http.DetectContentType` on the first bytes. Never SVG or HTML, which
+  a browser would run.
+- Uploads are streamed straight to storage (no temporary files) and get 5
+  minutes, past the usual request timeouts, for slow connections.
+- Downloads carry `Content-Security-Policy: sandbox` as well, so even a
+  file that slipped through can't run in the site's origin.
+- A deleted upload's file, and a deleted account's files, are removed by a
+  job after the records are gone, so a rolled-back transaction never loses
+  a file.
+- Files live on the `data` volume (`/data/uploads`). The database backups
+  don't include them: back up that volume as well.
 <!-- kickstart:end -->
 
 <!-- kickstart:begin module=admin -->
@@ -730,8 +745,16 @@ the change commits, which could lose some.
 Prometheus's `client_golang` and Go's `pprof` on an internal port that Caddy
 never exposes (`METRICS_ADDR`): requests per route, database pool use, job
 queue length and failures, and Go runtime stats. Tracing is skipped until a
-service is split out. **Considered:** OpenTelemetry for metrics and
-tracing, which is vendor-neutral but much heavier.
+service is split out.
+- Requests are labelled by the route pattern the router matched (`GET
+  /reset-password`), never the raw path, so the number of series stays
+  small.
+- The job counts are queried when Prometheus scrapes, so every instance
+  reports the same, shared queue.
+- `serve` serves them; a separate `worker` process doesn't.
+
+**Considered:** OpenTelemetry for metrics and tracing, which is
+vendor-neutral but much heavier.
 <!-- kickstart:end -->
 
 <!-- kickstart:begin module=errreport -->
@@ -739,7 +762,15 @@ tracing, which is vendor-neutral but much heavier.
 
 `sentry-go`, enabled by `SENTRY_DSN`, works with Sentry, GlitchTip or
 Bugsink. Panics and 500 errors are reported with the request ID; cookies and
-passwords are stripped. **Considered:** logs plus an uptime monitor only.
+passwords are stripped.
+- It is a slog handler that reports every error-level record. Errors are
+  logged once, where they're handled, so panics, 500 responses and failed
+  jobs are each reported once, with no reporting calls in the handlers.
+- Only the log record is sent (message, error, attributes, request ID),
+  never the request, so cookies and form fields can't leak.
+
+**Considered:** logs plus an uptime monitor only, and reporting from the
+recovery middleware and the 500 path, which would miss failed jobs.
 <!-- kickstart:end -->
 
 ### Example feature: notes

@@ -29,7 +29,10 @@ services:
       # (Template only: both DATABASE_URL lines are present until `make
       # init`; the last one wins, so the unpruned template runs on SQLite.)
       # kickstart:end
-    # kickstart:begin db=sqlite
+      # kickstart:begin module=uploads
+      - UPLOADS_DIR=/data/uploads
+      # kickstart:end
+    # kickstart:begin db=sqlite,module=uploads
     volumes:
       - data:/data
     # kickstart:end
@@ -90,7 +93,7 @@ services:
 volumes:
   caddy_data:
   caddy_config:
-  # kickstart:begin db=sqlite
+  # kickstart:begin db=sqlite,module=uploads
   data:
   # kickstart:end
   # kickstart:begin db=postgres

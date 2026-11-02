@@ -329,7 +329,8 @@ var markerLine = regexp.MustCompile(`^\s*(?://|#|--|<!--)\s*kickstart:(begin|end
 var blankLines = regexp.MustCompile(`\n{3,}`)
 
 // applyMarkers keeps or drops each `kickstart:begin <condition>` …
-// `kickstart:end` block and removes the marker lines. Blocks may nest.
+// `kickstart:end` block and removes the marker lines. Blocks may nest. A
+// comma-separated list of conditions keeps the block if any of them holds.
 func applyMarkers(text string, o options) (string, error) {
 	var out strings.Builder
 	var stack []bool
@@ -370,7 +371,19 @@ func applyMarkers(text string, o options) (string, error) {
 	return strings.TrimRight(s, "\n") + "\n", nil
 }
 
-func evalCondition(cond string, o options) (bool, error) {
+func evalCondition(conds string, o options) (bool, error) {
+	keep := false
+	for cond := range strings.SplitSeq(conds, ",") {
+		ok, err := evalOne(cond, o)
+		if err != nil {
+			return false, err
+		}
+		keep = keep || ok
+	}
+	return keep, nil
+}
+
+func evalOne(cond string, o options) (bool, error) {
 	if cond == "template" {
 		return false, nil
 	}

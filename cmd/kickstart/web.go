@@ -16,6 +16,9 @@ import (
 	// kickstart:begin module=audit
 	"github.com/ukharwa/kickstart/internal/audit"
 	// kickstart:end
+	// kickstart:begin module=uploads
+	"github.com/ukharwa/kickstart/internal/uploads"
+	// kickstart:end
 	// kickstart:begin module=workspaces
 	"github.com/ukharwa/kickstart/internal/workspaces"
 	// kickstart:end
@@ -63,6 +66,13 @@ func mountPages(cfg config.Config, logger *slog.Logger, root, app *http.ServeMux
 		return err
 	}
 	adminPages.Routes(app)
+	// kickstart:end
+	// kickstart:begin module=uploads
+	uploadPages, err := uploads.NewWeb(svc.uploads, pages)
+	if err != nil {
+		return err
+	}
+	uploadPages.Routes(app)
 	// kickstart:end
 	return nil
 }

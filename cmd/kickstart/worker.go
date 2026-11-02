@@ -4,6 +4,10 @@ import (
 	"context"
 	"flag"
 	"io"
+
+	// kickstart:begin module=errreport
+	"github.com/ukharwa/kickstart/internal/errreport"
+	// kickstart:end
 )
 
 // worker runs the job worker and scheduler without the HTTP server, so they
@@ -44,5 +48,8 @@ func worker(ctx context.Context, args []string, getenv func(string) string, stdo
 	deadline, cancel := context.WithTimeout(context.WithoutCancel(ctx), cfg.ShutdownTimeout)
 	defer cancel()
 	waitForJobs(done, deadline, logger)
+	// kickstart:begin module=errreport
+	errreport.Flush(logger)
+	// kickstart:end
 	return nil
 }

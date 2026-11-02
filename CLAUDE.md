@@ -42,7 +42,9 @@ new project picks and removes the rest:
   ```
 
   Conditions are `db=sqlite|postgres`, `ui=html|api`, `module=<name>`, and
-  `template` (always removed). Blocks may nest. Markers are always removed.
+  `template` (always removed). A comma-separated list keeps the block if
+  any of its conditions holds (`db=sqlite,module=uploads`). Blocks may
+  nest. Markers are always removed.
 - Init renames `kickstart` to the project name everywhere except
   `DECISIONS.md`, and the module path everywhere.
 - After init, nothing from an unchosen option may remain: don't mention
@@ -176,6 +178,22 @@ query that can't be shared goes in `internal/<feature>/sqlite/` and
   at `/api/admin/audit-events`.
   <!-- kickstart:end -->
 <!-- kickstart:end -->
+<!-- kickstart:begin module=uploads -->
+- `internal/uploads/`: users' files. `storage.go` is the `Storage` seam and
+  its local-disk implementation (`UPLOADS_DIR`); `uploads.go` checks each
+  file's type from its contents and size, and deletes stored files through
+  a job once their records are gone; `http.go` streams uploads and serves
+  downloads to their owner only.
+<!-- kickstart:end -->
+<!-- kickstart:begin module=metrics -->
+- `internal/metrics/`: Prometheus metrics (requests per route, database
+  pools, job queue, Go runtime) and Go's profiler, served by `serve` on
+  `METRICS_ADDR`, never publicly.
+<!-- kickstart:end -->
+<!-- kickstart:begin module=errreport -->
+- `internal/errreport/`: a slog handler that reports every error-level log
+  record to Sentry (or GlitchTip or Bugsink) when `SENTRY_DSN` is set.
+<!-- kickstart:end -->
 <!-- kickstart:begin ui=html -->
 - `internal/web/`: the page layout, renderer, stylesheet, HTMX and flash
   messages.
@@ -240,6 +258,10 @@ query that can't be shared goes in `internal/<feature>/sqlite/` and
   cookies, emails, query strings or database URLs. Changes to accounts go
   through `auth.Service`, which logs each as a security event with the
   user, the acting user, the IP address and the request ID.
+  <!-- kickstart:begin module=errreport -->
+  Every error-level record is also reported as an error to fix, so log at
+  error level only what someone should look at, and only once.
+  <!-- kickstart:end -->
 - **State:** no package-level mutable state; dependencies are built in
   `main` and passed explicitly. Nothing may assume a single instance.
 - **Background work:**
@@ -252,7 +274,10 @@ query that can't be shared goes in `internal/<feature>/sqlite/` and
     `email.Enqueue` it. Tests use `emailtest.Recorder` and run queued jobs
     with `worker.RunOne`.
 - **Interfaces:** only for the agreed seams (sessions, rate limiting, jobs,
-  email, file storage), defined where they're used.
+  email), defined where they're used.
+  <!-- kickstart:begin module=uploads -->
+  File storage (`uploads.Storage`) is one too.
+  <!-- kickstart:end -->
 - **HTTP:**
   - Each feature has a handler type with a `Routes(mux)` method listing its
     routes; mount it in `cmd/kickstart/routes.go`. Every request reaches
@@ -292,7 +317,8 @@ query that can't be shared goes in `internal/<feature>/sqlite/` and
   `dbtest.New(t)`, which gives each test its own database. End-to-end tests
   use `apptest.New(t)`: register the feature's routes on its `Mux` and drive
   its HTTPS `Server` with `Client()`, reading emails with `TokenFrom`.
-  `SignIn(client, email)` signs a client in as a new verified user.
+  `SignIn(client, email)` signs a client in as a new verified user. Tests
+  that need a folder use `t.TempDir()`, so nothing is left behind.
   <!-- kickstart:begin db=postgres -->
   It needs `make services` running and `TEST_DATABASE_URL` set.
   <!-- kickstart:end -->

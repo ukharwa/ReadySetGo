@@ -1,0 +1,42 @@
+{{define "title"}}Files{{end}}
+
+{{define "content"}}
+<h1>Your files</h1>
+{{with .Data.Error}}<p class="error-summary" role="alert">{{.}}</p>{{end}}
+
+<section class="card">
+  <h2>Upload a file</h2>
+  <form method="post" action="/uploads" enctype="multipart/form-data" class="stack">
+    <label>File
+      <input type="file" name="file" accept="{{.Data.Accept}}" required>
+      <span class="hint">An image (PNG, JPEG, GIF or WebP) or a PDF, up to {{.Data.MaxMB}} MB.</span>
+    </label>
+    <button type="submit">Upload</button>
+  </form>
+</section>
+
+<div class="table-scroll">
+<table>
+  <thead>
+    <tr><th>Name</th><th>Type</th><th>Size</th><th>Uploaded</th><th><span class="visually-hidden">Action</span></th></tr>
+  </thead>
+  <tbody>
+    {{range .Data.Uploads}}
+    <tr>
+      <td><a href="/uploads/{{.ID}}"{{if not .Inline}} download{{end}}>{{.Filename}}</a></td>
+      <td>{{.ContentType}}</td>
+      <td>{{.SizeText}}</td>
+      <td><time datetime="{{.CreatedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{.CreatedAt.Format "2 Jan 2006"}}</time></td>
+      <td>
+        <form method="post" action="/uploads/{{.ID}}/delete" class="inline">
+          <button type="submit" class="link">Delete</button>
+        </form>
+      </td>
+    </tr>
+    {{else}}
+    <tr><td colspan="5" class="muted">No files yet.</td></tr>
+    {{end}}
+  </tbody>
+</table>
+</div>
+{{end}}

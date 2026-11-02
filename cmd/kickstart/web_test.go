@@ -8,14 +8,13 @@ import (
 	"testing"
 
 	"github.com/ukharwa/kickstart/internal/apptest"
-	"github.com/ukharwa/kickstart/internal/config"
 	"github.com/ukharwa/kickstart/internal/httpx"
 )
 
 func TestRoutesHomeAndStatic(t *testing.T) {
 	t.Parallel()
 	a := apptest.New(t)
-	cfg := config.Config{Env: "prod", AppName: "Test", AppURL: apptest.BaseURL, PasswordMinLength: 12}
+	cfg := testConfig(t)
 	logger := slog.New(slog.DiscardHandler)
 	svc, err := newServices(cfg, a.DB, logger)
 	if err != nil {

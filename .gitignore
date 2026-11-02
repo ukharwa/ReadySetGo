@@ -1,7 +1,9 @@
 /bin/
 /tmp/
 .env
-# kickstart:begin db=sqlite
+# kickstart:begin db=sqlite,module=uploads
 /data/
+# kickstart:end
+# kickstart:begin db=sqlite
 /backups/
 # kickstart:end

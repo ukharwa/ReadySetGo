@@ -27,6 +27,9 @@ template only
 -- kickstart:begin ui=api
 api
 -- kickstart:end
+# kickstart:begin db=sqlite,module=uploads
+sqlite or uploads
+# kickstart:end
 prose mentioning kickstart:begin is not a marker
 b
 `
@@ -34,8 +37,9 @@ b
 		o    options
 		want string
 	}{
-		{sqliteHTML, "a\nsqlite\nprose mentioning kickstart:begin is not a marker\nb\n"},
-		{postgresAPI, "a\npostgres\nnested uploads\napi\nprose mentioning kickstart:begin is not a marker\nb\n"},
+		{sqliteHTML, "a\nsqlite\nsqlite or uploads\nprose mentioning kickstart:begin is not a marker\nb\n"},
+		{postgresAPI, "a\npostgres\nnested uploads\napi\nsqlite or uploads\nprose mentioning kickstart:begin is not a marker\nb\n"},
+		{options{db: "postgres", ui: "html"}, "a\npostgres\nprose mentioning kickstart:begin is not a marker\nb\n"},
 	}
 	for _, tt := range tests {
 		got, err := applyMarkers(in, tt.o)
@@ -54,6 +58,7 @@ func TestApplyMarkersErrors(t *testing.T) {
 		"unclosed":          "// kickstart:begin db=sqlite\nx\n",
 		"unopened":          "x\n// kickstart:end\n",
 		"unknown condition": "// kickstart:begin db=oracle\n// kickstart:end\n",
+		"unknown in a list": "// kickstart:begin db=sqlite,db=oracle\n// kickstart:end\n",
 		"end with argument": "// kickstart:begin db=sqlite\n// kickstart:end db=sqlite\n",
 	} {
 		if _, err := applyMarkers(in, sqliteHTML); err == nil {

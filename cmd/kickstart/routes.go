@@ -17,6 +17,9 @@ import (
 	// kickstart:begin module=audit
 	"github.com/ukharwa/kickstart/internal/audit"
 	// kickstart:end
+	// kickstart:begin module=uploads
+	"github.com/ukharwa/kickstart/internal/uploads"
+	// kickstart:end
 	// kickstart:begin module=workspaces
 	"github.com/ukharwa/kickstart/internal/workspaces"
 	// kickstart:end
@@ -52,9 +55,15 @@ func routes(cfg config.Config, logger *slog.Logger, health *httpx.Health, svc *s
 	// kickstart:begin module=admin
 	admin.NewAPI(svc.admin).Routes(app)
 	// kickstart:end
+	// kickstart:begin module=uploads
+	uploads.NewAPI(svc.uploads).Routes(app)
+	// kickstart:end
 	// kickstart:end
 
 	stack := append(httpx.Stack(logger, cfg.TrustedProxies, !cfg.Dev()), svc.accounts.LoadUser)
+	// kickstart:begin module=metrics
+	stack = append(stack, svc.metrics.Middleware) // last: it reads the route the router matched
+	// kickstart:end
 	root.Handle("/", httpx.Chain(app, stack...))
 	return root, nil
 }

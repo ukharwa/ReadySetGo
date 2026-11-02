@@ -11,12 +11,22 @@ import (
 	"github.com/ukharwa/kickstart/internal/httpx"
 )
 
+// testConfig returns the settings the routes tests run with.
+func testConfig(t *testing.T) config.Config {
+	return config.Config{
+		Env: "prod", AppName: "Test", AppURL: apptest.BaseURL, PasswordMinLength: 12,
+		// kickstart:begin module=uploads
+		UploadsDir: t.TempDir(),
+		// kickstart:end
+	}
+}
+
 // TestRoutesMiddleware checks that application routes get the middleware
 // stack and health checks bypass it.
 func TestRoutesMiddleware(t *testing.T) {
 	t.Parallel()
 	a := apptest.New(t)
-	cfg := config.Config{Env: "prod", AppName: "Test", AppURL: apptest.BaseURL, PasswordMinLength: 12}
+	cfg := testConfig(t)
 	logger := slog.New(slog.DiscardHandler)
 	svc, err := newServices(cfg, a.DB, logger)
 	if err != nil {

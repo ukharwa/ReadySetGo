@@ -48,6 +48,18 @@ type Config struct {
 	WorkerConcurrency int  // WORKER_CONCURRENCY
 
 	PasswordMinLength int // PASSWORD_MIN_LENGTH
+	// kickstart:begin module=uploads
+
+	UploadsDir string // UPLOADS_DIR
+	// kickstart:end
+	// kickstart:begin module=metrics
+
+	MetricsAddr string // METRICS_ADDR: empty turns metrics off
+	// kickstart:end
+	// kickstart:begin module=errreport
+
+	SentryDSN string // SENTRY_DSN (secret): empty turns error reporting off
+	// kickstart:end
 }
 
 // Dev reports whether the application runs in development mode.
@@ -79,6 +91,15 @@ func (c Config) LogValue() slog.Value {
 		slog.Bool("worker_enabled", c.WorkerEnabled),
 		slog.Int("worker_concurrency", c.WorkerConcurrency),
 		slog.Int("password_min_length", c.PasswordMinLength),
+		// kickstart:begin module=uploads
+		slog.String("uploads_dir", c.UploadsDir),
+		// kickstart:end
+		// kickstart:begin module=metrics
+		slog.String("metrics_addr", c.MetricsAddr),
+		// kickstart:end
+		// kickstart:begin module=errreport
+		slog.Bool("error_reporting", c.SentryDSN != ""),
+		// kickstart:end
 	)
 }
 
@@ -153,6 +174,18 @@ func Load(getenv func(string) string) (Config, error) {
 	if c.PasswordMinLength < 8 || c.PasswordMinLength > 64 {
 		l.fail("PASSWORD_MIN_LENGTH", "must be between 8 and 64")
 	}
+	// kickstart:begin module=uploads
+
+	c.UploadsDir = l.str("UPLOADS_DIR", "data/uploads")
+	// kickstart:end
+	// kickstart:begin module=metrics
+
+	c.MetricsAddr = l.str("METRICS_ADDR", "")
+	// kickstart:end
+	// kickstart:begin module=errreport
+
+	c.SentryDSN = l.str("SENTRY_DSN", "")
+	// kickstart:end
 
 	if c.ShutdownDrain < 0 {
 		l.fail("SHUTDOWN_DRAIN", "must not be negative")

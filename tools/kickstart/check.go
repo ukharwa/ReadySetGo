@@ -157,6 +157,9 @@ func leftovers(root string, o options) []string {
 	moduleWords := map[string]*regexp.Regexp{
 		"workspaces": regexp.MustCompile(`(?i)\bworkspaces?\b`),
 		"audit":      regexp.MustCompile(`(?i)\baudit`),
+		"uploads":    regexp.MustCompile(`(?i)\buploads?\b`),
+		"metrics":    regexp.MustCompile(`(?i)\bmetrics\b|prometheus|pprof`),
+		"errreport":  regexp.MustCompile(`(?i)errreport|sentry|glitchtip|bugsink`),
 		// "admin" is also a core role, so look for the folder and routes.
 		"admin": regexp.MustCompile(`internal/admin\b|/admin/(users|jobs|failed-jobs)\b`),
 	}
@@ -192,6 +195,7 @@ func leftovers(root string, o options) []string {
 			report(rel, "empty file")
 		}
 		exempt := rel == "DECISIONS.md" || rel == "go.sum"
+		vendored := strings.HasSuffix(rel, ".min.js") // someone else's words
 		sc := bufio.NewScanner(bytes.NewReader(data))
 		sc.Buffer(nil, 1<<20)
 		for n := 1; sc.Scan(); n++ {
@@ -206,7 +210,7 @@ func leftovers(root string, o options) []string {
 				report(where, "mentions the database that wasn't chosen: "+strings.TrimSpace(line))
 			case !exempt && templateName.MatchString(line):
 				report(where, "mentions the template's name: "+strings.TrimSpace(line))
-			case !exempt && slices.ContainsFunc(unchosen, func(re *regexp.Regexp) bool { return re.MatchString(line) }):
+			case !exempt && !vendored && slices.ContainsFunc(unchosen, func(re *regexp.Regexp) bool { return re.MatchString(line) }):
 				report(where, "mentions a module that wasn't chosen: "+strings.TrimSpace(line))
 			}
 		}

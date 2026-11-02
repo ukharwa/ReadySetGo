@@ -63,6 +63,16 @@ sql:
     queries: [internal/admin/admin.sql]
     gen: {go: {<<: *go, out: internal/admin/store}}
   # kickstart:end
+  # kickstart:begin module=uploads
+  - <<: *sqlc
+    queries: [internal/uploads/uploads.sql]
+    gen: {go: {<<: *go, out: internal/uploads/store}}
+  # kickstart:end
+  # kickstart:begin module=metrics
+  - <<: *sqlc
+    queries: [internal/metrics/metrics.sql]
+    gen: {go: {<<: *go, out: internal/metrics/store}}
+  # kickstart:end
   # kickstart:end
   # kickstart:begin db=postgres
   - &sqlc
@@ -91,5 +101,15 @@ sql:
   - <<: *sqlc
     queries: [internal/admin/admin.sql]
     gen: {go: {<<: *go, out: internal/admin/store/postgres}}
+  # kickstart:end
+  # kickstart:begin module=uploads
+  - <<: *sqlc
+    queries: [internal/uploads/uploads.sql]
+    gen: {go: {<<: *go, out: internal/uploads/store/postgres}}
+  # kickstart:end
+  # kickstart:begin module=metrics
+  - <<: *sqlc
+    queries: [internal/metrics/metrics.sql]
+    gen: {go: {<<: *go, out: internal/metrics/store/postgres}}
   # kickstart:end
   # kickstart:end
