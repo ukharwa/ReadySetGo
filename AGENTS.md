@@ -360,7 +360,8 @@ README.md ("Removing a module") explains taking a module out.
   the generated code.
 - `internal/auth/`: accounts. `auth.go` is the `Service` with every flow and
   no HTTP; `sessions.go` the session-store seam; `devices.go` lists a
-  user's sessions as signed-in devices; `middleware.go` loads the
+  user's sessions as signed-in devices; `profile.go` the name and time
+  zone; `middleware.go` loads the
   user and guards routes; `emails/` holds the email templates.
   <!-- readysetgo:begin ui=html -->
   `web.go` and `templates/` are the account pages.
@@ -416,8 +417,8 @@ README.md ("Removing a module") explains taking a module out.
   record to Sentry (or GlitchTip or Bugsink) when `SENTRY_DSN` is set.
 <!-- readysetgo:end -->
 <!-- readysetgo:begin ui=html -->
-- `internal/web/`: the page layout, renderer, stylesheet, HTMX and flash
-  messages.
+- `internal/web/`: the page layout, renderer, stylesheet, HTMX, flash
+  messages, and `app.js`, which fills time zones in from the browser.
 <!-- readysetgo:end -->
 <!-- example:begin -->
 - `internal/notes/`: the example feature, notes that belong to the user who
@@ -455,7 +456,8 @@ README.md ("Removing a module") explains taking a module out.
   (see the comment there).
   <!-- readysetgo:end -->
 - **Timestamps:** set from Go with `db.Now()` (UTC, microseconds), never by
-  database defaults.
+  database defaults. Stored and returned in JSON as UTC; only display
+  converts them to the user's time zone.
 - **Emails and usernames:** trim and lowercase in Go before saving or
   looking up, with a unique index on the cleaned value.
 - **Other types:** strings are `TEXT`; money is whole cents in an integer;
@@ -557,7 +559,8 @@ handlers and a link table from the feature's rows to `uploads(id)`.
   - Pages: parse a feature's `templates/` with `renderer.Pages` and
     `Render` them. Forms post, then redirect with `web.SetFlash`; on bad
     input re-render with `web.Form` and status 422. Use
-    `web.SafeRedirect` for any `?next=`.
+    `web.SafeRedirect` for any `?next=`. Show times in the viewer's time
+    zone: `{{(.CreatedAt.In $.TimeZone).Format "2 Jan 2006 15:04"}}`.
   <!-- readysetgo:end -->
   - JSON: decode with `httpx.ReadJSON`, respond with `httpx.WriteJSON`,
     `httpx.WriteInvalid` (422 with field errors) or `httpx.ErrorMessage`.

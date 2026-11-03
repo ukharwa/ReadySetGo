@@ -64,13 +64,18 @@ func (e *RateLimitedError) Error() string {
 type User struct {
 	ID            uuid.UUID
 	Email         string
+	Name          string // may be empty
+	TimeZone      string // an IANA name; Location returns it ready to use
 	Role          string
 	EmailVerified bool
 	CreatedAt     time.Time
 }
 
 func toUser(u store.User) User {
-	return User{ID: u.ID, Email: u.Email, Role: u.Role, EmailVerified: u.EmailVerifiedAt.Valid, CreatedAt: u.CreatedAt}
+	return User{
+		ID: u.ID, Email: u.Email, Name: u.Name, TimeZone: u.TimeZone, Role: u.Role,
+		EmailVerified: u.EmailVerifiedAt.Valid, CreatedAt: u.CreatedAt,
+	}
 }
 
 // Lifetime is how long a session lasts: it ends after Idle without use, and
@@ -317,33 +322,49 @@ func (s *Service) takeToken(ctx context.Context, q *store.Queries, token, purpos
 	return t, err
 }
 
+// Registration is what someone signs up with.
+type Registration struct {
+	Email    string
+	Password string
+	Name     string // optional
+	TimeZone string // optional: usually the browser's, so an unknown one means UTC
+}
+
 // Register creates an account and emails a verification link. If the
 // address already has an account, the owner gets an email about the attempt
 // instead, and Register returns exactly as if it had created one: the form
 // never reveals who has an account. Invalid input returns validate.Errors.
-func (s *Service) Register(ctx context.Context, address, password string) error {
-	address, ok := validate.Email(address)
+func (s *Service) Register(ctx context.Context, in Registration) error {
+	address, ok := validate.Email(in.Email)
 	errs := validate.Errors{}
 	if !ok {
 		errs["email"] = "Enter a valid email address."
 	}
-	for k, v := range s.checkPassword("password", password) {
+	for k, v := range s.checkPassword("password", in.Password) {
 		errs[k] = v
+	}
+	name, ok := cleanName(in.Name)
+	if !ok {
+		errs["name"] = nameTooLong
 	}
 	if len(errs) > 0 {
 		return errs
 	}
+	zone := in.TimeZone
+	if timeZone(zone) == nil {
+		zone = DefaultTimeZone
+	}
 
 	// Hash even when the address is taken, so both paths take as long.
-	hash, err := s.hasher.Hash(ctx, password)
+	hash, err := s.hasher.Hash(ctx, in.Password)
 	if err != nil {
 		return err
 	}
 	return s.db.InTx(ctx, func(tx *sql.Tx) error {
 		q := store.New(tx)
-		if _, err := q.GetUserByEmail(ctx, address); err == nil {
+		if existing, err := q.GetUserByEmail(ctx, address); err == nil {
 			return s.sendEmail(ctx, tx, "account_exists.txt", address, map[string]any{
-				"LoginLink": s.opts.BaseURL + "/login", "ResetLink": s.opts.BaseURL + "/forgot-password",
+				"Name": existing.Name, "LoginLink": s.opts.BaseURL + "/login", "ResetLink": s.opts.BaseURL + "/forgot-password",
 			})
 		} else if !errors.Is(db.Err(err), db.ErrNotFound) {
 			return err
@@ -351,7 +372,8 @@ func (s *Service) Register(ctx context.Context, address, password string) error 
 
 		now := s.now()
 		user, err := q.CreateUser(ctx, store.CreateUserParams{
-			ID: db.NewID(), Email: address, PasswordHash: hash, Role: RoleUser, CreatedAt: now, UpdatedAt: now,
+			ID: db.NewID(), Email: address, Name: name, TimeZone: zone, PasswordHash: hash, Role: RoleUser,
+			CreatedAt: now, UpdatedAt: now,
 		})
 		if errors.Is(db.Err(err), db.ErrConflict) {
 			return nil // registered a moment ago by a concurrent request
@@ -368,7 +390,9 @@ func (s *Service) Register(ctx context.Context, address, password string) error 
 		if err != nil {
 			return err
 		}
-		return s.sendEmail(ctx, tx, "verify_email.txt", address, map[string]any{"Link": s.link("/verify-email", token)})
+		return s.sendEmail(ctx, tx, "verify_email.txt", address, map[string]any{
+			"Name": name, "Link": s.link("/verify-email", token),
+		})
 	})
 }
 
@@ -527,7 +551,9 @@ func (s *Service) ResendVerification(ctx context.Context, u User) error {
 		if err != nil {
 			return err
 		}
-		return s.sendEmail(ctx, tx, "verify_email.txt", u.Email, map[string]any{"Link": s.link("/verify-email", token)})
+		return s.sendEmail(ctx, tx, "verify_email.txt", u.Email, map[string]any{
+			"Name": u.Name, "Link": s.link("/verify-email", token),
+		})
 	})
 }
 
@@ -556,7 +582,9 @@ func (s *Service) RequestPasswordReset(ctx context.Context, address string) erro
 		if err := s.record(ctx, tx, Event{Name: EventPasswordResetRequested, UserID: u.ID}); err != nil {
 			return err
 		}
-		return s.sendEmail(ctx, tx, "reset_password.txt", address, map[string]any{"Link": s.link("/reset-password", token)})
+		return s.sendEmail(ctx, tx, "reset_password.txt", address, map[string]any{
+			"Name": u.Name, "Link": s.link("/reset-password", token),
+		})
 	})
 }
 
@@ -656,8 +684,8 @@ func (s *Service) RequestEmailChange(ctx context.Context, u User, password, newA
 	}
 	return s.db.InTx(ctx, func(tx *sql.Tx) error {
 		q := store.New(tx)
-		if _, err := q.GetUserByEmail(ctx, newAddress); err == nil {
-			return s.sendEmail(ctx, tx, "email_in_use.txt", newAddress, map[string]any{})
+		if owner, err := q.GetUserByEmail(ctx, newAddress); err == nil {
+			return s.sendEmail(ctx, tx, "email_in_use.txt", newAddress, map[string]any{"Name": owner.Name})
 		} else if !errors.Is(db.Err(err), db.ErrNotFound) {
 			return err
 		}
@@ -668,7 +696,9 @@ func (s *Service) RequestEmailChange(ctx context.Context, u User, password, newA
 		if err != nil {
 			return err
 		}
-		return s.sendEmail(ctx, tx, "change_email.txt", newAddress, map[string]any{"Link": s.link("/confirm-email", token)})
+		return s.sendEmail(ctx, tx, "change_email.txt", newAddress, map[string]any{
+			"Name": u.Name, "Link": s.link("/confirm-email", token),
+		})
 	})
 }
 
@@ -699,7 +729,7 @@ func (s *Service) ConfirmEmailChange(ctx context.Context, token string) error {
 		if err := s.record(ctx, tx, Event{Name: EventEmailChanged, UserID: t.UserID}); err != nil {
 			return err
 		}
-		return s.sendEmail(ctx, tx, "email_changed.txt", old.Email, map[string]any{"NewEmail": t.Email})
+		return s.sendEmail(ctx, tx, "email_changed.txt", old.Email, map[string]any{"Name": old.Name, "NewEmail": t.Email})
 	})
 }
 
@@ -759,7 +789,7 @@ func (s *Service) CreateUser(ctx context.Context, address, password, role string
 	var u User
 	err = s.db.InTx(ctx, func(tx *sql.Tx) error {
 		row, err := store.New(tx).CreateUser(ctx, store.CreateUserParams{
-			ID: db.NewID(), Email: address, PasswordHash: hash, Role: role,
+			ID: db.NewID(), Email: address, TimeZone: DefaultTimeZone, PasswordHash: hash, Role: role,
 			EmailVerifiedAt: sql.NullTime{Time: now, Valid: verified}, CreatedAt: now, UpdatedAt: now,
 		})
 		if err != nil {

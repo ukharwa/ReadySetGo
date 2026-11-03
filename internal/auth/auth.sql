@@ -1,8 +1,8 @@
 -- Users
 
 -- name: CreateUser :one
-INSERT INTO users (id, email, password_hash, role, email_verified_at, created_at, updated_at)
-VALUES (@id, @email, @password_hash, @role, @email_verified_at, @created_at, @updated_at)
+INSERT INTO users (id, email, name, time_zone, password_hash, role, email_verified_at, created_at, updated_at)
+VALUES (@id, @email, @name, @time_zone, @password_hash, @role, @email_verified_at, @created_at, @updated_at)
 RETURNING *;
 
 -- name: GetUserByID :one
@@ -10,6 +10,10 @@ SELECT * FROM users WHERE id = @id;
 
 -- name: GetUserByEmail :one
 SELECT * FROM users WHERE email = @email;
+
+-- name: UpdateProfile :one
+UPDATE users SET name = @name, time_zone = @time_zone, updated_at = @updated_at WHERE id = @id
+RETURNING *;
 
 -- name: UpdatePasswordHash :exec
 UPDATE users SET password_hash = @password_hash, updated_at = @updated_at WHERE id = @id;

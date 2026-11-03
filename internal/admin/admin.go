@@ -47,6 +47,7 @@ func NewService(d *db.DB, accounts *auth.Service, logger *slog.Logger) *Service 
 type User struct {
 	ID            uuid.UUID
 	Email         string
+	Name          string
 	Role          string
 	EmailVerified bool
 	Disabled      bool
@@ -57,8 +58,8 @@ type User struct {
 // search matches them literally.
 var likeEscaper = strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
 
-// Users returns page (counting from 1) of the users whose address contains
-// search, by address, and whether there are more.
+// Users returns page (counting from 1) of the users whose address or name
+// contains search, by address, and whether there are more.
 func (s *Service) Users(ctx context.Context, search string, page int) ([]User, bool, error) {
 	page = min(max(page, 1), 1<<20) // the cap keeps the offset from overflowing
 	pattern := "%" + likeEscaper.Replace(strings.ToLower(strings.TrimSpace(search))) + "%"
@@ -79,7 +80,7 @@ func (s *Service) Users(ctx context.Context, search string, page int) ([]User, b
 
 func toUser(r store.GetUserRow) User {
 	return User{
-		ID: r.ID, Email: r.Email, Role: r.Role, EmailVerified: r.EmailVerifiedAt.Valid,
+		ID: r.ID, Email: r.Email, Name: r.Name, Role: r.Role, EmailVerified: r.EmailVerifiedAt.Valid,
 		Disabled: r.DisabledAt.Valid, CreatedAt: r.CreatedAt,
 	}
 }

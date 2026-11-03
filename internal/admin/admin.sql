@@ -1,13 +1,15 @@
 -- name: SearchUsers :many
--- Users whose address matches the LIKE pattern @pattern, by address.
-SELECT id, email, role, email_verified_at, disabled_at, created_at
+-- Users whose address or lowercased name matches the LIKE pattern @pattern,
+-- by address.
+SELECT id, email, name, role, email_verified_at, disabled_at, created_at
 FROM users
-WHERE email LIKE CAST(@pattern AS TEXT) ESCAPE '\'
+WHERE (email LIKE CAST(@pattern AS TEXT) ESCAPE '\')
+   OR (LOWER(name) LIKE CAST(@pattern AS TEXT) ESCAPE '\')
 ORDER BY email
 LIMIT CAST(@max_rows AS BIGINT) OFFSET CAST(@skip AS BIGINT);
 
 -- name: GetUser :one
-SELECT id, email, role, email_verified_at, disabled_at, created_at
+SELECT id, email, name, role, email_verified_at, disabled_at, created_at
 FROM users
 WHERE id = @id;
 

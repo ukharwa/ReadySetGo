@@ -1,6 +1,6 @@
 Subject: Someone tried to sign up with your email address
 
-Hello,
+Hello{{with .Name}} {{.}}{{end}},
 
 Someone tried to create a {{.AppName}} account with this email address, but
 it already has one.

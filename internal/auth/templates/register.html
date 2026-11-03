@@ -4,8 +4,13 @@
 <h1>Create an account</h1>
 <form method="post" action="/register" class="stack">
   <input type="hidden" name="next" value="{{.Data.Next}}">
+  <input type="hidden" name="time_zone" value="{{.Data.Form.Get "time_zone"}}" data-time-zone>
+  <label>Name <span class="hint">(optional)</span>
+    <input type="text" name="name" value="{{.Data.Form.Get "name"}}" autocomplete="name" maxlength="100" autofocus>
+    {{with .Data.Form.Errors.name}}<span class="field-error">{{.}}</span>{{end}}
+  </label>
   <label>Email
-    <input type="email" name="email" value="{{.Data.Form.Get "email"}}" autocomplete="email" required autofocus>
+    <input type="email" name="email" value="{{.Data.Form.Get "email"}}" autocomplete="email" required>
     {{with .Data.Form.Errors.email}}<span class="field-error">{{.}}</span>{{end}}
   </label>
   <label>Password

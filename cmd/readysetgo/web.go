@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/ukharwa/readysetgo/internal/auth"
 	"github.com/ukharwa/readysetgo/internal/config"
@@ -32,7 +33,9 @@ import (
 // middleware stack, since they need neither the access log nor a session
 // lookup), and every feature's pages on app.
 func mountPages(cfg config.Config, logger *slog.Logger, root, app *http.ServeMux, svc *services) error {
-	pages, err := web.New(web.Options{AppName: cfg.AppName, Dev: cfg.Dev(), User: currentUser, Logger: logger})
+	pages, err := web.New(web.Options{
+		AppName: cfg.AppName, Dev: cfg.Dev(), User: currentUser, TimeZone: currentTimeZone, Logger: logger,
+	})
 	if err != nil {
 		return err
 	}
@@ -92,6 +95,15 @@ func mountPages(cfg config.Config, logger *slog.Logger, root, app *http.ServeMux
 func currentUser(ctx context.Context) any {
 	if u, ok := auth.UserFrom(ctx); ok {
 		return &u
+	}
+	return nil
+}
+
+// currentTimeZone gives pages the logged-in user's time zone, or nil (UTC)
+// for a visitor.
+func currentTimeZone(ctx context.Context) *time.Location {
+	if u, ok := auth.UserFrom(ctx); ok {
+		return u.Location()
 	}
 	return nil
 }

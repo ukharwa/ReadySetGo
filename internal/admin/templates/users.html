@@ -6,7 +6,7 @@
 
 <form method="get" action="/admin/users" class="filter">
   <label>Search
-    <input type="search" name="q" value="{{.Data.Search}}" placeholder="Part of an email address">
+    <input type="search" name="q" value="{{.Data.Search}}" placeholder="Part of a name or email address">
   </label>
   <button type="submit" class="secondary">Search</button>
   {{if .Data.Search}}<a href="/admin/users">Show all</a>{{end}}
@@ -15,18 +15,19 @@
 <div class="table-scroll">
 <table>
   <thead>
-    <tr><th>Email address</th><th>Role</th><th>Status</th><th>Joined</th></tr>
+    <tr><th>Email address</th><th>Name</th><th>Role</th><th>Status</th><th>Joined</th></tr>
   </thead>
   <tbody>
     {{range .Data.Users}}
     <tr>
       <td><a href="/admin/users/{{.ID}}">{{.Email}}</a></td>
+      <td>{{.Name}}</td>
       <td>{{.Role}}</td>
       <td>{{if .Disabled}}disabled{{else if .EmailVerified}}active{{else}}unconfirmed{{end}}</td>
-      <td>{{.CreatedAt.Format "2 Jan 2006"}}</td>
+      <td>{{(.CreatedAt.In $.TimeZone).Format "2 Jan 2006"}}</td>
     </tr>
     {{else}}
-    <tr><td colspan="4" class="muted">No users{{with .Data.Search}} matching “{{.}}”{{end}}.</td></tr>
+    <tr><td colspan="5" class="muted">No users{{with .Data.Search}} matching “{{.}}”{{end}}.</td></tr>
     {{end}}
   </tbody>
 </table>

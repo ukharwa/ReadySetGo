@@ -26,7 +26,7 @@
       <td><a href="/uploads/{{.ID}}"{{if not .Inline}} download{{end}}>{{.Filename}}</a></td>
       <td>{{.ContentType}}</td>
       <td>{{.SizeText}}</td>
-      <td><time datetime="{{.CreatedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{.CreatedAt.Format "2 Jan 2006"}}</time></td>
+      <td><time datetime="{{.CreatedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{(.CreatedAt.In $.TimeZone).Format "2 Jan 2006"}}</time></td>
       <td>
         <form method="post" action="/uploads/{{.ID}}/delete" class="inline">
           <button type="submit" class="link">Delete</button>

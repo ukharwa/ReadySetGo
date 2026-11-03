@@ -13,7 +13,7 @@
   <tbody>
     {{range .Data}}
     <tr>
-      <td><time datetime="{{.FailedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{.FailedAt.Format "2 Jan 2006 15:04"}}</time></td>
+      <td><time datetime="{{.FailedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{(.FailedAt.In $.TimeZone).Format "2 Jan 2006 15:04"}}</time></td>
       <td><code>{{.Kind}}</code></td>
       <td>{{.Attempts}}</td>
       <td>{{.LastError}}</td>

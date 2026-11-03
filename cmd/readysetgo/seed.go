@@ -41,11 +41,14 @@ func seed(ctx context.Context, args []string, getenv func(string) string, stdout
 		return err
 	}
 
-	for _, u := range []struct{ email, role string }{
-		{"admin@example.com", auth.RoleAdmin},
-		{"user@example.com", auth.RoleUser},
+	for _, u := range []struct{ email, name, role string }{
+		{"admin@example.com", "Ada Admin", auth.RoleAdmin},
+		{"user@example.com", "Uma User", auth.RoleUser},
 	} {
-		_, err := svc.accounts.CreateUser(ctx, u.email, seedPassword, u.role, true)
+		created, err := svc.accounts.CreateUser(ctx, u.email, seedPassword, u.role, true)
+		if err == nil {
+			_, err = svc.accounts.UpdateProfile(ctx, created, u.name, auth.DefaultTimeZone)
+		}
 		switch {
 		case errors.Is(err, db.ErrConflict):
 			logger.Info("seed user exists", "email", u.email)

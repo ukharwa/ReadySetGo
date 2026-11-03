@@ -15,6 +15,23 @@
 {{end}}
 
 <section class="card">
+  <h2>Your profile</h2>
+  <form method="post" action="/account/profile" class="stack">
+    <label>Name
+      <input type="text" name="name" value="{{.Data.Profile.Get "name"}}" autocomplete="name" maxlength="100">
+      {{with .Data.Profile.Errors.name}}<span class="field-error">{{.}}</span>{{end}}
+    </label>
+    <label>Time zone
+      <input type="text" name="time_zone" value="{{.Data.Profile.Get "time_zone"}}" list="time-zones" autocomplete="off" required>
+      {{with .Data.Profile.Errors.time_zone}}<span class="field-error">{{.}}</span>{{end}}
+      <span class="hint">Times are shown in it. A name such as Africa/Johannesburg or Europe/London.</span>
+    </label>
+    <datalist id="time-zones"></datalist>
+    <button type="submit">Save profile</button>
+  </form>
+</section>
+
+<section class="card">
   <h2>Change your email address</h2>
   <form method="post" action="/account/email" class="stack">
     <label>New email address
@@ -57,7 +74,7 @@
       <tr>
         <td>{{.Name}}</td>
         <td>{{.IP}}</td>
-        <td>{{.LastSeenAt.Format "2 Jan 2006 15:04"}} UTC</td>
+        <td>{{(.LastSeenAt.In $.TimeZone).Format "2 Jan 2006 15:04"}}</td>
         <td>{{if .Current}}This device{{else}}
           <form method="post" action="/account/devices/{{.ID}}/sign-out" class="inline">
             <button type="submit" class="link">Sign out</button>

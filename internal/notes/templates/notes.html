@@ -8,7 +8,7 @@
   {{range .Data}}
   <li>
     <a href="/notes/{{.ID}}">{{.Title}}</a>
-    <span class="muted">· {{.UpdatedAt.Format "2 Jan 2006"}}</span>
+    <span class="muted">· {{(.UpdatedAt.In $.TimeZone).Format "2 Jan 2006"}}</span>
     {{/* Without JavaScript the form posts and the page reloads; with HTMX
          the response (empty) replaces just this row. */}}
     <form method="post" action="/notes/{{.ID}}/delete" class="inline"

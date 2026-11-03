@@ -10,6 +10,7 @@
 <title>{{block "title" .}}{{end}} · {{.AppName}}</title>
 <link rel="stylesheet" href="{{asset "app.css"}}">
 <script src="{{asset "htmx.min.js"}}" defer></script>
+<script src="{{asset "app.js"}}" defer></script>
 </head>
 <body>
 <header class="site-header">
@@ -32,7 +33,7 @@
       <!-- readysetgo:begin module=audit -->
       {{if eq .User.Role "admin"}}<a href="/admin/audit">Audit log</a>{{end}}
       <!-- readysetgo:end -->
-      <a href="/account">Account</a>
+      <a href="/account">{{with .User.Name}}{{.}}{{else}}Account{{end}}</a>
       <form method="post" action="/logout" class="inline"><button type="submit" class="link">Log out</button></form>
     {{else}}
       <a href="/login">Log in</a>

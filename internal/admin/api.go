@@ -41,6 +41,7 @@ func (h *API) Routes(mux *http.ServeMux) {
 type userJSON struct {
 	ID            uuid.UUID `json:"id"`
 	Email         string    `json:"email"`
+	Name          string    `json:"name"`
 	Role          string    `json:"role"`
 	EmailVerified bool      `json:"email_verified"`
 	Disabled      bool      `json:"disabled"`

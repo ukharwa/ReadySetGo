@@ -2,6 +2,8 @@
 CREATE TABLE users (
     id                uuid PRIMARY KEY,
     email             text NOT NULL,
+    name              text NOT NULL, -- what the app calls them; may be empty
+    time_zone         text NOT NULL, -- an IANA name, such as Africa/Johannesburg
     password_hash     text NOT NULL,
     role              text NOT NULL,
     email_verified_at timestamptz,

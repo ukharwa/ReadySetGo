@@ -14,7 +14,7 @@ import (
 )
 
 const getUser = `-- name: GetUser :one
-SELECT id, email, role, email_verified_at, disabled_at, created_at
+SELECT id, email, name, role, email_verified_at, disabled_at, created_at
 FROM users
 WHERE id = ?1
 `
@@ -22,6 +22,7 @@ WHERE id = ?1
 type GetUserRow struct {
 	ID              uuid.UUID
 	Email           string
+	Name            string
 	Role            string
 	EmailVerifiedAt sql.NullTime
 	DisabledAt      sql.NullTime
@@ -34,6 +35,7 @@ func (q *Queries) GetUser(ctx context.Context, id uuid.UUID) (GetUserRow, error)
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
+		&i.Name,
 		&i.Role,
 		&i.EmailVerifiedAt,
 		&i.DisabledAt,
@@ -111,9 +113,10 @@ func (q *Queries) RetryJob(ctx context.Context, arg RetryJobParams) (int64, erro
 }
 
 const searchUsers = `-- name: SearchUsers :many
-SELECT id, email, role, email_verified_at, disabled_at, created_at
+SELECT id, email, name, role, email_verified_at, disabled_at, created_at
 FROM users
-WHERE email LIKE CAST(?1 AS TEXT) ESCAPE '\'
+WHERE (email LIKE CAST(?1 AS TEXT) ESCAPE '\')
+   OR (LOWER(name) LIKE CAST(?1 AS TEXT) ESCAPE '\')
 ORDER BY email
 LIMIT CAST(?3 AS BIGINT) OFFSET CAST(?2 AS BIGINT)
 `
@@ -127,13 +130,15 @@ type SearchUsersParams struct {
 type SearchUsersRow struct {
 	ID              uuid.UUID
 	Email           string
+	Name            string
 	Role            string
 	EmailVerifiedAt sql.NullTime
 	DisabledAt      sql.NullTime
 	CreatedAt       time.Time
 }
 
-// Users whose address matches the LIKE pattern @pattern, by address.
+// Users whose address or lowercased name matches the LIKE pattern @pattern,
+// by address.
 func (q *Queries) SearchUsers(ctx context.Context, arg SearchUsersParams) ([]SearchUsersRow, error) {
 	rows, err := q.db.QueryContext(ctx, searchUsers, arg.Pattern, arg.Skip, arg.MaxRows)
 	if err != nil {
@@ -146,6 +151,7 @@ func (q *Queries) SearchUsers(ctx context.Context, arg SearchUsersParams) ([]Sea
 		if err := rows.Scan(
 			&i.ID,
 			&i.Email,
+			&i.Name,
 			&i.Role,
 			&i.EmailVerifiedAt,
 			&i.DisabledAt,

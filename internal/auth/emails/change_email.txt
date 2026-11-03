@@ -1,6 +1,6 @@
 Subject: Confirm your new email address
 
-Hello,
+Hello{{with .Name}} {{.}}{{end}},
 
 Open this link to make this address the email for your {{.AppName}} account:
 

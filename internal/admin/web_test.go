@@ -27,11 +27,17 @@ func TestWebUsers(t *testing.T) {
 	t.Parallel()
 	a := newWebApp(t)
 	admin, _ := signInAdmin(t, a)
-	a.SignIn(a.Client(), "bob@example.com")
+	bob := a.SignIn(a.Client(), "bob@example.com")
+	if _, err := a.Accounts.UpdateProfile(t.Context(), bob, "Robert Tables", "UTC"); err != nil {
+		t.Fatal(err)
+	}
 	a.SignIn(a.Client(), "carol_x@example.com")
 
-	if p := a.Get(admin, "/admin/users"); p.Status != http.StatusOK || !apptest.Contains(p.Body, "admin@example.com", "bob@example.com", "carol_x@example.com") {
+	if p := a.Get(admin, "/admin/users"); p.Status != http.StatusOK || !apptest.Contains(p.Body, "admin@example.com", "bob@example.com", "Robert Tables", "carol_x@example.com") {
 		t.Errorf("all users: %d\n%s", p.Status, p.Body)
+	}
+	if p := a.Get(admin, "/admin/users?q=tables"); !strings.Contains(p.Body, "bob@example.com") || strings.Contains(p.Body, "carol") {
+		t.Errorf("search by name:\n%s", p.Body)
 	}
 	if p := a.Get(admin, "/admin/users?q=BOB"); !strings.Contains(p.Body, "bob@example.com") || strings.Contains(p.Body, "carol") {
 		t.Errorf("search for bob:\n%s", p.Body)

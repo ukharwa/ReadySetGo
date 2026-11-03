@@ -191,3 +191,34 @@ func TestAPIDevices(t *testing.T) {
 		t.Errorf("another user's session was signed out: %d", r.Status)
 	}
 }
+
+type profile struct {
+	Name     string `json:"name"`
+	TimeZone string `json:"time_zone"`
+}
+
+func TestAPIProfile(t *testing.T) {
+	t.Parallel()
+	a := newAPIApp(t)
+	c := a.Client()
+	r := a.JSON(c, "POST", "/api/auth/register", "", map[string]string{
+		"email": "ada@example.com", "password": apiPassword, "name": "Ada", "time_zone": "Africa/Johannesburg",
+	})
+	if r.Status != http.StatusAccepted {
+		t.Fatalf("register: %d %s", r.Status, r.Body)
+	}
+	a.JSON(c, "POST", "/api/auth/login", "", map[string]any{"email": "ada@example.com", "password": apiPassword})
+	var got profile
+	a.Decode(a.JSON(c, "GET", "/api/auth/me", "", nil), &got)
+	if got != (profile{"Ada", "Africa/Johannesburg"}) {
+		t.Errorf("me = %+v", got)
+	}
+
+	if r := a.JSON(c, "POST", "/api/auth/profile", "", profile{"Ada", "Local"}); r.Status != http.StatusUnprocessableEntity {
+		t.Errorf("Local as a time zone: %d, want 422", r.Status)
+	}
+	r = a.JSON(c, "POST", "/api/auth/profile", "", profile{"Ada King", "Europe/London"})
+	if a.Decode(r, &got); r.Status != http.StatusOK || got != (profile{"Ada King", "Europe/London"}) {
+		t.Errorf("update profile: %d %+v", r.Status, got)
+	}
+}

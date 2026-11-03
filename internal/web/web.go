@@ -38,8 +38,10 @@ type Options struct {
 	AppName string
 	Dev     bool
 	// User returns the logged-in user for the layout, or nil.
-	User   func(ctx context.Context) any
-	Logger *slog.Logger
+	User func(ctx context.Context) any
+	// TimeZone returns the time zone to show times in, or nil for UTC.
+	TimeZone func(ctx context.Context) *time.Location
+	Logger   *slog.Logger
 }
 
 // Renderer renders pages within the shared layout and serves static files.
@@ -151,13 +153,15 @@ func (p *Pages) parse() (map[string]*template.Template, error) {
 	return byName, nil
 }
 
-// pageData is what every template receives: .AppName, .User and .Flash from
-// the layout's side, and .Data from the handler.
+// pageData is what every template receives: .AppName, .User, .TimeZone and
+// .Flash from the layout's side, and .Data from the handler. Templates show
+// a time in the viewer's zone with `(.T.In $.TimeZone).Format "2 Jan 2006"`.
 type pageData struct {
-	AppName string
-	User    any
-	Flash   string
-	Data    any
+	AppName  string
+	User     any
+	TimeZone *time.Location
+	Flash    string
+	Data     any
 }
 
 // Render writes the page name with status, passing data as .Data.
@@ -175,9 +179,14 @@ func (p *Pages) Render(w http.ResponseWriter, r *http.Request, status int, name 
 		p.fail(w, r, fmt.Errorf("no page template %q", name))
 		return
 	}
-	pd := pageData{AppName: p.rd.opts.AppName, Flash: popFlash(w, r), Data: data}
+	pd := pageData{AppName: p.rd.opts.AppName, TimeZone: time.UTC, Flash: popFlash(w, r), Data: data}
 	if p.rd.opts.User != nil {
 		pd.User = p.rd.opts.User(r.Context())
+	}
+	if p.rd.opts.TimeZone != nil {
+		if loc := p.rd.opts.TimeZone(r.Context()); loc != nil {
+			pd.TimeZone = loc
+		}
 	}
 	// Render to a buffer first, so a template error mid-page becomes a
 	// clean error response rather than half a page.

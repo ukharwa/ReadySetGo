@@ -58,7 +58,7 @@
   <h3>Waiting to be accepted</h3>
   <ul class="list">
     {{range .}}
-    <li>{{.Email}} <span class="muted">· {{.Role}} · until {{.ExpiresAt.Format "2 Jan 2006"}}</span>
+    <li>{{.Email}} <span class="muted">· {{.Role}} · until {{(.ExpiresAt.In $.TimeZone).Format "2 Jan 2006"}}</span>
       <form method="post" action="/w/{{$ws.ID}}/invitations/{{.ID}}/revoke" class="inline">
         <button type="submit" class="link">Cancel</button>
       </form>

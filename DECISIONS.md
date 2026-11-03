@@ -380,6 +380,20 @@ factor. A breached-password check (Have I Been Pwned) is skipped for now.
   register hashes the password either way, and login checks a dummy hash
   for unknown addresses.
 
+### Names and time zones
+
+Every user has an optional display name and a time zone (an IANA name such
+as `Africa/Johannesburg`, `UTC` by default). Times are stored and sent in
+JSON as UTC; pages show them in the viewer's zone, so "last active" and
+"joined" read as local time. The sign-up form takes the zone from the
+browser, quietly falling back to UTC for one Go doesn't know, since nobody
+can fix a hidden field; the account page validates it. The binary embeds
+Go's time zone database (`time/tzdata`, about 450 KB), so zones work in the
+distroless image and on any machine. **Considered:** a list of zones
+written into the page, which Go has no API for; the browser supplies its
+own list instead (`Intl.supportedValuesOf`), and without JavaScript the
+field still takes a typed name.
+
 ### Roles: a `role` column
 
 `user` or `admin`, with `auth.RequireRole("admin")` middleware and

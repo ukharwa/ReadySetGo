@@ -7,10 +7,11 @@
 {{with .Data.Error}}<p class="error-summary" role="alert">{{.}}</p>{{end}}
 
 <dl class="details">
+  <dt>Name</dt><dd>{{or $u.Name "not given"}}</dd>
   <dt>Role</dt><dd>{{$u.Role}}</dd>
   <dt>Email address</dt><dd>{{if $u.EmailVerified}}confirmed{{else}}not confirmed yet{{end}}</dd>
   <dt>Status</dt><dd>{{if $u.Disabled}}disabled{{else}}active{{end}}</dd>
-  <dt>Joined</dt><dd>{{$u.CreatedAt.Format "2 Jan 2006 15:04"}} UTC</dd>
+  <dt>Joined</dt><dd>{{($u.CreatedAt.In $.TimeZone).Format "2 Jan 2006 15:04"}}</dd>
 </dl>
 
 {{if .Data.Self}}

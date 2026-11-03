@@ -58,6 +58,7 @@ func (h *Web) Routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /confirm-email", h.tokenForm("confirm_email.html"))
 	mux.Handle("POST /confirm-email", limit(h.confirmEmail))
 	mux.Handle("GET /account", RequireUser(http.HandlerFunc(h.accountPage)))
+	mux.Handle("POST /account/profile", RequireUser(http.HandlerFunc(h.updateProfile)))
 	mux.Handle("POST /account/resend-verification", RequireUser(limit(h.resendVerification)))
 	mux.Handle("POST /account/password", RequireUser(http.HandlerFunc(h.changePassword)))
 	mux.Handle("POST /account/email", RequireUser(http.HandlerFunc(h.changeEmail)))
@@ -127,7 +128,10 @@ func (h *Web) fail(w http.ResponseWriter, r *http.Request, page string, data for
 
 func (h *Web) register(w http.ResponseWriter, r *http.Request) {
 	form := web.Form{Values: postForm(r)}
-	if err := h.svc.Register(r.Context(), form.Get("email"), form.Get("password")); err != nil {
+	err := h.svc.Register(r.Context(), Registration{
+		Email: form.Get("email"), Password: form.Get("password"), Name: form.Get("name"), TimeZone: form.Get("time_zone"),
+	})
+	if err != nil {
 		h.fail(w, r, "register.html", formPage{Form: form, Next: form.Get("next")}, err)
 		return
 	}
@@ -214,6 +218,7 @@ func (h *Web) confirmEmail(w http.ResponseWriter, r *http.Request) {
 type accountPage struct {
 	User     User
 	Devices  []Device
+	Profile  web.Form
 	Email    web.Form
 	Password web.Form
 	Delete   web.Form
@@ -224,8 +229,12 @@ func (h *Web) accountPage(w http.ResponseWriter, r *http.Request) {
 	h.renderAccount(w, r, http.StatusOK, &accountPage{User: u})
 }
 
-// renderAccount renders the account page, adding the device list.
+// renderAccount renders the account page, adding the device list and
+// filling the profile form from the user unless it was just submitted.
 func (h *Web) renderAccount(w http.ResponseWriter, r *http.Request, status int, page *accountPage) {
+	if page.Profile.Values == nil {
+		page.Profile.Values = url.Values{"name": {page.User.Name}, "time_zone": {page.User.TimeZone}}
+	}
 	var err error
 	if page.Devices, err = h.svc.Devices(r.Context(), page.User, tokenFrom(r.Context())); err != nil {
 		h.fail(w, r, "account.html", formPage{}, err)
@@ -242,6 +251,17 @@ func (h *Web) accountFail(w http.ResponseWriter, r *http.Request, page *accountP
 		return
 	}
 	h.renderAccount(w, r, http.StatusUnprocessableEntity, page)
+}
+
+func (h *Web) updateProfile(w http.ResponseWriter, r *http.Request) {
+	u, _ := UserFrom(r.Context())
+	page := accountPage{User: u, Profile: web.Form{Values: postForm(r)}}
+	if _, err := h.svc.UpdateProfile(r.Context(), u, page.Profile.Get("name"), page.Profile.Get("time_zone")); err != nil {
+		h.accountFail(w, r, &page, &page.Profile, err)
+		return
+	}
+	web.SetFlash(w, "Your profile is saved.")
+	http.Redirect(w, r, "/account", http.StatusSeeOther)
 }
 
 func (h *Web) resendVerification(w http.ResponseWriter, r *http.Request) {

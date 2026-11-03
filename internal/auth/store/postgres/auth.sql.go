@@ -49,14 +49,16 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) er
 
 const createUser = `-- name: CreateUser :one
 
-INSERT INTO users (id, email, password_hash, role, email_verified_at, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING id, email, password_hash, role, email_verified_at, disabled_at, created_at, updated_at
+INSERT INTO users (id, email, name, time_zone, password_hash, role, email_verified_at, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+RETURNING id, email, name, time_zone, password_hash, role, email_verified_at, disabled_at, created_at, updated_at
 `
 
 type CreateUserParams struct {
 	ID              uuid.UUID
 	Email           string
+	Name            string
+	TimeZone        string
 	PasswordHash    string
 	Role            string
 	EmailVerifiedAt sql.NullTime
@@ -69,6 +71,8 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	row := q.db.QueryRowContext(ctx, createUser,
 		arg.ID,
 		arg.Email,
+		arg.Name,
+		arg.TimeZone,
 		arg.PasswordHash,
 		arg.Role,
 		arg.EmailVerifiedAt,
@@ -79,6 +83,8 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
+		&i.Name,
+		&i.TimeZone,
 		&i.PasswordHash,
 		&i.Role,
 		&i.EmailVerifiedAt,
@@ -227,7 +233,7 @@ func (q *Queries) GetSession(ctx context.Context, tokenHash string) (Session, er
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, password_hash, role, email_verified_at, disabled_at, created_at, updated_at FROM users WHERE email = $1
+SELECT id, email, name, time_zone, password_hash, role, email_verified_at, disabled_at, created_at, updated_at FROM users WHERE email = $1
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
@@ -236,6 +242,8 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
+		&i.Name,
+		&i.TimeZone,
 		&i.PasswordHash,
 		&i.Role,
 		&i.EmailVerifiedAt,
@@ -247,7 +255,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, email, password_hash, role, email_verified_at, disabled_at, created_at, updated_at FROM users WHERE id = $1
+SELECT id, email, name, time_zone, password_hash, role, email_verified_at, disabled_at, created_at, updated_at FROM users WHERE id = $1
 `
 
 func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
@@ -256,6 +264,8 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
+		&i.Name,
+		&i.TimeZone,
 		&i.PasswordHash,
 		&i.Role,
 		&i.EmailVerifiedAt,
@@ -442,4 +452,39 @@ type UpdatePasswordHashParams struct {
 func (q *Queries) UpdatePasswordHash(ctx context.Context, arg UpdatePasswordHashParams) error {
 	_, err := q.db.ExecContext(ctx, updatePasswordHash, arg.PasswordHash, arg.UpdatedAt, arg.ID)
 	return err
+}
+
+const updateProfile = `-- name: UpdateProfile :one
+UPDATE users SET name = $1, time_zone = $2, updated_at = $3 WHERE id = $4
+RETURNING id, email, name, time_zone, password_hash, role, email_verified_at, disabled_at, created_at, updated_at
+`
+
+type UpdateProfileParams struct {
+	Name      string
+	TimeZone  string
+	UpdatedAt time.Time
+	ID        uuid.UUID
+}
+
+func (q *Queries) UpdateProfile(ctx context.Context, arg UpdateProfileParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, updateProfile,
+		arg.Name,
+		arg.TimeZone,
+		arg.UpdatedAt,
+		arg.ID,
+	)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Name,
+		&i.TimeZone,
+		&i.PasswordHash,
+		&i.Role,
+		&i.EmailVerifiedAt,
+		&i.DisabledAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }

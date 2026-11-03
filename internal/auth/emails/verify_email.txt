@@ -1,6 +1,6 @@
 Subject: Confirm your email address
 
-Hello,
+Hello{{with .Name}} {{.}}{{end}},
 
 Confirm the email address for your {{.AppName}} account by opening this link:
 

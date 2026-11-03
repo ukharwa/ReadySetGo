@@ -26,6 +26,8 @@ type Session struct {
 type User struct {
 	ID              uuid.UUID
 	Email           string
+	Name            string
+	TimeZone        string
 	PasswordHash    string
 	Role            string
 	EmailVerifiedAt sql.NullTime

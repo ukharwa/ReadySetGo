@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/ukharwa/readysetgo/internal/auth"
 	"github.com/ukharwa/readysetgo/internal/web"
@@ -19,6 +20,12 @@ func (a *App) Renderer() *web.Renderer {
 		User: func(ctx context.Context) any {
 			if u, ok := auth.UserFrom(ctx); ok {
 				return &u
+			}
+			return nil
+		},
+		TimeZone: func(ctx context.Context) *time.Location {
+			if u, ok := auth.UserFrom(ctx); ok {
+				return u.Location()
 			}
 			return nil
 		},

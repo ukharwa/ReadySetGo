@@ -42,6 +42,7 @@ func (h *API) Routes(mux *http.ServeMux) {
 	mux.Handle("POST /api/auth/token", limit(h.token))
 	mux.HandleFunc("POST /api/auth/logout", h.logout)
 	mux.Handle("GET /api/auth/me", RequireUser(http.HandlerFunc(h.me)))
+	mux.Handle("POST /api/auth/profile", RequireUser(http.HandlerFunc(h.updateProfile)))
 	mux.Handle("POST /api/auth/verify-email", limit(h.verifyEmail))
 	mux.Handle("POST /api/auth/resend-verification", RequireUser(limit(h.resendVerification)))
 	mux.Handle("POST /api/auth/forgot-password", limit(h.forgotPassword))
@@ -88,11 +89,16 @@ func accepted(w http.ResponseWriter, message string) {
 }
 
 func (h *API) register(w http.ResponseWriter, r *http.Request) {
-	var in struct{ Email, Password string }
+	var in struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+		Name     string `json:"name"`
+		TimeZone string `json:"time_zone"`
+	}
 	if !httpx.ReadJSON(w, r, &in) {
 		return
 	}
-	if err := h.svc.Register(r.Context(), in.Email, in.Password); err != nil {
+	if err := h.svc.Register(r.Context(), Registration(in)); err != nil {
 		h.fail(w, r, err)
 		return
 	}
@@ -155,6 +161,8 @@ func (h *API) logout(w http.ResponseWriter, r *http.Request) {
 type userJSON struct {
 	ID            uuid.UUID `json:"id"`
 	Email         string    `json:"email"`
+	Name          string    `json:"name"`
+	TimeZone      string    `json:"time_zone"`
 	Role          string    `json:"role"`
 	EmailVerified bool      `json:"email_verified"`
 	CreatedAt     time.Time `json:"created_at"`
@@ -162,6 +170,25 @@ type userJSON struct {
 
 func (h *API) me(w http.ResponseWriter, r *http.Request) {
 	u, _ := UserFrom(r.Context())
+	httpx.WriteJSON(w, http.StatusOK, userJSON(u))
+}
+
+// updateProfile changes the user's name and time zone, and returns the
+// updated user.
+func (h *API) updateProfile(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Name     string `json:"name"`
+		TimeZone string `json:"time_zone"`
+	}
+	if !httpx.ReadJSON(w, r, &in) {
+		return
+	}
+	u, _ := UserFrom(r.Context())
+	u, err := h.svc.UpdateProfile(r.Context(), u, in.Name, in.TimeZone)
+	if err != nil {
+		h.fail(w, r, err)
+		return
+	}
 	httpx.WriteJSON(w, http.StatusOK, userJSON(u))
 }
 

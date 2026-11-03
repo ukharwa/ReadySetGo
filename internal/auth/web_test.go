@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ukharwa/readysetgo/internal/apptest"
 	"github.com/ukharwa/readysetgo/internal/auth"
@@ -330,5 +331,42 @@ func TestWebDevices(t *testing.T) {
 	}
 	if others := otherDevices(t, a, here); len(others) != 0 {
 		t.Errorf("devices left besides this one: %v", others)
+	}
+}
+
+func TestWebProfile(t *testing.T) {
+	t.Parallel()
+	a := newWebApp(t)
+	c := a.Client()
+	p := a.Post(c, "/register", url.Values{
+		"name": {"  Ada   Lovelace "}, "email": {"ada@example.com"}, "password": {password}, "time_zone": {"Not/AZone"},
+	})
+	if p.Status != http.StatusSeeOther {
+		t.Fatalf("register: status %d\n%s", p.Status, p.Body)
+	}
+	if sent := a.SentTo("ada@example.com"); len(sent) != 1 || !strings.Contains(sent[0].Body, "Hello Ada Lovelace,") {
+		t.Errorf("verification email doesn't greet Ada by name: %+v", sent)
+	}
+	logIn(t, a, c, "ada@example.com", password)
+	page := a.Get(c, "/account")
+	if !apptest.Contains(page.Body, `>Ada Lovelace</a>`, `value="Ada Lovelace"`, `value="UTC"`) {
+		t.Errorf("want the name in the nav and form, and an unknown zone replaced by UTC:\n%s", page.Body)
+	}
+
+	p = a.Post(c, "/account/profile", url.Values{"name": {"Ada"}, "time_zone": {"Atlantis/Capital"}})
+	if p.Status != http.StatusUnprocessableEntity || !strings.Contains(p.Body, "Choose a time zone") {
+		t.Errorf("unknown time zone: status %d\n%s", p.Status, p.Body)
+	}
+	if p := a.Post(c, "/account/profile", url.Values{"name": {"Ada"}, "time_zone": {"Asia/Kolkata"}}); p.Status != http.StatusSeeOther {
+		t.Fatalf("save profile: status %d\n%s", p.Status, p.Body)
+	}
+
+	// Times show in the chosen zone: the device list's "last active" is
+	// this login, a moment ago, in India's UTC+5:30.
+	kolkata, _ := time.LoadLocation("Asia/Kolkata")
+	now := time.Now().In(kolkata)
+	page = a.Get(c, "/account")
+	if !strings.Contains(page.Body, now.Format("2 Jan 2006 15:04")) && !strings.Contains(page.Body, now.Add(-time.Minute).Format("2 Jan 2006 15:04")) {
+		t.Errorf("device list doesn't show %s Kolkata time:\n%s", now.Format("15:04"), page.Body)
 	}
 }

@@ -1,6 +1,6 @@
 Subject: Your email address was changed
 
-Hello,
+Hello{{with .Name}} {{.}}{{end}},
 
 The email address for your {{.AppName}} account was just changed to
 {{.NewEmail}}. From now on, emails about your account go there.
