@@ -83,6 +83,11 @@ sql:
     queries: [internal/twofactor/twofactor.sql]
     gen: {go: {<<: *go, out: internal/twofactor/store}}
   # readysetgo:end
+  # readysetgo:begin module=social
+  - <<: *sqlc
+    queries: [internal/social/social.sql]
+    gen: {go: {<<: *go, out: internal/social/store}}
+  # readysetgo:end
   # readysetgo:end
   # readysetgo:begin db=postgres
   - &sqlc
@@ -131,5 +136,10 @@ sql:
   - <<: *sqlc
     queries: [internal/twofactor/twofactor.sql]
     gen: {go: {<<: *go, out: internal/twofactor/store/postgres}}
+  # readysetgo:end
+  # readysetgo:begin module=social
+  - <<: *sqlc
+    queries: [internal/social/social.sql]
+    gen: {go: {<<: *go, out: internal/social/store/postgres}}
   # readysetgo:end
   # readysetgo:end

@@ -95,6 +95,8 @@ How requests map:
 - **`errreport`:** Sentry, GlitchTip, Bugsink, error tracking or alerts.
 - **`twofactor`:** two-factor login, 2FA, MFA, authenticator apps, TOTP,
   one-time codes, extra security for logins.
+- **`social`:** social login, "Sign in with Google" or GitHub, OAuth login,
+  logging in without a password.
 - **Invite-only sign-up**, a closed beta or an internal tool: not an init
   option but a setting, `REGISTRATION=invite`, changed any time. Mention
   it rather than leaving it out.
@@ -130,10 +132,13 @@ Say so in the same message, with what the template does instead
 - **JWT:** not used. A browser frontend signs in with an HttpOnly session
   cookie; mobile apps and scripts get revocable bearer tokens
   (`POST /api/auth/token`).
-- **Social login (Google and others) or passkeys:** not included; they'd
-  be built afterwards. Social login needs the OAuth flow, linking accounts
-  by verified email, and a migration allowing users without a password
-  (`password_hash` is required now).
+- **Passkeys:** not included; they'd be built afterwards.
+- **Social login with Microsoft, Apple, Facebook or others:** the `social`
+  module has Google and GitHub. Others are added there as providers, but
+  only services that verify email addresses, since accounts are linked by
+  address: Microsoft's aren't always verified, and Apple needs a paid
+  developer account. Mobile apps that sign in with a native SDK aren't
+  covered.
 - **Two-factor login by SMS or email codes:** the `twofactor` module uses
   authenticator apps (and recovery codes) only; SMS is weaker and costs
   money per message.
@@ -246,6 +251,9 @@ repository's history keeps. That chose:
 <!-- readysetgo:begin module=twofactor -->
 - **Module:** twofactor (two-factor login with authenticator apps).
 <!-- readysetgo:end -->
+<!-- readysetgo:begin module=social -->
+- **Module:** social (logging in with Google or GitHub).
+<!-- readysetgo:end -->
 
 The init step deleted itself, so these can't be changed by a setting.
 Asked to change one, say what it involves first, then follow "Changing
@@ -276,7 +284,7 @@ optional modules, let init work out the change:
 
 Moving an existing database's data into a new one is a separate step:
 SCALING.md covers it.
-<!-- readysetgo:begin module=workspaces,module=admin,module=audit,module=uploads,module=metrics,module=errreport,module=twofactor -->
+<!-- readysetgo:begin module=workspaces,module=admin,module=audit,module=uploads,module=metrics,module=errreport,module=twofactor,module=social -->
 README.md ("Removing a module") explains taking a module out.
 <!-- readysetgo:end -->
 
@@ -443,6 +451,14 @@ README.md ("Removing a module") explains taking a module out.
   `totp.go` makes the codes. The code step of logging in is auth's
   (`internal/auth/secondfactor.go`).
 <!-- readysetgo:end -->
+<!-- readysetgo:begin module=social -->
+- `internal/social/`: logging in with Google or GitHub. `providers.go`
+  lists the providers (each on when its client ID and secret are set);
+  `social.go` links their accounts to users by the rules in its package
+  comment; `flow.go` is the browser's round trip (state cookie and PKCE).
+  New accounts without a password come from
+  `auth.Service.SignUpVerified` (`internal/auth/social.go`).
+<!-- readysetgo:end -->
 <!-- readysetgo:begin ui=html -->
 - `internal/web/`: the page layout, renderer, stylesheet, HTMX, flash
   messages, and `app.js`, which fills time zones in from the browser.
@@ -597,6 +613,10 @@ handlers and a link table from the feature's rows to `uploads(id)`.
     Errors are RFC 9457 problem details.
   - GET requests never change state: the CSRF check only covers POST, PUT,
     PATCH and DELETE.
+    <!-- readysetgo:begin module=social -->
+    Providers' callbacks are the exception, since they must be GETs; a
+    one-time `state` in a cookie stops anyone else's link from working.
+    <!-- readysetgo:end -->
   - Respond to errors with `httpx.Error(w, r, status)`; it never shows
     error details and adds the request ID to 5xx responses.
   - Use `httpx.ClientIP(ctx)` for the client's address, never `RemoteAddr`

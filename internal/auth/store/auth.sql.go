@@ -13,6 +13,22 @@ import (
 	"github.com/google/uuid"
 )
 
+const countSignupInvitations = `-- name: CountSignupInvitations :one
+SELECT COUNT(*) FROM signup_invitations WHERE email = ?1 AND expires_at > ?2
+`
+
+type CountSignupInvitationsParams struct {
+	Email string
+	Now   time.Time
+}
+
+func (q *Queries) CountSignupInvitations(ctx context.Context, arg CountSignupInvitationsParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countSignupInvitations, arg.Email, arg.Now)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createSession = `-- name: CreateSession :exec
 
 INSERT INTO sessions (token_hash, id, user_id, user_agent, ip, created_at, last_seen_at, idle_expires_at, expires_at)

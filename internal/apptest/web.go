@@ -12,10 +12,11 @@ import (
 	"github.com/ukharwa/readysetgo/internal/web"
 )
 
-// Renderer returns a page renderer using the embedded templates.
-func (a *App) Renderer() *web.Renderer {
+// Renderer returns a page renderer using the embedded templates. Each
+// option changes its settings.
+func (a *App) Renderer(options ...func(*web.Options)) *web.Renderer {
 	a.t.Helper()
-	rd, err := web.New(web.Options{
+	opts := web.Options{
 		AppName:    "Test",
 		OpenSignup: !a.Accounts.InviteOnly(),
 		User: func(ctx context.Context) any {
@@ -31,7 +32,11 @@ func (a *App) Renderer() *web.Renderer {
 			return nil
 		},
 		Logger: a.Logger,
-	})
+	}
+	for _, o := range options {
+		o(&opts)
+	}
+	rd, err := web.New(opts)
 	if err != nil {
 		a.t.Fatal(err)
 	}

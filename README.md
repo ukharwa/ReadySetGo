@@ -54,6 +54,7 @@ Optional modules add what some apps need and others don't:
 | `metrics` | Prometheus metrics and Go's profiler on an internal port |
 | `errreport` | Error reports to Sentry, GlitchTip or Bugsink |
 | `twofactor` | Two-factor login with an authenticator app, and recovery codes |
+| `social` | Logging in with Google or GitHub |
 
 Every project also starts with a small notes feature that shows the whole
 pattern, from migration to test. `make remove-example` deletes it when
@@ -238,6 +239,11 @@ grows.
   recovery codes, and secrets encrypted with `TWO_FACTOR_KEY`.
   `user reset-two-factor EMAIL` helps someone who lost both.
 <!-- readysetgo:end -->
+<!-- readysetgo:begin module=social -->
+- **Logging in with Google or GitHub**, linked to accounts by verified
+  email address. People who sign up that way have no password until they
+  set one with a reset link.
+<!-- readysetgo:end -->
 <!-- example:begin -->
 - **The notes example:** a small feature showing the pattern from migration
   to test. `make remove-example` deletes it.
@@ -350,6 +356,11 @@ start.
 <!-- readysetgo:begin module=twofactor -->
    Add a `TWO_FACTOR_KEY` too (`openssl rand -base64 32`), and keep a copy
    somewhere safe: losing it turns off everyone's authenticator codes.
+<!-- readysetgo:end -->
+<!-- readysetgo:begin module=social -->
+   For logging in with Google or GitHub, add their `_CLIENT_ID` and
+   `_CLIENT_SECRET`, and register the callback URL `.env.example` gives
+   with each, on your real domain.
 <!-- readysetgo:end -->
 4. CI pushes an image to `ghcr.io` on every push to `main`. If the
    repository is private, log the server in to read it:
@@ -471,7 +482,7 @@ database backups don't include. Back the volume up as well, for example
 with `rclone sync` from the volume's folder to the same storage.
 <!-- readysetgo:end -->
 
-<!-- readysetgo:begin module=workspaces,module=admin,module=audit,module=uploads,module=metrics,module=errreport,module=twofactor -->
+<!-- readysetgo:begin module=workspaces,module=admin,module=audit,module=uploads,module=metrics,module=errreport,module=twofactor,module=social -->
 ## Removing a module
 
 Each module is a folder in `internal/` that the rest of the app reaches only
@@ -491,6 +502,16 @@ there and follow the compiler.
 Delete `templates/login_code.html` too, and the two-factor card in
 `templates/account.html`.
 <!-- readysetgo:end -->
+<!-- readysetgo:end -->
+<!-- readysetgo:begin module=social -->
+Social login also has code in `internal/auth`: `social.go`, and the lines
+that handle accounts without a password.
+<!-- readysetgo:begin ui=html -->
+The login and sign-up pages' buttons, `Provider` in `internal/web` and a
+block in `app.js` go with it.
+<!-- readysetgo:end -->
+First make sure everyone who signed up through a provider has set a
+password: without the module, they'd have no way in.
 <!-- readysetgo:end -->
 <!-- readysetgo:end -->
 <!-- example:begin -->

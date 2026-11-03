@@ -25,5 +25,10 @@
   </label>
   <button type="submit">Sign up</button>
 </form>
+<!-- readysetgo:begin module=social -->
+{{range .Providers}}
+<p><a href="/auth/{{.ID}}{{with $.Data.Next}}?next={{.}}{{end}}" class="button secondary" data-time-zone>Continue with {{.Name}}</a></p>
+{{end}}
+<!-- readysetgo:end -->
 <p>Already have an account? <a href="/login{{with .Data.Next}}?next={{.}}{{end}}">Log in</a></p>
 {{end}}

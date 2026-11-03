@@ -130,6 +130,12 @@ func TestLoadOverrides(t *testing.T) {
 		// readysetgo:begin module=twofactor
 		"TWO_FACTOR_KEY": testKey,
 		// readysetgo:end
+		// readysetgo:begin module=social
+		"GOOGLE_CLIENT_ID":     "google-id",
+		"GOOGLE_CLIENT_SECRET": "google-secret",
+		"GITHUB_CLIENT_ID":     "github-id",
+		"GITHUB_CLIENT_SECRET": "github-secret",
+		// readysetgo:end
 	}))
 	if err != nil {
 		t.Fatalf("Load: %v", err)
@@ -177,6 +183,12 @@ func TestLoadOverrides(t *testing.T) {
 		// readysetgo:begin module=twofactor
 		TwoFactorKey: []byte("0123456789abcdef0123456789abcdef"),
 		// readysetgo:end
+		// readysetgo:begin module=social
+		GoogleClientID:     "google-id",
+		GoogleClientSecret: "google-secret",
+		GitHubClientID:     "github-id",
+		GitHubClientSecret: "github-secret",
+		// readysetgo:end
 	}
 	if !reflect.DeepEqual(c, want) {
 		t.Errorf("Load = %+v, want %+v", c, want)
@@ -200,6 +212,9 @@ func TestLoadReportsAllErrors(t *testing.T) {
 		// readysetgo:begin module=twofactor
 		"TWO_FACTOR_KEY": "too short",
 		// readysetgo:end
+		// readysetgo:begin module=social
+		"GITHUB_CLIENT_ID": "an ID without its secret",
+		// readysetgo:end
 	}))
 	if err == nil {
 		t.Fatal("Load succeeded, want error")
@@ -210,6 +225,9 @@ func TestLoadReportsAllErrors(t *testing.T) {
 		"REGISTRATION",
 		// readysetgo:begin module=twofactor
 		"TWO_FACTOR_KEY",
+		// readysetgo:end
+		// readysetgo:begin module=social
+		"GITHUB_CLIENT_ID",
 		// readysetgo:end
 	} {
 		if !strings.Contains(err.Error(), key) {

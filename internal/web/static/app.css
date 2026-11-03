@@ -100,7 +100,7 @@ button, .button {
   text-decoration: none;
   cursor: pointer;
 }
-button.secondary { background: transparent; color: var(--accent); }
+button.secondary, .button.secondary { background: transparent; color: var(--accent); }
 button.danger { background: var(--danger); border-color: var(--danger); color: var(--bg); }
 button.link {
   padding: 0;

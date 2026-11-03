@@ -45,7 +45,21 @@ type Options struct {
 	// TimeZone returns the time zone to show times in, or nil for UTC.
 	TimeZone func(ctx context.Context) *time.Location
 	Logger   *slog.Logger
+	// readysetgo:begin module=social
+	// Providers are the other services people can log in with, offered on
+	// the login and sign-up pages.
+	Providers []Provider
+	// readysetgo:end
 }
+
+// readysetgo:begin module=social
+// Provider is a service people can log in with: its pages are under
+// /auth/{ID}.
+type Provider struct {
+	ID, Name string
+}
+
+// readysetgo:end
 
 // Renderer renders pages within the shared layout and serves static files.
 type Renderer struct {
@@ -167,6 +181,9 @@ type pageData struct {
 	OpenSignup bool
 	Flash      string
 	Data       any
+	// readysetgo:begin module=social
+	Providers []Provider
+	// readysetgo:end
 }
 
 // Render writes the page name with status, passing data as .Data.
@@ -188,6 +205,9 @@ func (p *Pages) Render(w http.ResponseWriter, r *http.Request, status int, name 
 		AppName: p.rd.opts.AppName, TimeZone: time.UTC, OpenSignup: p.rd.opts.OpenSignup,
 		Flash: popFlash(w, r), Data: data,
 	}
+	// readysetgo:begin module=social
+	pd.Providers = p.rd.opts.Providers
+	// readysetgo:end
 	if p.rd.opts.User != nil {
 		pd.User = p.rd.opts.User(r.Context())
 	}

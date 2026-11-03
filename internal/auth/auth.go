@@ -69,13 +69,20 @@ type User struct {
 	Role          string
 	EmailVerified bool
 	CreatedAt     time.Time
+	// readysetgo:begin module=social
+	HasPassword bool // false for someone who signed up through another service
+	// readysetgo:end
 }
 
 func toUser(u store.User) User {
-	return User{
+	user := User{
 		ID: u.ID, Email: u.Email, Name: u.Name, TimeZone: u.TimeZone, Role: u.Role,
 		EmailVerified: u.EmailVerifiedAt.Valid, CreatedAt: u.CreatedAt,
 	}
+	// readysetgo:begin module=social
+	user.HasPassword = u.PasswordHash != ""
+	// readysetgo:end
+	return user
 }
 
 // Lifetime is how long a session lasts: it ends after Idle without use, and
@@ -457,6 +464,12 @@ func (s *Service) Login(ctx context.Context, address, password string, client Cl
 	} else if err != nil {
 		return "", err
 	}
+	// readysetgo:begin module=social
+	if u.PasswordHash == "" { // signed up through another service
+		_, _, _ = s.hasher.Verify(ctx, s.dummyHash, password)
+		return "", s.loginFailed(ctx, u.ID, ip, "no password")
+	}
+	// readysetgo:end
 	ok, rehash, err := s.hasher.Verify(ctx, u.PasswordHash, password)
 	switch {
 	case err != nil:
@@ -478,26 +491,21 @@ func (s *Service) Login(ctx context.Context, address, password string, client Cl
 		}
 	}
 	// readysetgo:begin module=twofactor
-	if s.secondFactor != nil {
-		challenge, err := s.secondFactor.Challenge(ctx, u.ID)
-		if err != nil {
-			return "", err
-		}
-		if challenge != "" {
-			return "", &CodeRequiredError{Challenge: challenge}
-		}
+	if err := s.askForCode(ctx, u.ID); err != nil {
+		return "", err
 	}
 	// readysetgo:end
-	return s.loggedIn(ctx, u.ID, client, life)
+	return s.loggedIn(ctx, u.ID, client, life, "")
 }
 
-// loggedIn starts a session for userID and records the login.
-func (s *Service) loggedIn(ctx context.Context, userID uuid.UUID, client Client, life Lifetime) (string, error) {
+// loggedIn starts a session for userID and records the login, with how
+// they logged in as its detail when it wasn't a password.
+func (s *Service) loggedIn(ctx context.Context, userID uuid.UUID, client Client, life Lifetime, how string) (string, error) {
 	token, err := s.startSession(ctx, userID, client, life)
 	if err != nil {
 		return "", err
 	}
-	return token, s.Record(ctx, nil, Event{Name: EventLogin, UserID: userID, IP: client.IP})
+	return token, s.Record(ctx, nil, Event{Name: EventLogin, UserID: userID, IP: client.IP, Detail: how})
 }
 
 // loginFailed records a failed login and returns ErrInvalidCredentials.
@@ -688,6 +696,11 @@ func (s *Service) CheckCurrentPassword(ctx context.Context, u User, field, passw
 	if err != nil {
 		return db.Err(err)
 	}
+	// readysetgo:begin module=social
+	if row.PasswordHash == "" {
+		return validate.Errors{field: "You don't have a password yet. Set one first, with a password reset link."}
+	}
+	// readysetgo:end
 	ok, _, err := s.hasher.Verify(ctx, row.PasswordHash, password)
 	if err != nil {
 		return err

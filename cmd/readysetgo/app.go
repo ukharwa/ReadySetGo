@@ -31,6 +31,9 @@ import (
 	// readysetgo:begin module=uploads
 	"github.com/ukharwa/readysetgo/internal/uploads"
 	// readysetgo:end
+	// readysetgo:begin module=social
+	"github.com/ukharwa/readysetgo/internal/social"
+	// readysetgo:end
 	// readysetgo:begin module=twofactor
 	"github.com/ukharwa/readysetgo/internal/twofactor"
 	// readysetgo:end
@@ -134,6 +137,9 @@ type services struct {
 	// readysetgo:begin module=twofactor
 	twoFactor *twofactor.Service
 	// readysetgo:end
+	// readysetgo:begin module=social
+	social *social.Service
+	// readysetgo:end
 }
 
 // newServices builds the services, with sessions in the database.
@@ -181,6 +187,17 @@ func newServices(cfg config.Config, d *db.DB, logger *slog.Logger) (*services, e
 	s.twoFactor, err = twofactor.NewService(d, s.accounts, logger, twofactor.Options{
 		AppName: cfg.AppName,
 		Key:     cfg.TwoFactorKey,
+	})
+	if err != nil {
+		return nil, err
+	}
+	// readysetgo:end
+	// readysetgo:begin module=social
+	s.social, err = social.NewService(d, s.accounts, logger, social.Options{
+		AppName: cfg.AppName,
+		BaseURL: cfg.AppURL,
+		Google:  social.Credentials{ClientID: cfg.GoogleClientID, ClientSecret: cfg.GoogleClientSecret},
+		GitHub:  social.Credentials{ClientID: cfg.GitHubClientID, ClientSecret: cfg.GitHubClientSecret},
 	})
 	if err != nil {
 		return nil, err

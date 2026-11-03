@@ -1,0 +1,29 @@
+{{define "title"}}Ways to log in{{end}}
+
+{{define "content"}}
+<p><a href="/account">Your account</a></p>
+<h1>Ways to log in</h1>
+{{with .Data}}
+<section class="card">
+  <h2>Password</h2>
+  {{if .HasPassword}}<p>You can log in with your email address and password.</p>
+  {{else}}<p>You haven't set a password. To set one, <a href="/forgot-password">ask for a password reset link</a>.</p>
+  {{end}}
+</section>
+
+<section class="card">
+  <h2>Other services</h2>
+  {{range .Identities}}
+  <p>{{.Provider.Name}} ({{.Email}}), connected {{(.ConnectedAt.In $.TimeZone).Format "2 Jan 2006"}}.</p>
+  <form method="post" action="/account/sign-in/{{.Provider.ID}}/disconnect" class="inline">
+    <button type="submit" class="secondary">Disconnect {{.Provider.Name}}</button>
+  </form>
+  {{else}}
+  <p>None connected yet.</p>
+  {{end}}
+  {{range .Unconnected}}
+  <p><a href="/auth/{{.ID}}" class="button secondary">Connect {{.Name}}</a></p>
+  {{end}}
+</section>
+{{end}}
+{{end}}

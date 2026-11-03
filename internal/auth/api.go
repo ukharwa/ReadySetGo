@@ -200,6 +200,9 @@ type userJSON struct {
 	Role          string    `json:"role"`
 	EmailVerified bool      `json:"email_verified"`
 	CreatedAt     time.Time `json:"created_at"`
+	// readysetgo:begin module=social
+	HasPassword bool `json:"has_password"`
+	// readysetgo:end
 }
 
 func (h *API) me(w http.ResponseWriter, r *http.Request) {

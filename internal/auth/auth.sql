@@ -93,6 +93,9 @@ VALUES (@token_hash, @email, @created_at, @expires_at);
 -- name: GetSignupInvitation :one
 SELECT * FROM signup_invitations WHERE token_hash = @token_hash;
 
+-- name: CountSignupInvitations :one
+SELECT COUNT(*) FROM signup_invitations WHERE email = @email AND expires_at > @now;
+
 -- name: DeleteSignupInvitations :exec
 DELETE FROM signup_invitations WHERE email = @email;
 

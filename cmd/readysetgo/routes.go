@@ -20,6 +20,9 @@ import (
 	// readysetgo:begin module=uploads
 	"github.com/ukharwa/readysetgo/internal/uploads"
 	// readysetgo:end
+	// readysetgo:begin module=social
+	"github.com/ukharwa/readysetgo/internal/social"
+	// readysetgo:end
 	// readysetgo:begin module=twofactor
 	"github.com/ukharwa/readysetgo/internal/twofactor"
 	// readysetgo:end
@@ -72,6 +75,9 @@ func routes(cfg config.Config, logger *slog.Logger, health *httpx.Health, svc *s
 	// readysetgo:end
 	// readysetgo:begin module=twofactor
 	twofactor.NewAPI(svc.twoFactor, svc.limiter).Routes(app)
+	// readysetgo:end
+	// readysetgo:begin module=social
+	social.NewAPI(svc.social, svc.limiter).Routes(app)
 	// readysetgo:end
 	// readysetgo:end
 

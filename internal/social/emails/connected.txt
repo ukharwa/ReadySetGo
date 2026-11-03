@@ -1,0 +1,9 @@
+Subject: {{.Provider}} was connected to your account
+
+Hello{{with .Name}} {{.}}{{end}},
+
+You can now log in to {{.AppName}} with your {{.Provider}} account
+({{.Account}}).
+
+If that wasn't you, someone may have access to your {{.Provider}} account:
+disconnect it from your account page, and secure it with {{.Provider}}.

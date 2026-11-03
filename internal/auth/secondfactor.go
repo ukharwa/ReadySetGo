@@ -34,6 +34,22 @@ type SecondFactor interface {
 // UseSecondFactor makes Login ask for f after the password.
 func (s *Service) UseSecondFactor(f SecondFactor) { s.secondFactor = f }
 
+// askForCode returns *CodeRequiredError if userID must give a code to finish
+// logging in.
+func (s *Service) askForCode(ctx context.Context, userID uuid.UUID) error {
+	if s.secondFactor == nil {
+		return nil
+	}
+	challenge, err := s.secondFactor.Challenge(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if challenge != "" {
+		return &CodeRequiredError{Challenge: challenge}
+	}
+	return nil
+}
+
 // CodeRequiredError is what Login returns when the password was right and
 // a code is needed too. FinishLogin continues with Challenge and the code.
 type CodeRequiredError struct {
@@ -77,7 +93,7 @@ func (s *Service) FinishLogin(ctx context.Context, challenge, code string, clien
 	if err := s.limiter.Reset(ctx, key); err != nil {
 		return "", err
 	}
-	return s.loggedIn(ctx, u.ID, client, life)
+	return s.loggedIn(ctx, u.ID, client, life, "")
 }
 
 // readysetgo:end

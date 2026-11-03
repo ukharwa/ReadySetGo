@@ -14,5 +14,10 @@
   <label class="check"><input type="checkbox" name="remember" value="1"> Keep me logged in for 30 days</label>
   <button type="submit">Log in</button>
 </form>
+<!-- readysetgo:begin module=social -->
+{{range .Providers}}
+<p><a href="/auth/{{.ID}}{{with $.Data.Next}}?next={{.}}{{end}}" class="button secondary" data-time-zone>Continue with {{.Name}}</a></p>
+{{end}}
+<!-- readysetgo:end -->
 <p><a href="/forgot-password">Forgotten your password?</a>{{if .OpenSignup}} · <a href="/register{{with .Data.Next}}?next={{.}}{{end}}">Create an account</a>{{end}}</p>
 {{end}}

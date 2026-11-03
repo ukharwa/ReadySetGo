@@ -17,6 +17,9 @@ import (
 	// readysetgo:begin module=audit
 	"github.com/ukharwa/readysetgo/internal/audit"
 	// readysetgo:end
+	// readysetgo:begin module=social
+	"github.com/ukharwa/readysetgo/internal/social"
+	// readysetgo:end
 	// readysetgo:begin module=twofactor
 	"github.com/ukharwa/readysetgo/internal/twofactor"
 	// readysetgo:end
@@ -36,10 +39,16 @@ import (
 // middleware stack, since they need neither the access log nor a session
 // lookup), and every feature's pages on app.
 func mountPages(cfg config.Config, logger *slog.Logger, root, app *http.ServeMux, svc *services) error {
-	pages, err := web.New(web.Options{
+	opts := web.Options{
 		AppName: cfg.AppName, Dev: cfg.Dev(), OpenSignup: !svc.accounts.InviteOnly(),
 		User: currentUser, TimeZone: currentTimeZone, Logger: logger,
-	})
+	}
+	// readysetgo:begin module=social
+	for _, p := range svc.social.Providers() {
+		opts.Providers = append(opts.Providers, web.Provider(p))
+	}
+	// readysetgo:end
+	pages, err := web.New(opts)
 	if err != nil {
 		return err
 	}
@@ -98,6 +107,13 @@ func mountPages(cfg config.Config, logger *slog.Logger, root, app *http.ServeMux
 		return err
 	}
 	twoFactorPages.Routes(app)
+	// readysetgo:end
+	// readysetgo:begin module=social
+	socialPages, err := social.NewWeb(svc.social, pages, svc.limiter)
+	if err != nil {
+		return err
+	}
+	socialPages.Routes(app)
 	// readysetgo:end
 	return nil
 }

@@ -414,10 +414,10 @@ the flow differ from every other sign-up.
 default password. **Considered:** full role-based permissions (RBAC), which apps
 this size don't need yet.
 
-### Left out: social login and passkeys
+### Left out: passkeys
 
-Most of these apps don't need them, and neither is small. **Considered:** a
-"Sign in with Google" style module, and passkeys.
+Most of these apps don't need them yet, and they aren't small.
+**Considered:** passkeys as a module.
 
 ## Security
 
@@ -892,6 +892,40 @@ standard library), or one of 10 single-use recovery codes.
 **Considered:** storing secrets unencrypted, as many libraries do; codes by
 SMS or email, which are weaker and cost money; "remember this device";
 requiring it for admins; and passkeys.
+<!-- readysetgo:end -->
+
+<!-- readysetgo:begin module=social -->
+### Social login: Google and GitHub, linked by verified address
+
+Added 2026-11-03. OAuth 2.0's code flow with PKCE, through
+`golang.org/x/oauth2` (the Go team's, with no other dependencies). Each
+provider is on when its client ID and secret are set.
+- Someone coming back from a provider is logged in as the account that
+  provider account was linked to; otherwise the account with the same
+  address, but only when the provider says the address is verified;
+  otherwise a new account, which `REGISTRATION=invite` still limits to
+  invited addresses.
+- Linking to an account that never confirmed its address first clears its
+  password and sessions: whoever made it may not own the address, and could
+  be waiting for the owner to link it (a known takeover).
+- New accounts have no password (an empty hash, which never matches). They
+  set one with a reset link, which anything asking for the current password
+  points them to. Disconnecting a provider that is someone's only way in is
+  refused.
+- People's details come from each provider's user-info endpoint with the
+  access token, so no ID token or JWT library is needed.
+- Starting is a link (GET), not a form: pages' `form-action 'self'` would
+  stop a form redirecting to the provider. The callback is a GET too; a
+  one-time `state` in a cookie stops anyone else's link from working.
+- Two-factor login, when both modules are chosen, still asks for its code
+  after a provider: someone who turned it on expects it on every login.
+- Sessions last as a login without "keep me logged in" does.
+
+**Considered:** Microsoft, whose address claim isn't always verified, so
+linking by address would be unsafe; Apple, which needs a paid developer
+account; asking people to log in with their password before linking an
+existing account; and a generic OpenID Connect provider, until an app needs
+one.
 <!-- readysetgo:end -->
 
 <!-- example:begin -->

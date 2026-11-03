@@ -68,6 +68,13 @@ type Config struct {
 
 	TwoFactorKey []byte // TWO_FACTOR_KEY (secret): encrypts two-factor login secrets
 	// readysetgo:end
+	// readysetgo:begin module=social
+
+	GoogleClientID     string // GOOGLE_CLIENT_ID: with the secret, turns on logging in with Google
+	GoogleClientSecret string // GOOGLE_CLIENT_SECRET (secret)
+	GitHubClientID     string // GITHUB_CLIENT_ID: with the secret, turns on logging in with GitHub
+	GitHubClientSecret string // GITHUB_CLIENT_SECRET (secret)
+	// readysetgo:end
 }
 
 // Dev reports whether the application runs in development mode.
@@ -108,6 +115,10 @@ func (c Config) LogValue() slog.Value {
 		// readysetgo:end
 		// readysetgo:begin module=errreport
 		slog.Bool("error_reporting", c.SentryDSN != ""),
+		// readysetgo:end
+		// readysetgo:begin module=social
+		slog.Bool("google_login", c.GoogleClientID != ""),
+		slog.Bool("github_login", c.GitHubClientID != ""),
 		// readysetgo:end
 	)
 }
@@ -200,6 +211,11 @@ func Load(getenv func(string) string) (Config, error) {
 
 	c.TwoFactorKey = l.twoFactorKey(c.Dev())
 	// readysetgo:end
+	// readysetgo:begin module=social
+
+	c.GoogleClientID, c.GoogleClientSecret = l.pair("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET")
+	c.GitHubClientID, c.GitHubClientSecret = l.pair("GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET")
+	// readysetgo:end
 
 	if c.ShutdownDrain < 0 {
 		l.fail("SHUTDOWN_DRAIN", "must not be negative")
@@ -231,6 +247,18 @@ func (l *loader) twoFactorKey(dev bool) []byte {
 		l.fail("TWO_FACTOR_KEY", "must be 32 bytes in base64: "+how)
 	}
 	return key
+}
+
+// readysetgo:end
+// readysetgo:begin module=social
+// pair reads two settings that are set together or not at all, such as a
+// client ID and its secret.
+func (l *loader) pair(a, b string) (string, string) {
+	va, vb := l.str(a, ""), l.str(b, "")
+	if (va == "") != (vb == "") {
+		l.fail(a, "and "+b+" must be set together")
+	}
+	return va, vb
 }
 
 // readysetgo:end
