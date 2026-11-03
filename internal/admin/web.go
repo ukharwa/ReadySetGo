@@ -45,6 +45,7 @@ func (h *Web) Routes(mux *http.ServeMux) {
 		return auth.RequireUser(auth.RequireRole(auth.RoleAdmin)(f))
 	}
 	mux.Handle("GET /admin/users", admin(h.users))
+	mux.Handle("POST /admin/invitations", admin(h.invite))
 	mux.Handle("GET /admin/users/{userID}", admin(h.user))
 	mux.Handle("POST /admin/users/{userID}/role", admin(h.setRole))
 	mux.Handle("POST /admin/users/{userID}/disable", admin(h.disable))
@@ -58,10 +59,17 @@ func (h *Web) Routes(mux *http.ServeMux) {
 type usersPage struct {
 	Search     string
 	Users      []User
-	Prev, Next string // links to the neighbouring pages, if there are any
+	Prev, Next string   // links to the neighbouring pages, if there are any
+	Invite     web.Form // the invitation form
 }
 
 func (h *Web) users(w http.ResponseWriter, r *http.Request) {
+	h.renderUsers(w, r, http.StatusOK, web.Form{})
+}
+
+// renderUsers shows the users matching the request's search, with invite
+// as the invitation form.
+func (h *Web) renderUsers(w http.ResponseWriter, r *http.Request, status int, invite web.Form) {
 	q := r.URL.Query()
 	page, _ := strconv.Atoi(q.Get("page"))
 	page = max(page, 1)
@@ -70,7 +78,7 @@ func (h *Web) users(w http.ResponseWriter, r *http.Request) {
 		h.serverError(w, r, err)
 		return
 	}
-	data := usersPage{Search: q.Get("q"), Users: users}
+	data := usersPage{Search: q.Get("q"), Users: users, Invite: invite}
 	link := func(page int) string {
 		q.Set("page", strconv.Itoa(page))
 		return "/admin/users?" + q.Encode()
@@ -81,7 +89,22 @@ func (h *Web) users(w http.ResponseWriter, r *http.Request) {
 	if more {
 		data.Next = link(page + 1)
 	}
-	h.pages.Render(w, r, http.StatusOK, "users.html", data)
+	h.pages.Render(w, r, status, "users.html", data)
+}
+
+func (h *Web) invite(w http.ResponseWriter, r *http.Request) {
+	_ = r.ParseForm()
+	form := web.Form{Values: r.PostForm}
+	err := h.svc.Invite(r.Context(), form.Get("email"))
+	switch {
+	case errors.As(err, &form.Errors):
+		h.renderUsers(w, r, http.StatusUnprocessableEntity, form)
+	case err != nil:
+		h.serverError(w, r, err)
+	default:
+		web.SetFlash(w, "An invitation is on its way to "+strings.TrimSpace(form.Get("email"))+".")
+		http.Redirect(w, r, "/admin/users", http.StatusSeeOther)
+	}
 }
 
 type userPage struct {

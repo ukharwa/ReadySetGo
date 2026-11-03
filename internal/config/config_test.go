@@ -57,6 +57,7 @@ func TestLoadDefaults(t *testing.T) {
 				WorkerEnabled:     true,
 				WorkerConcurrency: 4,
 				PasswordMinLength: 12,
+				Registration:      "open",
 				// readysetgo:begin module=uploads
 				UploadsDir: "data/uploads",
 				// readysetgo:end
@@ -102,6 +103,7 @@ func TestLoadOverrides(t *testing.T) {
 		"WORKER_ENABLED":      "false",
 		"WORKER_CONCURRENCY":  "2",
 		"PASSWORD_MIN_LENGTH": "15",
+		"REGISTRATION":        "invite",
 		// readysetgo:begin module=uploads
 		"UPLOADS_DIR": "/srv/files",
 		// readysetgo:end
@@ -145,6 +147,7 @@ func TestLoadOverrides(t *testing.T) {
 		WorkerEnabled:     false,
 		WorkerConcurrency: 2,
 		PasswordMinLength: 15,
+		Registration:      "invite",
 		// readysetgo:begin module=uploads
 		UploadsDir: "/srv/files",
 		// readysetgo:end
@@ -173,6 +176,7 @@ func TestLoadReportsAllErrors(t *testing.T) {
 		"TRUSTED_PROXIES":    "10.0.0.0/8,caddy",
 		"WORKER_CONCURRENCY": "0",
 		"APP_URL":            "ftp://example.com",
+		"REGISTRATION":       "closed",
 	}))
 	if err == nil {
 		t.Fatal("Load succeeded, want error")
@@ -180,6 +184,7 @@ func TestLoadReportsAllErrors(t *testing.T) {
 	for _, key := range []string{
 		"APP_ENV", "LOG_FORMAT", "LOG_LEVEL", "SHUTDOWN_DRAIN", "SHUTDOWN_TIMEOUT",
 		"DATABASE_URL", "MIGRATE_ON_START", "TRUSTED_PROXIES", "SMTP_HOST", "WORKER_CONCURRENCY", "APP_URL",
+		"REGISTRATION",
 	} {
 		if !strings.Contains(err.Error(), key) {
 			t.Errorf("error does not mention %s:\n%v", key, err)

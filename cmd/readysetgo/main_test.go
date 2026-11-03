@@ -142,6 +142,12 @@ func TestUserCommand(t *testing.T) {
 	if err := user("enable", "user@example.com"); !errors.Is(err, auth.ErrUserNotFound) {
 		t.Errorf("enabling a deleted user: err = %v, want ErrUserNotFound", err)
 	}
+	if err := user("invite", "new@example.com"); err != nil {
+		t.Errorf("invite: %v", err)
+	}
+	if err := user("invite", "admin@example.com"); err == nil || !strings.Contains(err.Error(), "already has an account") {
+		t.Errorf("inviting a user: err = %v", err)
+	}
 	if err := user("rename", "admin@example.com"); err == nil || !strings.Contains(err.Error(), "usage") {
 		t.Errorf("unknown action: err = %v, want the usage", err)
 	}

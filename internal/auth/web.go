@@ -44,7 +44,7 @@ func (h *Web) Routes(mux *http.ServeMux) {
 	limit := func(f http.HandlerFunc) http.Handler {
 		return ratelimit.PerIP(h.limiter, "auth", 20, time.Minute)(f)
 	}
-	mux.HandleFunc("GET /register", h.form("register.html"))
+	mux.HandleFunc("GET /register", h.registerPage)
 	mux.Handle("POST /register", limit(h.register))
 	mux.HandleFunc("GET /login", h.loginPage)
 	mux.Handle("POST /login", limit(h.login))
@@ -80,10 +80,11 @@ func redirectToLogin(w http.ResponseWriter, r *http.Request) bool {
 
 // formPage is the data for the single-form pages.
 type formPage struct {
-	Form  web.Form
-	Error string // a message about the whole form
-	Token string // for pages reached from an emailed link
-	Next  string // where to go after logging in
+	Form       web.Form
+	Error      string // a message about the whole form
+	Token      string // for pages reached from an emailed link
+	Next       string // where to go after logging in
+	InviteOnly bool   // on the sign-up page: whether it needs an invitation
 }
 
 func (h *Web) form(page string) http.HandlerFunc {
@@ -126,16 +127,41 @@ func (h *Web) fail(w http.ResponseWriter, r *http.Request, page string, data for
 	h.pages.Render(w, r, status, page, data)
 }
 
+// registerPage shows the sign-up form; with an invitation's token, it
+// fills in the address the invitation was sent to.
+func (h *Web) registerPage(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	page := formPage{Next: q.Get("next"), Token: q.Get("token"), InviteOnly: h.svc.InviteOnly()}
+	if page.Token != "" {
+		address, err := h.svc.Invitation(r.Context(), page.Token)
+		switch {
+		case errors.Is(err, ErrInvalidToken):
+			page.Error, page.Token = "This invitation is invalid or has expired.", ""
+		case err != nil:
+			h.fail(w, r, "register.html", page, err)
+			return
+		default:
+			page.Form.Values = url.Values{"email": {address}}
+		}
+	}
+	h.pages.Render(w, r, http.StatusOK, "register.html", page)
+}
+
 func (h *Web) register(w http.ResponseWriter, r *http.Request) {
 	form := web.Form{Values: postForm(r)}
-	err := h.svc.Register(r.Context(), Registration{
-		Email: form.Get("email"), Password: form.Get("password"), Name: form.Get("name"), TimeZone: form.Get("time_zone"),
-	})
-	if err != nil {
-		h.fail(w, r, "register.html", formPage{Form: form, Next: form.Get("next")}, err)
+	reg := Registration{
+		Email: form.Get("email"), Password: form.Get("password"), Name: form.Get("name"),
+		TimeZone: form.Get("time_zone"), Invite: form.Get("token"),
+	}
+	if err := h.svc.Register(r.Context(), reg); err != nil {
+		page := formPage{Form: form, Next: form.Get("next"), Token: reg.Invite, InviteOnly: h.svc.InviteOnly()}
+		if errors.Is(err, ErrInvalidToken) {
+			page.Token = ""
+		}
+		h.fail(w, r, "register.html", page, err)
 		return
 	}
-	web.SetFlash(w, "Check your inbox for a link to confirm your email address. You can log in now.")
+	web.SetFlash(w, h.svc.registeredMessage(reg))
 	login := "/login"
 	if next := web.SafeRedirect(form.Get("next"), ""); next != "" {
 		login += "?" + url.Values{"next": {next}}.Encode()

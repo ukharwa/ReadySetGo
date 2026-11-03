@@ -23,6 +23,13 @@ type Session struct {
 	ExpiresAt     time.Time
 }
 
+type SignupInvitation struct {
+	TokenHash string
+	Email     string
+	CreatedAt time.Time
+	ExpiresAt time.Time
+}
+
 type User struct {
 	ID              uuid.UUID
 	Email           string

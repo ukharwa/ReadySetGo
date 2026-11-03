@@ -10,11 +10,12 @@ import (
 	"github.com/ukharwa/readysetgo/internal/auth"
 )
 
-const userUsage = "usage: user promote | demote | disable | enable | delete EMAIL"
+const userUsage = "usage: user invite | promote | demote | disable | enable | delete EMAIL"
 
-// user changes an account from the command line. promote is how the first
-// admin is made, so the app never needs a default admin password; disable
-// also logs the user out everywhere; delete removes the account and
+// user changes an account from the command line. invite emails an address
+// a link to sign up (the way in when REGISTRATION=invite); promote is how
+// the first admin is made, so the app never needs a default admin password;
+// disable also logs the user out everywhere; delete removes the account and
 // everything that belongs to it.
 func user(ctx context.Context, args []string, getenv func(string) string, stdout io.Writer) error {
 	fs := flag.NewFlagSet("user", flag.ContinueOnError)
@@ -40,6 +41,13 @@ func user(ctx context.Context, args []string, getenv func(string) string, stdout
 		return err
 	}
 	accounts := svc.accounts
+	if action == "invite" {
+		if err := accounts.Invite(ctx, address); err != nil {
+			return fmt.Errorf("invite %s: %w", address, err)
+		}
+		logger.Info("invitation queued; a running worker sends it")
+		return nil
+	}
 	u, err := accounts.UserByEmail(ctx, address)
 	if err != nil {
 		return fmt.Errorf("%s %s: %w", action, address, err)

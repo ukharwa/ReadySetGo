@@ -47,6 +47,30 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) er
 	return err
 }
 
+const createSignupInvitation = `-- name: CreateSignupInvitation :exec
+
+INSERT INTO signup_invitations (token_hash, email, created_at, expires_at)
+VALUES (?1, ?2, ?3, ?4)
+`
+
+type CreateSignupInvitationParams struct {
+	TokenHash string
+	Email     string
+	CreatedAt time.Time
+	ExpiresAt time.Time
+}
+
+// Sign-up invitations
+func (q *Queries) CreateSignupInvitation(ctx context.Context, arg CreateSignupInvitationParams) error {
+	_, err := q.db.ExecContext(ctx, createSignupInvitation,
+		arg.TokenHash,
+		arg.Email,
+		arg.CreatedAt,
+		arg.ExpiresAt,
+	)
+	return err
+}
+
 const createUser = `-- name: CreateUser :one
 
 INSERT INTO users (id, email, name, time_zone, password_hash, role, email_verified_at, created_at, updated_at)
@@ -135,6 +159,18 @@ func (q *Queries) DeleteExpiredSessions(ctx context.Context, now time.Time) (int
 	return result.RowsAffected()
 }
 
+const deleteExpiredSignupInvitations = `-- name: DeleteExpiredSignupInvitations :execrows
+DELETE FROM signup_invitations WHERE expires_at < ?1
+`
+
+func (q *Queries) DeleteExpiredSignupInvitations(ctx context.Context, now time.Time) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteExpiredSignupInvitations, now)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const deleteExpiredUserTokens = `-- name: DeleteExpiredUserTokens :execrows
 DELETE FROM user_tokens WHERE expires_at < ?1
 `
@@ -153,6 +189,15 @@ DELETE FROM sessions WHERE token_hash = ?1
 
 func (q *Queries) DeleteSession(ctx context.Context, tokenHash string) error {
 	_, err := q.db.ExecContext(ctx, deleteSession, tokenHash)
+	return err
+}
+
+const deleteSignupInvitations = `-- name: DeleteSignupInvitations :exec
+DELETE FROM signup_invitations WHERE email = ?1
+`
+
+func (q *Queries) DeleteSignupInvitations(ctx context.Context, email string) error {
+	_, err := q.db.ExecContext(ctx, deleteSignupInvitations, email)
 	return err
 }
 
@@ -227,6 +272,22 @@ func (q *Queries) GetSession(ctx context.Context, tokenHash string) (Session, er
 		&i.CreatedAt,
 		&i.LastSeenAt,
 		&i.IdleExpiresAt,
+		&i.ExpiresAt,
+	)
+	return i, err
+}
+
+const getSignupInvitation = `-- name: GetSignupInvitation :one
+SELECT token_hash, email, created_at, expires_at FROM signup_invitations WHERE token_hash = ?1
+`
+
+func (q *Queries) GetSignupInvitation(ctx context.Context, tokenHash string) (SignupInvitation, error) {
+	row := q.db.QueryRowContext(ctx, getSignupInvitation, tokenHash)
+	var i SignupInvitation
+	err := row.Scan(
+		&i.TokenHash,
+		&i.Email,
+		&i.CreatedAt,
 		&i.ExpiresAt,
 	)
 	return i, err

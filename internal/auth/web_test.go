@@ -14,9 +14,9 @@ import (
 
 const password = "correct horse battery"
 
-func newWebApp(t *testing.T) *apptest.App {
+func newWebApp(t *testing.T, options ...func(*auth.Options)) *apptest.App {
 	t.Helper()
-	a := apptest.New(t)
+	a := apptest.New(t, options...)
 	pages, err := auth.NewWeb(a.Accounts, a.Renderer(), a.Limiter)
 	if err != nil {
 		t.Fatal(err)
@@ -368,5 +368,60 @@ func TestWebProfile(t *testing.T) {
 	page = a.Get(c, "/account")
 	if !strings.Contains(page.Body, now.Format("2 Jan 2006 15:04")) && !strings.Contains(page.Body, now.Add(-time.Minute).Format("2 Jan 2006 15:04")) {
 		t.Errorf("device list doesn't show %s Kolkata time:\n%s", now.Format("15:04"), page.Body)
+	}
+}
+
+func inviteOnly(o *auth.Options) { o.InviteOnly = true }
+
+func TestWebInviteOnly(t *testing.T) {
+	t.Parallel()
+	a := newWebApp(t, inviteOnly)
+	c := a.Client()
+	if p := a.Get(c, "/login"); strings.Contains(p.Body, `href="/register`) {
+		t.Errorf("login page links to sign-up when it needs an invitation:\n%s", p.Body)
+	}
+
+	// Without an invitation, signing up looks the same but makes nothing.
+	open := newWebApp(t)
+	want := a.Post(c, "/register", url.Values{"email": {"eve@example.com"}, "password": {password}})
+	got := open.Post(open.Client(), "/register", url.Values{"email": {"eve@example.com"}, "password": {password}})
+	if want.Status != got.Status || want.Location != got.Location {
+		t.Errorf("uninvited: %d → %q; open sign-up: %d → %q", want.Status, want.Location, got.Status, got.Location)
+	}
+	if sent := a.SentTo("eve@example.com"); len(sent) != 1 || !strings.Contains(sent[0].Subject, "needs an invitation") {
+		t.Errorf("emails to eve: %+v", sent)
+	}
+	if p := a.Post(c, "/login", url.Values{"email": {"eve@example.com"}, "password": {password}}); p.Status != http.StatusUnauthorized {
+		t.Errorf("uninvited sign-up made an account: login status %d", p.Status)
+	}
+
+	if err := a.Accounts.Invite(t.Context(), "ada@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	token := a.TokenFrom("ada@example.com", "/register")
+	if p := a.Get(c, "/register?token="+token); !apptest.Contains(p.Body, `value="ada@example.com"`, "You've been invited") {
+		t.Errorf("invitation page doesn't fill in the address:\n%s", p.Body)
+	}
+	if p := a.Get(c, "/register?token=nonsense"); !strings.Contains(p.Body, "invalid or has expired") {
+		t.Errorf("a bad invitation isn't reported:\n%s", p.Body)
+	}
+	if p := a.Post(c, "/register", url.Values{"token": {token}, "email": {"eve@example.com"}, "password": {password}}); p.Status != http.StatusUnprocessableEntity || !strings.Contains(p.Body, "address the invitation was sent to") {
+		t.Errorf("someone else's invitation: status %d\n%s", p.Status, p.Body)
+	}
+	if p := a.Post(c, "/register", url.Values{"token": {token}, "email": {"ada@example.com"}, "password": {password}}); p.Status != http.StatusSeeOther {
+		t.Fatalf("sign up with the invitation: status %d\n%s", p.Status, p.Body)
+	}
+	logIn(t, a, c, "ada@example.com", password)
+	if p := a.Get(c, "/account"); strings.Contains(p.Body, "Send a new link") {
+		t.Error("signing up through an invitation didn't confirm the address")
+	}
+	if sent := a.SentTo("ada@example.com"); len(sent) != 1 {
+		t.Errorf("want only the invitation sent to ada, got %d emails", len(sent))
+	}
+	if err := a.Accounts.Invite(t.Context(), "ada@example.com"); err == nil {
+		t.Error("invited an address that has an account")
+	}
+	if p := a.Post(a.Client(), "/register", url.Values{"token": {token}, "email": {"ada@example.com"}, "password": {password}}); p.Status != http.StatusBadRequest {
+		t.Errorf("reusing the invitation: status %d, want 400", p.Status)
 	}
 }

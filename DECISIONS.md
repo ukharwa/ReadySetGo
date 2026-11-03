@@ -394,6 +394,19 @@ written into the page, which Go has no API for; the browser supplies its
 own list instead (`Intl.supportedValuesOf`), and without JavaScript the
 field still takes a typed name.
 
+### Sign-up: open, or by invitation
+
+`REGISTRATION=open` (the default) or `invite`. An invitation is an emailed
+link, valid for 7 days, sent by `user invite EMAIL` or an admin; signing up
+through it confirms the address. In invite mode, someone without one gets
+the same reply as everyone else and an email explaining, so the form never
+reveals who is invited. Features with invitations of their own (joining a
+workspace) vouch for their addresses through `auth.Service.AllowSignup`,
+so auth doesn't depend on them. **Considered:** a third "closed" mode,
+which invite mode with nobody inviting already is; and logging the new
+user straight in after an invited sign-up, which saves one step but makes
+the flow differ from every other sign-up.
+
 ### Roles: a `role` column
 
 `user` or `admin`, with `auth.RequireRole("admin")` middleware and

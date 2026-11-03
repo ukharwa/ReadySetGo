@@ -222,3 +222,27 @@ func TestAPIProfile(t *testing.T) {
 		t.Errorf("update profile: %d %+v", r.Status, got)
 	}
 }
+
+func TestAPIInvitation(t *testing.T) {
+	t.Parallel()
+	a := apptest.New(t, func(o *auth.Options) { o.InviteOnly = true })
+	auth.NewAPI(a.Accounts, a.Limiter).Routes(a.Mux)
+	c := a.Client()
+	body := map[string]string{"email": "ada@example.com", "password": apiPassword}
+	if r := a.JSON(c, "POST", "/api/auth/register", "", body); r.Status != http.StatusAccepted || strings.Contains(string(r.Body), "ready") {
+		t.Errorf("uninvited: %d %s", r.Status, r.Body)
+	}
+	if err := a.Accounts.Invite(t.Context(), "ada@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	body["token"] = a.TokenFrom("ada@example.com", "/register")
+	if r := a.JSON(c, "POST", "/api/auth/register", "", body); r.Status != http.StatusAccepted || !strings.Contains(string(r.Body), "ready") {
+		t.Fatalf("invited: %d %s", r.Status, r.Body)
+	}
+	var got me
+	a.JSON(c, "POST", "/api/auth/login", "", map[string]any{"email": "ada@example.com", "password": apiPassword})
+	a.Decode(a.JSON(c, "GET", "/api/auth/me", "", nil), &got)
+	if !got.EmailVerified {
+		t.Errorf("me = %+v, want the invited address confirmed", got)
+	}
+}

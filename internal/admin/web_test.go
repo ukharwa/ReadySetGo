@@ -162,3 +162,25 @@ func TestWebFailedJobs(t *testing.T) {
 		t.Errorf("retrying a job that isn't failed: %d, want 404", p.Status)
 	}
 }
+
+func TestWebInvite(t *testing.T) {
+	t.Parallel()
+	a := newWebApp(t)
+	admin, _ := signInAdmin(t, a)
+	user := a.Client()
+	a.SignIn(user, "bob@example.com")
+
+	if p := a.Post(admin, "/admin/invitations", url.Values{"email": {"bob@example.com"}}); p.Status != http.StatusUnprocessableEntity || !strings.Contains(p.Body, "already has an account") {
+		t.Errorf("inviting a user: %d\n%s", p.Status, p.Body)
+	}
+	if p := a.Post(user, "/admin/invitations", url.Values{"email": {"eve@example.com"}}); p.Status != http.StatusForbidden {
+		t.Errorf("inviting as a user: %d, want 403", p.Status)
+	}
+	if p := a.Post(admin, "/admin/invitations", url.Values{"email": {"dora@example.com"}}); p.Status != http.StatusSeeOther {
+		t.Fatalf("invite: %d\n%s", p.Status, p.Body)
+	}
+	a.TokenFrom("dora@example.com", "/register") // fails the test if there's no link
+	if sent := a.SentTo("eve@example.com"); len(sent) != 0 {
+		t.Errorf("a user's invitation was sent: %+v", sent)
+	}
+}

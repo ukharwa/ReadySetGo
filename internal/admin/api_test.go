@@ -59,3 +59,17 @@ func TestAPIUsers(t *testing.T) {
 		t.Errorf("failed jobs as a user: %d, want 403", r.Status)
 	}
 }
+
+func TestAPIInvite(t *testing.T) {
+	t.Parallel()
+	a := apptest.New(t)
+	admin.NewAPI(admin.NewService(a.DB, a.Accounts, a.Logger)).Routes(a.Mux)
+	adminClient, _ := signInAdmin(t, a)
+	if r := a.JSON(adminClient, "POST", "/api/admin/invitations", "", map[string]string{"email": "not an address"}); r.Status != http.StatusUnprocessableEntity {
+		t.Errorf("invalid address: %d, want 422", r.Status)
+	}
+	if r := a.JSON(adminClient, "POST", "/api/admin/invitations", "", map[string]string{"email": "dora@example.com"}); r.Status != http.StatusAccepted {
+		t.Fatalf("invite: %d %s", r.Status, r.Body)
+	}
+	a.TokenFrom("dora@example.com", "/register")
+}

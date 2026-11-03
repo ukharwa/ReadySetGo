@@ -37,7 +37,7 @@
       <form method="post" action="/logout" class="inline"><button type="submit" class="link">Log out</button></form>
     {{else}}
       <a href="/login">Log in</a>
-      <a href="/register" class="button">Sign up</a>
+      {{if .OpenSignup}}<a href="/register" class="button">Sign up</a>{{end}}
     {{end}}
   </nav>
 </header>

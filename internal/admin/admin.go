@@ -113,6 +113,11 @@ func accountErr(err error) error {
 	return err
 }
 
+// Invite emails address a link to sign up.
+func (s *Service) Invite(ctx context.Context, address string) error {
+	return s.accounts.Invite(ctx, address)
+}
+
 // SetRole gives the user with id a role, on admin's behalf.
 func (s *Service) SetRole(ctx context.Context, admin auth.User, id uuid.UUID, role string) error {
 	if err := notSelf(admin, id); err != nil {

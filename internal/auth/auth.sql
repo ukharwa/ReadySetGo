@@ -83,3 +83,18 @@ DELETE FROM user_tokens WHERE user_id = @user_id AND purpose = @purpose;
 
 -- name: DeleteExpiredUserTokens :execrows
 DELETE FROM user_tokens WHERE expires_at < @now;
+
+-- Sign-up invitations
+
+-- name: CreateSignupInvitation :exec
+INSERT INTO signup_invitations (token_hash, email, created_at, expires_at)
+VALUES (@token_hash, @email, @created_at, @expires_at);
+
+-- name: GetSignupInvitation :one
+SELECT * FROM signup_invitations WHERE token_hash = @token_hash;
+
+-- name: DeleteSignupInvitations :exec
+DELETE FROM signup_invitations WHERE email = @email;
+
+-- name: DeleteExpiredSignupInvitations :execrows
+DELETE FROM signup_invitations WHERE expires_at < @now;

@@ -135,7 +135,15 @@ func NewService(d *db.DB, accounts *auth.Service, limiter ratelimit.Limiter, log
 	s := &Service{db: d, accounts: accounts, limiter: limiter, logger: logger, opts: opts, emails: emails, now: db.Now}
 	accounts.OnUserCreated(s.createPersonal)
 	accounts.OnUserDeleting(s.beforeUserDeleted)
+	accounts.AllowSignup(s.hasInvitation)
 	return s, nil
+}
+
+// hasInvitation reports whether address has been invited to a workspace,
+// which lets it sign up when signing up needs an invitation.
+func (s *Service) hasInvitation(ctx context.Context, tx *sql.Tx, address string) (bool, error) {
+	pending, err := store.New(tx).CountPendingInvitations(ctx, store.CountPendingInvitationsParams{Email: address, Now: s.now()})
+	return pending > 0, err
 }
 
 // createPersonal gives a new user a workspace of their own, unless an

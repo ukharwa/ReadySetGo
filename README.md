@@ -185,6 +185,11 @@ grows.
   and security events (failed logins, role changes, …) in the logs.
 - **Roles:** `user` and `admin`; `user promote EMAIL` makes the first
   admin.
+- **Open or invite-only sign-up:** `REGISTRATION=invite` lets in only
+  people with an invitation, which `user invite EMAIL` sends.
+<!-- readysetgo:begin module=admin -->
+  Admins can send them from the users page too.
+<!-- readysetgo:end -->
 - **Background jobs** in the database, safe with several instances, and
   scheduled tasks that run once per interval.
 - **Email** through SMTP, sent by a job; Mailpit catches it in development.

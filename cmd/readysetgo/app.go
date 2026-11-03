@@ -138,6 +138,7 @@ func newServices(cfg config.Config, d *db.DB, logger *slog.Logger) (*services, e
 		AppName:           cfg.AppName,
 		BaseURL:           cfg.AppURL,
 		MinPasswordLength: cfg.PasswordMinLength,
+		InviteOnly:        cfg.Registration == "invite",
 	})
 	if err != nil {
 		return nil, err

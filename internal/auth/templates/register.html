@@ -2,8 +2,13 @@
 
 {{define "content"}}
 <h1>Create an account</h1>
+{{if .Data.Token}}<p>You've been invited. Choose a password to finish signing up.</p>
+{{else if .Data.InviteOnly}}<p>Signing up needs an invitation: use the email address it was sent to.</p>
+{{end}}
+{{with .Data.Error}}<p class="error-summary" role="alert">{{.}}</p>{{end}}
 <form method="post" action="/register" class="stack">
   <input type="hidden" name="next" value="{{.Data.Next}}">
+  <input type="hidden" name="token" value="{{.Data.Token}}">
   <input type="hidden" name="time_zone" value="{{.Data.Form.Get "time_zone"}}" data-time-zone>
   <label>Name <span class="hint">(optional)</span>
     <input type="text" name="name" value="{{.Data.Form.Get "name"}}" autocomplete="name" maxlength="100" autofocus>

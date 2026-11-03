@@ -6,6 +6,10 @@
   <p>You're logged in as {{.User.Email}}.</p>
 {{else}}
   <p>This is the home page. Replace it with your app.</p>
+  {{if .OpenSignup}}
   <p><a href="/register" class="button">Create an account</a> or <a href="/login">log in</a>.</p>
+  {{else}}
+  <p><a href="/login" class="button">Log in</a></p>
+  {{end}}
 {{end}}
 {{end}}

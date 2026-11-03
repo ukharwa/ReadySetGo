@@ -16,7 +16,8 @@ import (
 func (a *App) Renderer() *web.Renderer {
 	a.t.Helper()
 	rd, err := web.New(web.Options{
-		AppName: "Test",
+		AppName:    "Test",
+		OpenSignup: !a.Accounts.InviteOnly(),
 		User: func(ctx context.Context) any {
 			if u, ok := auth.UserFrom(ctx); ok {
 				return &u

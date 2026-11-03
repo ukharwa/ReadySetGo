@@ -28,6 +28,19 @@ CREATE TABLE user_tokens (
 
 CREATE INDEX user_tokens_user_id_idx ON user_tokens (user_id);
 
+-- Invitations to sign up, sent to an address that has no account yet.
+-- Signing up through one confirms the address; with REGISTRATION=invite,
+-- it's how people get in.
+CREATE TABLE signup_invitations (
+    token_hash TEXT PRIMARY KEY,
+    email      TEXT NOT NULL,
+    created_at DATETIME NOT NULL,
+    expires_at DATETIME NOT NULL
+);
+
+CREATE INDEX signup_invitations_email_idx ON signup_invitations (email);
+
 -- +goose Down
+DROP TABLE signup_invitations;
 DROP TABLE user_tokens;
 DROP TABLE sessions;

@@ -30,6 +30,7 @@ func (h *API) Routes(mux *http.ServeMux) {
 		return auth.RequireUser(auth.RequireRole(auth.RoleAdmin)(f))
 	}
 	mux.Handle("GET /api/admin/users", admin(h.users))
+	mux.Handle("POST /api/admin/invitations", admin(h.invite))
 	mux.Handle("GET /api/admin/users/{userID}", admin(h.user))
 	mux.Handle("PATCH /api/admin/users/{userID}", admin(h.update))
 	mux.Handle("DELETE /api/admin/users/{userID}", admin(h.delete))
@@ -143,6 +144,21 @@ func (h *API) delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// invite emails {"email": …} a link to sign up.
+func (h *API) invite(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Email string `json:"email"`
+	}
+	if !httpx.ReadJSON(w, r, &in) {
+		return
+	}
+	if err := h.svc.Invite(r.Context(), in.Email); err != nil {
+		h.fail(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusAccepted, map[string]string{"message": "An invitation is on its way."})
 }
 
 func (h *API) resendVerification(w http.ResponseWriter, r *http.Request) {

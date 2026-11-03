@@ -44,15 +44,19 @@ type App struct {
 	t        testing.TB
 }
 
-// New starts an App. Everything is cleaned up when the test ends.
-func New(t testing.TB) *App {
+// New starts an App. Everything is cleaned up when the test ends. Each
+// option changes the account service's settings, such as
+// func(o *auth.Options) { o.InviteOnly = true }.
+func New(t testing.TB, options ...func(*auth.Options)) *App {
 	t.Helper()
 	d := dbtest.New(t)
 	logger := slog.New(slog.DiscardHandler)
 	limiter := ratelimit.NewMemory()
-	accounts, err := auth.NewService(d, auth.DBSessions{DB: d}, limiter, logger, auth.Options{
-		AppName: "Test", BaseURL: BaseURL, MinPasswordLength: 12,
-	})
+	opts := auth.Options{AppName: "Test", BaseURL: BaseURL, MinPasswordLength: 12}
+	for _, o := range options {
+		o(&opts)
+	}
+	accounts, err := auth.NewService(d, auth.DBSessions{DB: d}, limiter, logger, opts)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -47,7 +47,8 @@ type Config struct {
 	WorkerEnabled     bool // WORKER_ENABLED: run the job worker inside `serve`
 	WorkerConcurrency int  // WORKER_CONCURRENCY
 
-	PasswordMinLength int // PASSWORD_MIN_LENGTH
+	PasswordMinLength int    // PASSWORD_MIN_LENGTH
+	Registration      string // REGISTRATION: "open" or "invite"
 	// readysetgo:begin module=uploads
 
 	UploadsDir string // UPLOADS_DIR
@@ -91,6 +92,7 @@ func (c Config) LogValue() slog.Value {
 		slog.Bool("worker_enabled", c.WorkerEnabled),
 		slog.Int("worker_concurrency", c.WorkerConcurrency),
 		slog.Int("password_min_length", c.PasswordMinLength),
+		slog.String("registration", c.Registration),
 		// readysetgo:begin module=uploads
 		slog.String("uploads_dir", c.UploadsDir),
 		// readysetgo:end
@@ -174,6 +176,7 @@ func Load(getenv func(string) string) (Config, error) {
 	if c.PasswordMinLength < 8 || c.PasswordMinLength > 64 {
 		l.fail("PASSWORD_MIN_LENGTH", "must be between 8 and 64")
 	}
+	c.Registration = l.oneOf("REGISTRATION", "open", "open", "invite")
 	// readysetgo:begin module=uploads
 
 	c.UploadsDir = l.str("UPLOADS_DIR", "data/uploads")

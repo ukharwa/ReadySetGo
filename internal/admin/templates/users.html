@@ -37,4 +37,16 @@
   {{with .Data.Prev}}<a href="{{.}}">← Previous</a>{{end}}
   {{with .Data.Next}}<a href="{{.}}">Next →</a>{{end}}
 </p>
+
+<section class="card">
+  <h2>Invite someone</h2>
+  <p>They get an email with a link to sign up, which works for 7 days.</p>
+  <form method="post" action="/admin/invitations" class="stack">
+    <label>Email address
+      <input type="email" name="email" value="{{.Data.Invite.Get "email"}}" required>
+      {{with .Data.Invite.Errors.email}}<span class="field-error">{{.}}</span>{{end}}
+    </label>
+    <button type="submit" class="secondary">Send an invitation</button>
+  </form>
+</section>
 {{end}}

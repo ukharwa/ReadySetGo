@@ -94,15 +94,17 @@ func (h *API) register(w http.ResponseWriter, r *http.Request) {
 		Password string `json:"password"`
 		Name     string `json:"name"`
 		TimeZone string `json:"time_zone"`
+		Token    string `json:"token"` // from an invitation link, when signing up through one
 	}
 	if !httpx.ReadJSON(w, r, &in) {
 		return
 	}
-	if err := h.svc.Register(r.Context(), Registration(in)); err != nil {
+	reg := Registration{Email: in.Email, Password: in.Password, Name: in.Name, TimeZone: in.TimeZone, Invite: in.Token}
+	if err := h.svc.Register(r.Context(), reg); err != nil {
 		h.fail(w, r, err)
 		return
 	}
-	accepted(w, "Check your inbox for a link to confirm your email address. You can log in now.")
+	accepted(w, h.svc.registeredMessage(reg))
 }
 
 type credentials struct {

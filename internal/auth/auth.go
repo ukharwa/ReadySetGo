@@ -110,6 +110,7 @@ type Options struct {
 	AppName           string
 	BaseURL           string // links in emails start with this, e.g. https://example.com
 	MinPasswordLength int
+	InviteOnly        bool // signing up needs an invitation
 }
 
 // Service implements the account flows.
@@ -126,6 +127,8 @@ type Service struct {
 	created   []Hook
 	deleting  []Hook
 	events    []EventHook
+
+	signupChecks []SignupCheck
 }
 
 // Hook lets another feature act when an account is created or deleted,
@@ -152,6 +155,7 @@ func runHooks(ctx context.Context, tx *sql.Tx, hooks []Hook, u User) error {
 // Names of the security events Service records.
 const (
 	EventUserCreated            = "user.created"
+	EventUserInvited            = "user.invited"
 	EventUserDeleted            = "user.deleted"
 	EventRoleChanged            = "user.role_changed"
 	EventUserDisabled           = "user.disabled"
@@ -328,12 +332,19 @@ type Registration struct {
 	Password string
 	Name     string // optional
 	TimeZone string // optional: usually the browser's, so an unknown one means UTC
+	Invite   string // the token from an invitation link, when signing up through one
 }
 
 // Register creates an account and emails a verification link. If the
 // address already has an account, the owner gets an email about the attempt
 // instead, and Register returns exactly as if it had created one: the form
 // never reveals who has an account. Invalid input returns validate.Errors.
+//
+// Signing up through an invitation (in.Invite) confirms the address, so no
+// link is sent; an invalid one returns ErrInvalidToken. When sign-up is by
+// invitation only, an address with no invitation, and none a SignupCheck
+// vouches for, gets an email saying so, and Register again returns as if it
+// had created an account: the form doesn't reveal who's invited either.
 func (s *Service) Register(ctx context.Context, in Registration) error {
 	address, ok := validate.Email(in.Email)
 	errs := validate.Errors{}
@@ -362,6 +373,10 @@ func (s *Service) Register(ctx context.Context, in Registration) error {
 	}
 	return s.db.InTx(ctx, func(tx *sql.Tx) error {
 		q := store.New(tx)
+		invited, err := s.invited(ctx, q, in.Invite, address)
+		if err != nil {
+			return err
+		}
 		if existing, err := q.GetUserByEmail(ctx, address); err == nil {
 			return s.sendEmail(ctx, tx, "account_exists.txt", address, map[string]any{
 				"Name": existing.Name, "LoginLink": s.opts.BaseURL + "/login", "ResetLink": s.opts.BaseURL + "/forgot-password",
@@ -370,14 +385,27 @@ func (s *Service) Register(ctx context.Context, in Registration) error {
 			return err
 		}
 
+		if !invited && s.opts.InviteOnly {
+			ok, err := s.vouchedFor(ctx, tx, address)
+			if err != nil {
+				return err
+			}
+			if !ok {
+				return s.sendEmail(ctx, tx, "invitation_needed.txt", address, map[string]any{})
+			}
+		}
+
 		now := s.now()
 		user, err := q.CreateUser(ctx, store.CreateUserParams{
 			ID: db.NewID(), Email: address, Name: name, TimeZone: zone, PasswordHash: hash, Role: RoleUser,
-			CreatedAt: now, UpdatedAt: now,
+			EmailVerifiedAt: sql.NullTime{Time: now, Valid: invited}, CreatedAt: now, UpdatedAt: now,
 		})
 		if errors.Is(db.Err(err), db.ErrConflict) {
 			return nil // registered a moment ago by a concurrent request
 		} else if err != nil {
+			return err
+		}
+		if err := q.DeleteSignupInvitations(ctx, address); err != nil {
 			return err
 		}
 		if err := runHooks(ctx, tx, s.created, toUser(user)); err != nil {
@@ -385,6 +413,9 @@ func (s *Service) Register(ctx context.Context, in Registration) error {
 		}
 		if err := s.record(ctx, tx, Event{Name: EventUserCreated, UserID: user.ID}); err != nil {
 			return err
+		}
+		if invited {
+			return nil // the invitation link already proved the address
 		}
 		token, err := createToken(ctx, q, user.ID, "verify_email", address, verifyTokenTTL, now)
 		if err != nil {

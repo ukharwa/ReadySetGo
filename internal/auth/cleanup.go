@@ -23,7 +23,12 @@ func (s *Service) Cleanup() jobs.Handler {
 		if err != nil {
 			return fmt.Errorf("delete expired tokens: %w", err)
 		}
-		s.logger.InfoContext(ctx, "expired sessions and links deleted", "sessions", sessions, "links", tokens)
+		invitations, err := store.New(s.db.Write).DeleteExpiredSignupInvitations(ctx, now)
+		if err != nil {
+			return fmt.Errorf("delete expired invitations: %w", err)
+		}
+		s.logger.InfoContext(ctx, "expired sessions and links deleted",
+			"sessions", sessions, "links", tokens, "invitations", invitations)
 		return nil
 	}
 }

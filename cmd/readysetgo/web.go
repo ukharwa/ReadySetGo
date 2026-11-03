@@ -34,7 +34,8 @@ import (
 // lookup), and every feature's pages on app.
 func mountPages(cfg config.Config, logger *slog.Logger, root, app *http.ServeMux, svc *services) error {
 	pages, err := web.New(web.Options{
-		AppName: cfg.AppName, Dev: cfg.Dev(), User: currentUser, TimeZone: currentTimeZone, Logger: logger,
+		AppName: cfg.AppName, Dev: cfg.Dev(), OpenSignup: !svc.accounts.InviteOnly(),
+		User: currentUser, TimeZone: currentTimeZone, Logger: logger,
 	})
 	if err != nil {
 		return err

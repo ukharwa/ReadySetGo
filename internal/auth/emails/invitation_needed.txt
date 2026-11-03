@@ -1,0 +1,11 @@
+Subject: Signing up for {{.AppName}} needs an invitation
+
+Hello,
+
+Someone tried to create a {{.AppName}} account with this email address, but
+signing up needs an invitation, and this address doesn't have one.
+
+If it was you, ask whoever uses {{.AppName}} to invite you, then sign up
+with the link in the invitation.
+
+If it wasn't you, you can ignore this email.

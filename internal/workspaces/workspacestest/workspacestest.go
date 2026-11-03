@@ -13,10 +13,10 @@ import (
 )
 
 // New starts an apptest.App with the workspaces service hooked into its
-// accounts, as the app does.
-func New(t testing.TB) (*apptest.App, *workspaces.Service) {
+// accounts, as the app does. options are apptest.New's.
+func New(t testing.TB, options ...func(*auth.Options)) (*apptest.App, *workspaces.Service) {
 	t.Helper()
-	a := apptest.New(t)
+	a := apptest.New(t, options...)
 	svc, err := workspaces.NewService(a.DB, a.Accounts, a.Limiter, a.Logger, workspaces.Options{
 		AppName: "Test", BaseURL: apptest.BaseURL,
 	})

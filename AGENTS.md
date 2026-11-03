@@ -93,6 +93,9 @@ How requests map:
   built on top afterwards, reusing its storage and checks.
 - **`metrics`:** Prometheus, Grafana, monitoring, performance metrics.
 - **`errreport`:** Sentry, GlitchTip, Bugsink, error tracking or alerts.
+- **Invite-only sign-up**, a closed beta or an internal tool: not an init
+  option but a setting, `REGISTRATION=invite`, changed any time. Mention
+  it rather than leaving it out.
 
 A database the user named is the one to use; mention a mismatch only when
 there's a real one (SQLite for an app that must run on several servers).
@@ -308,7 +311,8 @@ README.md ("Removing a module") explains taking a module out.
 - `make seed`: add `admin@example.com` and `user@example.com`, both with
   the password `dev-password-123` (dev only)
 - `go run ./cmd/readysetgo user promote EMAIL`: make a user an admin (also
-  `demote`, `disable`, `enable`, `delete`)
+  `demote`, `disable`, `enable`, `delete`); `user invite EMAIL` emails
+  someone a link to sign up
 <!-- example:begin -->
 - `make remove-example`: delete the notes example and every line marked
   for it, before the first deploy
@@ -361,8 +365,9 @@ README.md ("Removing a module") explains taking a module out.
 - `internal/auth/`: accounts. `auth.go` is the `Service` with every flow and
   no HTTP; `sessions.go` the session-store seam; `devices.go` lists a
   user's sessions as signed-in devices; `profile.go` the name and time
-  zone; `middleware.go` loads the
-  user and guards routes; `emails/` holds the email templates.
+  zone; `invitations.go` sign-up invitations and invite-only sign-up
+  (`REGISTRATION=invite`); `middleware.go` loads the user and guards
+  routes; `emails/` holds the email templates.
   <!-- readysetgo:begin ui=html -->
   `web.go` and `templates/` are the account pages.
   <!-- readysetgo:end -->
@@ -371,7 +376,9 @@ README.md ("Removing a module") explains taking a module out.
   <!-- readysetgo:end -->
   Other features react to accounts through `OnUserCreated` and
   `OnUserDeleting` hooks, and to security events (failed logins, role
-  changes, …) through `OnEvent`; all run inside the same transaction.
+  changes, …) through `OnEvent`; all run inside the same transaction. A
+  feature with invitations of its own lets their addresses sign up when it
+  needs an invitation through `AllowSignup`.
 <!-- readysetgo:begin module=workspaces -->
 - `internal/workspaces/`: workspaces, their members (owner, admin, member)
   and email invitations. `middleware.go` resolves `{workspaceID}` and

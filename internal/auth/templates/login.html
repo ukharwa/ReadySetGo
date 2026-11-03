@@ -14,5 +14,5 @@
   <label class="check"><input type="checkbox" name="remember" value="1"> Keep me logged in for 30 days</label>
   <button type="submit">Log in</button>
 </form>
-<p><a href="/forgot-password">Forgotten your password?</a> · <a href="/register{{with .Data.Next}}?next={{.}}{{end}}">Create an account</a></p>
+<p><a href="/forgot-password">Forgotten your password?</a>{{if .OpenSignup}} · <a href="/register{{with .Data.Next}}?next={{.}}{{end}}">Create an account</a>{{end}}</p>
 {{end}}

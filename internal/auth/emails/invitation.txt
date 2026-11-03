@@ -1,0 +1,10 @@
+Subject: You're invited to {{.AppName}}
+
+Hello,
+
+You've been invited to create an account on {{.AppName}}. Open this link to
+choose a password:
+
+{{.Link}}
+
+The link works for 7 days. If you weren't expecting this, you can ignore it.
