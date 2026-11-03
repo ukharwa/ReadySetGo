@@ -31,6 +31,9 @@ import (
 	// readysetgo:begin module=uploads
 	"github.com/ukharwa/readysetgo/internal/uploads"
 	// readysetgo:end
+	// readysetgo:begin module=twofactor
+	"github.com/ukharwa/readysetgo/internal/twofactor"
+	// readysetgo:end
 	// readysetgo:begin module=workspaces
 	"github.com/ukharwa/readysetgo/internal/workspaces"
 	// readysetgo:end
@@ -128,6 +131,9 @@ type services struct {
 	// readysetgo:begin module=metrics
 	metrics *metrics.Metrics
 	// readysetgo:end
+	// readysetgo:begin module=twofactor
+	twoFactor *twofactor.Service
+	// readysetgo:end
 }
 
 // newServices builds the services, with sessions in the database.
@@ -170,6 +176,15 @@ func newServices(cfg config.Config, d *db.DB, logger *slog.Logger) (*services, e
 	// readysetgo:end
 	// readysetgo:begin module=metrics
 	s.metrics = metrics.New(d, logger)
+	// readysetgo:end
+	// readysetgo:begin module=twofactor
+	s.twoFactor, err = twofactor.NewService(d, s.accounts, logger, twofactor.Options{
+		AppName: cfg.AppName,
+		Key:     cfg.TwoFactorKey,
+	})
+	if err != nil {
+		return nil, err
+	}
 	// readysetgo:end
 	return s, nil
 }

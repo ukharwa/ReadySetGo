@@ -53,6 +53,7 @@ Optional modules add what some apps need and others don't:
 | `uploads` | File uploads with type checks and owner-only downloads |
 | `metrics` | Prometheus metrics and Go's profiler on an internal port |
 | `errreport` | Error reports to Sentry, GlitchTip or Bugsink |
+| `twofactor` | Two-factor login with an authenticator app, and recovery codes |
 
 Every project also starts with a small notes feature that shows the whole
 pattern, from migration to test. `make remove-example` deletes it when
@@ -232,6 +233,11 @@ grows.
 <!-- readysetgo:begin module=errreport -->
 - **Error reports** to Sentry, GlitchTip or Bugsink.
 <!-- readysetgo:end -->
+<!-- readysetgo:begin module=twofactor -->
+- **Two-factor login:** codes from any authenticator app, single-use
+  recovery codes, and secrets encrypted with `TWO_FACTOR_KEY`.
+  `user reset-two-factor EMAIL` helps someone who lost both.
+<!-- readysetgo:end -->
 <!-- example:begin -->
 - **The notes example:** a small feature showing the pattern from migration
   to test. `make remove-example` deletes it.
@@ -340,6 +346,10 @@ start.
 <!-- readysetgo:end -->
 <!-- readysetgo:begin db=sqlite -->
    and, for backups off the server, the `LITESTREAM_` settings.
+<!-- readysetgo:end -->
+<!-- readysetgo:begin module=twofactor -->
+   Add a `TWO_FACTOR_KEY` too (`openssl rand -base64 32`), and keep a copy
+   somewhere safe: losing it turns off everyone's authenticator codes.
 <!-- readysetgo:end -->
 4. CI pushes an image to `ghcr.io` on every push to `main`. If the
    repository is private, log the server in to read it:
@@ -461,7 +471,7 @@ database backups don't include. Back the volume up as well, for example
 with `rclone sync` from the volume's folder to the same storage.
 <!-- readysetgo:end -->
 
-<!-- readysetgo:begin module=workspaces,module=admin,module=audit,module=uploads,module=metrics,module=errreport -->
+<!-- readysetgo:begin module=workspaces,module=admin,module=audit,module=uploads,module=metrics,module=errreport,module=twofactor -->
 ## Removing a module
 
 Each module is a folder in `internal/` that the rest of the app reaches only
@@ -474,6 +484,14 @@ Take its link out of the nav in `internal/web/templates/layout.html`.
 <!-- readysetgo:end -->
 If its migration has already run anywhere, add a migration that drops its
 tables instead of deleting that one.
+<!-- readysetgo:begin module=twofactor -->
+Two-factor login also has code in `internal/auth`: delete `secondfactor.go`
+there and follow the compiler.
+<!-- readysetgo:begin ui=html -->
+Delete `templates/login_code.html` too, and the two-factor card in
+`templates/account.html`.
+<!-- readysetgo:end -->
+<!-- readysetgo:end -->
 <!-- readysetgo:end -->
 <!-- example:begin -->
 

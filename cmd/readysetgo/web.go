@@ -17,6 +17,9 @@ import (
 	// readysetgo:begin module=audit
 	"github.com/ukharwa/readysetgo/internal/audit"
 	// readysetgo:end
+	// readysetgo:begin module=twofactor
+	"github.com/ukharwa/readysetgo/internal/twofactor"
+	// readysetgo:end
 	// readysetgo:begin module=uploads
 	"github.com/ukharwa/readysetgo/internal/uploads"
 	// readysetgo:end
@@ -88,6 +91,13 @@ func mountPages(cfg config.Config, logger *slog.Logger, root, app *http.ServeMux
 		return err
 	}
 	uploadPages.Routes(app)
+	// readysetgo:end
+	// readysetgo:begin module=twofactor
+	twoFactorPages, err := twofactor.NewWeb(svc.twoFactor, pages, svc.limiter)
+	if err != nil {
+		return err
+	}
+	twoFactorPages.Routes(app)
 	// readysetgo:end
 	return nil
 }

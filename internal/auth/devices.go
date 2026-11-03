@@ -78,7 +78,7 @@ func (s *Service) SignOutDevice(ctx context.Context, u User, id uuid.UUID) error
 	if !found {
 		return ErrDeviceNotFound
 	}
-	return s.record(ctx, nil, Event{Name: EventDeviceSignedOut, UserID: u.ID})
+	return s.Record(ctx, nil, Event{Name: EventDeviceSignedOut, UserID: u.ID})
 }
 
 // SignOutOtherDevices ends every one of u's sessions except currentToken's.
@@ -86,7 +86,7 @@ func (s *Service) SignOutOtherDevices(ctx context.Context, u User, currentToken 
 	if err := s.sessions.DeleteForUser(ctx, u.ID, hashToken(currentToken)); err != nil {
 		return err
 	}
-	return s.record(ctx, nil, Event{Name: EventDeviceSignedOut, UserID: u.ID, Detail: "all other devices"})
+	return s.Record(ctx, nil, Event{Name: EventDeviceSignedOut, UserID: u.ID, Detail: "all other devices"})
 }
 
 // The browsers and systems deviceName knows, in the order they're checked:

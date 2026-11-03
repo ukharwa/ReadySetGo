@@ -24,7 +24,7 @@ const templateModule = "github.com/ukharwa/readysetgo"
 var (
 	databases  = []string{"sqlite", "postgres"}
 	uiModes    = []string{"html", "api"}
-	allModules = []string{"workspaces", "uploads", "admin", "audit", "metrics", "errreport"}
+	allModules = []string{"workspaces", "uploads", "admin", "audit", "metrics", "errreport", "twofactor"}
 	validName  = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
 )
 

@@ -1,0 +1,19 @@
+<!-- readysetgo:begin module=twofactor -->
+{{define "title"}}Enter your code{{end}}
+
+{{define "content"}}
+<h1>Enter your code</h1>
+{{with .Data.Error}}<p class="error-summary" role="alert">{{.}}</p>{{end}}
+<form method="post" action="/login/code" class="stack">
+  <input type="hidden" name="challenge" value="{{.Data.Token}}">
+  <input type="hidden" name="next" value="{{.Data.Next}}">
+  <input type="hidden" name="remember" value="{{.Data.Form.Get "remember"}}">
+  <label>Code
+    <input type="text" name="code" autocomplete="one-time-code" spellcheck="false" required autofocus>
+    <span class="hint">The 6-digit code from your authenticator app. Lost your phone? Enter one of your recovery codes instead.</span>
+  </label>
+  <button type="submit">Log in</button>
+</form>
+<p><a href="/login">Start again</a></p>
+{{end}}
+<!-- readysetgo:end -->

@@ -10,6 +10,11 @@ import (
 	"time"
 )
 
+// readysetgo:begin module=twofactor
+// testKey is a TWO_FACTOR_KEY: "0123456789abcdef0123456789abcdef" in base64.
+const testKey = "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+
+// readysetgo:end
 func env(vars map[string]string) func(string) string {
 	return func(key string) string { return vars[key] }
 }
@@ -31,6 +36,9 @@ func TestLoadDefaults(t *testing.T) {
 				vars["SMTP_HOST"] = "smtp.example.com"
 				vars["SMTP_FROM"] = "noreply@example.com"
 				vars["APP_URL"] = "https://example.com"
+				// readysetgo:begin module=twofactor
+				vars["TWO_FACTOR_KEY"] = testKey
+				// readysetgo:end
 			}
 			c, err := Load(env(vars))
 			if err != nil {
@@ -61,11 +69,17 @@ func TestLoadDefaults(t *testing.T) {
 				// readysetgo:begin module=uploads
 				UploadsDir: "data/uploads",
 				// readysetgo:end
+				// readysetgo:begin module=twofactor
+				TwoFactorKey: make([]byte, 32),
+				// readysetgo:end
 			}
 			if tt.env == "prod" {
 				want.SMTPHost = "smtp.example.com"
 				want.SMTPFrom = "noreply@example.com"
 				want.AppURL = "https://example.com"
+				// readysetgo:begin module=twofactor
+				want.TwoFactorKey = []byte("0123456789abcdef0123456789abcdef")
+				// readysetgo:end
 			}
 			if !reflect.DeepEqual(c, want) {
 				t.Errorf("Load = %+v, want %+v", c, want)
@@ -113,6 +127,9 @@ func TestLoadOverrides(t *testing.T) {
 		// readysetgo:begin module=errreport
 		"SENTRY_DSN": "https://key@errors.example.com/1",
 		// readysetgo:end
+		// readysetgo:begin module=twofactor
+		"TWO_FACTOR_KEY": testKey,
+		// readysetgo:end
 	}))
 	if err != nil {
 		t.Fatalf("Load: %v", err)
@@ -157,6 +174,9 @@ func TestLoadOverrides(t *testing.T) {
 		// readysetgo:begin module=errreport
 		SentryDSN: "https://key@errors.example.com/1",
 		// readysetgo:end
+		// readysetgo:begin module=twofactor
+		TwoFactorKey: []byte("0123456789abcdef0123456789abcdef"),
+		// readysetgo:end
 	}
 	if !reflect.DeepEqual(c, want) {
 		t.Errorf("Load = %+v, want %+v", c, want)
@@ -177,6 +197,9 @@ func TestLoadReportsAllErrors(t *testing.T) {
 		"WORKER_CONCURRENCY": "0",
 		"APP_URL":            "ftp://example.com",
 		"REGISTRATION":       "closed",
+		// readysetgo:begin module=twofactor
+		"TWO_FACTOR_KEY": "too short",
+		// readysetgo:end
 	}))
 	if err == nil {
 		t.Fatal("Load succeeded, want error")
@@ -185,6 +208,9 @@ func TestLoadReportsAllErrors(t *testing.T) {
 		"APP_ENV", "LOG_FORMAT", "LOG_LEVEL", "SHUTDOWN_DRAIN", "SHUTDOWN_TIMEOUT",
 		"DATABASE_URL", "MIGRATE_ON_START", "TRUSTED_PROXIES", "SMTP_HOST", "WORKER_CONCURRENCY", "APP_URL",
 		"REGISTRATION",
+		// readysetgo:begin module=twofactor
+		"TWO_FACTOR_KEY",
+		// readysetgo:end
 	} {
 		if !strings.Contains(err.Error(), key) {
 			t.Errorf("error does not mention %s:\n%v", key, err)
@@ -208,6 +234,9 @@ func TestLogValueHidesSecrets(t *testing.T) {
 func TestSMTPRules(t *testing.T) {
 	t.Parallel()
 	base := map[string]string{"APP_ENV": "prod", "DATABASE_URL": "db", "SMTP_FROM": "noreply@example.com", "APP_URL": "https://example.com"}
+	// readysetgo:begin module=twofactor
+	base["TWO_FACTOR_KEY"] = testKey
+	// readysetgo:end
 	tests := []struct {
 		name    string
 		vars    map[string]string

@@ -3,6 +3,9 @@
 package config
 
 import (
+	// readysetgo:begin module=twofactor
+	"encoding/base64"
+	// readysetgo:end
 	"errors"
 	"fmt"
 	"log/slog"
@@ -60,6 +63,10 @@ type Config struct {
 	// readysetgo:begin module=errreport
 
 	SentryDSN string // SENTRY_DSN (secret): empty turns error reporting off
+	// readysetgo:end
+	// readysetgo:begin module=twofactor
+
+	TwoFactorKey []byte // TWO_FACTOR_KEY (secret): encrypts two-factor login secrets
 	// readysetgo:end
 }
 
@@ -189,6 +196,10 @@ func Load(getenv func(string) string) (Config, error) {
 
 	c.SentryDSN = l.str("SENTRY_DSN", "")
 	// readysetgo:end
+	// readysetgo:begin module=twofactor
+
+	c.TwoFactorKey = l.twoFactorKey(c.Dev())
+	// readysetgo:end
 
 	if c.ShutdownDrain < 0 {
 		l.fail("SHUTDOWN_DRAIN", "must not be negative")
@@ -203,6 +214,26 @@ func Load(getenv func(string) string) (Config, error) {
 	return c, nil
 }
 
+// readysetgo:begin module=twofactor
+// twoFactorKey reads TWO_FACTOR_KEY: 32 bytes in base64. Dev may leave it
+// empty and use a key of zeros.
+func (l *loader) twoFactorKey(dev bool) []byte {
+	const how = "make one with `openssl rand -base64 32`"
+	v := l.str("TWO_FACTOR_KEY", "")
+	if v == "" {
+		if !dev {
+			l.fail("TWO_FACTOR_KEY", "is required in prod: "+how)
+		}
+		return make([]byte, 32)
+	}
+	key, err := base64.StdEncoding.DecodeString(v)
+	if err != nil || len(key) != 32 {
+		l.fail("TWO_FACTOR_KEY", "must be 32 bytes in base64: "+how)
+	}
+	return key
+}
+
+// readysetgo:end
 // loader reads typed values and collects every problem instead of stopping
 // at the first one.
 type loader struct {

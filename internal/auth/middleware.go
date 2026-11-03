@@ -28,7 +28,9 @@ func UserFrom(ctx context.Context) (User, bool) {
 	return c.user, ok
 }
 
-func tokenFrom(ctx context.Context) string {
+// SessionToken returns the token of the session LoadUser found, or "". A
+// feature passes it to SignOutOtherDevices to keep the current one.
+func SessionToken(ctx context.Context) string {
 	c, _ := ctx.Value(contextKey{}).(current)
 	return c.token
 }

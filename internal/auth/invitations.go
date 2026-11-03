@@ -53,7 +53,7 @@ func (s *Service) Invite(ctx context.Context, address string) error {
 		}); err != nil {
 			return err
 		}
-		if err := s.record(ctx, tx, Event{Name: EventUserInvited}); err != nil {
+		if err := s.Record(ctx, tx, Event{Name: EventUserInvited}); err != nil {
 			return err
 		}
 		return s.sendEmail(ctx, tx, "invitation.txt", address, map[string]any{"Link": s.link("/register", token)})

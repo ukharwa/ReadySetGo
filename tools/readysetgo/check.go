@@ -172,6 +172,7 @@ func leftovers(root string, o options, removedExample bool) []string {
 		"uploads":    regexp.MustCompile(`(?i)\buploads?\b`),
 		"metrics":    regexp.MustCompile(`(?i)\bmetrics\b|prometheus|pprof`),
 		"errreport":  regexp.MustCompile(`(?i)errreport|sentry|glitchtip|bugsink`),
+		"twofactor":  regexp.MustCompile(`(?i)two-?factor|\btotp\b|recovery.codes?|authenticator|otpauth|rsc\.io/qr`),
 		// "admin" is also a core role, so look for the folder and routes.
 		"admin": regexp.MustCompile(`internal/admin\b|/admin/(users|jobs|failed-jobs)\b`),
 	}

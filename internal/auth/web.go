@@ -48,6 +48,9 @@ func (h *Web) Routes(mux *http.ServeMux) {
 	mux.Handle("POST /register", limit(h.register))
 	mux.HandleFunc("GET /login", h.loginPage)
 	mux.Handle("POST /login", limit(h.login))
+	// readysetgo:begin module=twofactor
+	mux.Handle("POST /login/code", limit(h.loginCode))
+	// readysetgo:end
 	mux.HandleFunc("POST /logout", h.logout)
 	mux.HandleFunc("GET /forgot-password", h.form("forgot_password.html"))
 	mux.Handle("POST /forgot-password", limit(h.forgotPassword))
@@ -113,6 +116,10 @@ func (h *Web) fail(w http.ResponseWriter, r *http.Request, page string, data for
 		status, data.Error = http.StatusUnauthorized, "Your email or password is incorrect."
 	case errors.Is(err, ErrInvalidToken):
 		status, data.Error = http.StatusBadRequest, "This link is invalid or has expired."
+	// readysetgo:begin module=twofactor
+	case errors.Is(err, ErrInvalidCode):
+		status, data.Error = http.StatusUnauthorized, "That code isn't right."
+	// readysetgo:end
 	default:
 		if limited, ok := errors.AsType[*RateLimitedError](err); ok {
 			w.Header().Set("Retry-After", fmt.Sprint(int(limited.RetryAfter.Seconds())))
@@ -181,6 +188,12 @@ func (h *Web) login(w http.ResponseWriter, r *http.Request) {
 		life = RememberedSession
 	}
 	token, err := h.svc.Login(r.Context(), form.Get("email"), form.Get("password"), ClientOf(r), life)
+	// readysetgo:begin module=twofactor
+	if step, ok := errors.AsType[*CodeRequiredError](err); ok {
+		h.pages.Render(w, r, http.StatusOK, "login_code.html", formPage{Form: form, Token: step.Challenge, Next: form.Get("next")})
+		return
+	}
+	// readysetgo:end
 	if err != nil {
 		h.fail(w, r, "login.html", formPage{Form: form, Next: form.Get("next")}, err)
 		return
@@ -188,6 +201,31 @@ func (h *Web) login(w http.ResponseWriter, r *http.Request) {
 	setSessionCookie(w, token, life, remember)
 	http.Redirect(w, r, web.SafeRedirect(form.Get("next"), "/"), http.StatusSeeOther)
 }
+
+// readysetgo:begin module=twofactor
+// loginCode is the second step of logging in, for users who turned
+// two-factor login on: the login page asked for a code after the password.
+func (h *Web) loginCode(w http.ResponseWriter, r *http.Request) {
+	form := web.Form{Values: postForm(r)}
+	remember := form.Get("remember") != ""
+	life := BrowserSession
+	if remember {
+		life = RememberedSession
+	}
+	token, err := h.svc.FinishLogin(r.Context(), form.Get("challenge"), form.Get("code"), ClientOf(r), life)
+	if errors.Is(err, ErrLoginExpired) {
+		page := formPage{Error: "That took too long. Log in again.", Next: form.Get("next")}
+		h.pages.Render(w, r, http.StatusUnauthorized, "login.html", page)
+		return
+	} else if err != nil {
+		h.fail(w, r, "login_code.html", formPage{Form: form, Token: form.Get("challenge"), Next: form.Get("next")}, err)
+		return
+	}
+	setSessionCookie(w, token, life, remember)
+	http.Redirect(w, r, web.SafeRedirect(form.Get("next"), "/"), http.StatusSeeOther)
+}
+
+// readysetgo:end
 
 func (h *Web) logout(w http.ResponseWriter, r *http.Request) {
 	if token := requestToken(r); token != "" {
@@ -262,7 +300,7 @@ func (h *Web) renderAccount(w http.ResponseWriter, r *http.Request, status int, 
 		page.Profile.Values = url.Values{"name": {page.User.Name}, "time_zone": {page.User.TimeZone}}
 	}
 	var err error
-	if page.Devices, err = h.svc.Devices(r.Context(), page.User, tokenFrom(r.Context())); err != nil {
+	if page.Devices, err = h.svc.Devices(r.Context(), page.User, SessionToken(r.Context())); err != nil {
 		h.fail(w, r, "account.html", formPage{}, err)
 		return
 	}
@@ -303,7 +341,7 @@ func (h *Web) resendVerification(w http.ResponseWriter, r *http.Request) {
 func (h *Web) changePassword(w http.ResponseWriter, r *http.Request) {
 	u, _ := UserFrom(r.Context())
 	page := accountPage{User: u, Password: web.Form{Values: postForm(r)}}
-	err := h.svc.ChangePassword(r.Context(), u, tokenFrom(r.Context()),
+	err := h.svc.ChangePassword(r.Context(), u, SessionToken(r.Context()),
 		page.Password.Get("current_password"), page.Password.Get("new_password"))
 	if err != nil {
 		h.accountFail(w, r, &page, &page.Password, err)
@@ -357,7 +395,7 @@ func (h *Web) signOutDevice(w http.ResponseWriter, r *http.Request) {
 
 func (h *Web) signOutOtherDevices(w http.ResponseWriter, r *http.Request) {
 	u, _ := UserFrom(r.Context())
-	if err := h.svc.SignOutOtherDevices(r.Context(), u, tokenFrom(r.Context())); err != nil {
+	if err := h.svc.SignOutOtherDevices(r.Context(), u, SessionToken(r.Context())); err != nil {
 		h.fail(w, r, "account.html", formPage{}, err)
 		return
 	}

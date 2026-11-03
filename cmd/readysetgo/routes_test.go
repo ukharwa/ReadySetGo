@@ -18,6 +18,9 @@ func testConfig(t *testing.T) config.Config {
 		// readysetgo:begin module=uploads
 		UploadsDir: t.TempDir(),
 		// readysetgo:end
+		// readysetgo:begin module=twofactor
+		TwoFactorKey: make([]byte, 32),
+		// readysetgo:end
 	}
 }
 

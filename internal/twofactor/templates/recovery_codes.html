@@ -1,0 +1,11 @@
+{{define "title"}}Your recovery codes{{end}}
+
+{{define "content"}}
+<h1>Save your recovery codes</h1>
+<p>If you lose your phone, each of these logs you in once in place of a code from the app. Keep them somewhere safe, such as your password manager: they won't be shown again.</p>
+<ul>
+  {{range .Data}}<li><code>{{.}}</code></li>
+  {{end}}
+</ul>
+<p><a href="/account/two-factor" class="button">I've saved them</a></p>
+{{end}}

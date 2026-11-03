@@ -1,0 +1,10 @@
+Subject: A recovery code was used to log in
+
+Hello{{with .Name}} {{.}}{{end}},
+
+Someone just logged in to your {{.AppName}} account with one of your
+recovery codes. You have {{.Left}} left; make a new set from your account
+page if that's running low.
+
+If that wasn't you, someone has your password and a recovery code: reset
+your password, then make new recovery codes.

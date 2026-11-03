@@ -63,6 +63,17 @@ func bearerToken(r *http.Request) (string, bool) {
 
 // fail responds with the problem matching err.
 func (h *API) fail(w http.ResponseWriter, r *http.Request, err error) {
+	// readysetgo:begin module=twofactor
+	if step, ok := errors.AsType[*CodeRequiredError](err); ok {
+		// Not a failure: the password was right, and a code is needed too.
+		// The client sends {"challenge", "code"} to the same endpoint.
+		httpx.WriteJSON(w, http.StatusAccepted, map[string]string{
+			"challenge": step.Challenge,
+			"message":   "Enter the code from your authenticator app, or a recovery code.",
+		})
+		return
+	}
+	// readysetgo:end
 	var errs validate.Errors
 	switch {
 	case errors.As(err, &errs):
@@ -71,6 +82,12 @@ func (h *API) fail(w http.ResponseWriter, r *http.Request, err error) {
 		httpx.ErrorMessage(w, r, http.StatusUnauthorized, "Your email or password is incorrect.")
 	case errors.Is(err, ErrInvalidToken):
 		httpx.ErrorMessage(w, r, http.StatusBadRequest, "This link is invalid or has expired.")
+	// readysetgo:begin module=twofactor
+	case errors.Is(err, ErrInvalidCode):
+		httpx.ErrorMessage(w, r, http.StatusUnauthorized, "That code isn't right.")
+	case errors.Is(err, ErrLoginExpired):
+		httpx.ErrorMessage(w, r, http.StatusUnauthorized, "That took too long. Log in again.")
+	// readysetgo:end
 	default:
 		if limited, ok := errors.AsType[*RateLimitedError](err); ok {
 			w.Header().Set("Retry-After", fmt.Sprint(int(limited.RetryAfter.Seconds())))
@@ -111,6 +128,21 @@ type credentials struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 	Remember bool   `json:"remember"`
+	// readysetgo:begin module=twofactor
+	Challenge string `json:"challenge"` // with code, in place of email and password: the second step
+	Code      string `json:"code"`
+	// readysetgo:end
+}
+
+// logIn starts a session with lifetime life from in: a password, or the
+// challenge and code of a second step.
+func (h *API) logIn(r *http.Request, in credentials, life Lifetime) (string, error) {
+	// readysetgo:begin module=twofactor
+	if in.Challenge != "" {
+		return h.svc.FinishLogin(r.Context(), in.Challenge, in.Code, ClientOf(r), life)
+	}
+	// readysetgo:end
+	return h.svc.Login(r.Context(), in.Email, in.Password, ClientOf(r), life)
 }
 
 // login starts a session for a browser frontend, in the session cookie.
@@ -123,7 +155,7 @@ func (h *API) login(w http.ResponseWriter, r *http.Request) {
 	if in.Remember {
 		life = RememberedSession
 	}
-	token, err := h.svc.Login(r.Context(), in.Email, in.Password, ClientOf(r), life)
+	token, err := h.logIn(r, in, life)
 	if err != nil {
 		h.fail(w, r, err)
 		return
@@ -135,11 +167,11 @@ func (h *API) login(w http.ResponseWriter, r *http.Request) {
 // token starts a session for a non-browser client and returns its bearer
 // token.
 func (h *API) token(w http.ResponseWriter, r *http.Request) {
-	var in struct{ Email, Password string }
+	var in credentials
 	if !httpx.ReadJSON(w, r, &in) {
 		return
 	}
-	token, err := h.svc.Login(r.Context(), in.Email, in.Password, ClientOf(r), APIToken)
+	token, err := h.logIn(r, in, APIToken)
 	if err != nil {
 		h.fail(w, r, err)
 		return
@@ -248,7 +280,7 @@ func (h *API) changePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	u, _ := UserFrom(r.Context())
-	if err := h.svc.ChangePassword(r.Context(), u, tokenFrom(r.Context()), in.CurrentPassword, in.NewPassword); err != nil {
+	if err := h.svc.ChangePassword(r.Context(), u, SessionToken(r.Context()), in.CurrentPassword, in.NewPassword); err != nil {
 		h.fail(w, r, err)
 		return
 	}
@@ -306,7 +338,7 @@ type deviceJSON struct {
 // devices lists the user's signed-in browsers and tokens.
 func (h *API) devices(w http.ResponseWriter, r *http.Request) {
 	u, _ := UserFrom(r.Context())
-	devices, err := h.svc.Devices(r.Context(), u, tokenFrom(r.Context()))
+	devices, err := h.svc.Devices(r.Context(), u, SessionToken(r.Context()))
 	if err != nil {
 		h.fail(w, r, err)
 		return
@@ -337,7 +369,7 @@ func (h *API) signOutDevice(w http.ResponseWriter, r *http.Request) {
 
 func (h *API) signOutOtherDevices(w http.ResponseWriter, r *http.Request) {
 	u, _ := UserFrom(r.Context())
-	if err := h.svc.SignOutOtherDevices(r.Context(), u, tokenFrom(r.Context())); err != nil {
+	if err := h.svc.SignOutOtherDevices(r.Context(), u, SessionToken(r.Context())); err != nil {
 		h.fail(w, r, err)
 		return
 	}

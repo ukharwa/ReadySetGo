@@ -93,6 +93,8 @@ How requests map:
   built on top afterwards, reusing its storage and checks.
 - **`metrics`:** Prometheus, Grafana, monitoring, performance metrics.
 - **`errreport`:** Sentry, GlitchTip, Bugsink, error tracking or alerts.
+- **`twofactor`:** two-factor login, 2FA, MFA, authenticator apps, TOTP,
+  one-time codes, extra security for logins.
 - **Invite-only sign-up**, a closed beta or an internal tool: not an init
   option but a setting, `REGISTRATION=invite`, changed any time. Mention
   it rather than leaving it out.
@@ -128,10 +130,13 @@ Say so in the same message, with what the template does instead
 - **JWT:** not used. A browser frontend signs in with an HttpOnly session
   cookie; mobile apps and scripts get revocable bearer tokens
   (`POST /api/auth/token`).
-- **Social login (Google and others), two-factor login or passkeys:** not
-  included; they'd be built afterwards. Social login needs the OAuth flow,
-  linking accounts by verified email, and a migration allowing users
-  without a password (`password_hash` is required now).
+- **Social login (Google and others) or passkeys:** not included; they'd
+  be built afterwards. Social login needs the OAuth flow, linking accounts
+  by verified email, and a migration allowing users without a password
+  (`password_hash` is required now).
+- **Two-factor login by SMS or email codes:** the `twofactor` module uses
+  authenticator apps (and recovery codes) only; SMS is weaker and costs
+  money per message.
 - **Uploads to S3:** the uploads module stores files on local disk; adding
   S3 is a step in SCALING.md.
 - **Redis, Kubernetes, message queues or microservices:** left out by
@@ -238,6 +243,9 @@ repository's history keeps. That chose:
 <!-- readysetgo:begin module=errreport -->
 - **Module:** errreport (error reports to Sentry and compatible services).
 <!-- readysetgo:end -->
+<!-- readysetgo:begin module=twofactor -->
+- **Module:** twofactor (two-factor login with authenticator apps).
+<!-- readysetgo:end -->
 
 The init step deleted itself, so these can't be changed by a setting.
 Asked to change one, say what it involves first, then follow "Changing
@@ -268,7 +276,7 @@ optional modules, let init work out the change:
 
 Moving an existing database's data into a new one is a separate step:
 SCALING.md covers it.
-<!-- readysetgo:begin module=workspaces,module=admin,module=audit,module=uploads,module=metrics,module=errreport -->
+<!-- readysetgo:begin module=workspaces,module=admin,module=audit,module=uploads,module=metrics,module=errreport,module=twofactor -->
 README.md ("Removing a module") explains taking a module out.
 <!-- readysetgo:end -->
 
@@ -313,6 +321,11 @@ README.md ("Removing a module") explains taking a module out.
 - `go run ./cmd/readysetgo user promote EMAIL`: make a user an admin (also
   `demote`, `disable`, `enable`, `delete`); `user invite EMAIL` emails
   someone a link to sign up
+<!-- readysetgo:begin module=twofactor -->
+- `go run ./cmd/readysetgo user reset-two-factor EMAIL`: turn two-factor
+  login off for someone who lost their phone and recovery codes (check
+  it's them first)
+<!-- readysetgo:end -->
 <!-- example:begin -->
 - `make remove-example`: delete the notes example and every line marked
   for it, before the first deploy
@@ -422,6 +435,13 @@ README.md ("Removing a module") explains taking a module out.
 <!-- readysetgo:begin module=errreport -->
 - `internal/errreport/`: a slog handler that reports every error-level log
   record to Sentry (or GlitchTip or Bugsink) when `SENTRY_DSN` is set.
+<!-- readysetgo:end -->
+<!-- readysetgo:begin module=twofactor -->
+- `internal/twofactor/`: two-factor login. `twofactor.go` turns it on and
+  off, encrypts each secret with `TWO_FACTOR_KEY`, and checks codes for
+  auth's login, which asks it through `auth.Service.UseSecondFactor`;
+  `totp.go` makes the codes. The code step of logging in is auth's
+  (`internal/auth/secondfactor.go`).
 <!-- readysetgo:end -->
 <!-- readysetgo:begin ui=html -->
 - `internal/web/`: the page layout, renderer, stylesheet, HTMX, flash
@@ -548,6 +568,9 @@ handlers and a link table from the feature's rows to `uploads(id)`.
   email), defined where they're used.
   <!-- readysetgo:begin module=uploads -->
   File storage (`uploads.Storage`) is one too.
+  <!-- readysetgo:end -->
+  <!-- readysetgo:begin module=twofactor -->
+  So is the login's second step (`auth.SecondFactor`).
   <!-- readysetgo:end -->
 - **HTTP:**
   - Each feature has a handler type with a `Routes(mux)` method listing its

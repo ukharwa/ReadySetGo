@@ -1,0 +1,60 @@
+{{define "title"}}Two-factor login{{end}}
+
+{{define "content"}}
+<p><a href="/account">Your account</a></p>
+<h1>Two-factor login</h1>
+{{with .Data}}
+{{if .Status.On}}
+<p>Two-factor login is on, since {{(.Status.Since.In $.TimeZone).Format "2 Jan 2006"}}: logging in asks for a code from your authenticator app as well as your password.</p>
+
+<section class="card">
+  <h2>Recovery codes</h2>
+  <p>You have {{.Status.RecoveryCodesLeft}} left. Each one logs you in once if you lose your phone. Making new ones replaces them all.</p>
+  <form method="post" action="/account/two-factor/recovery-codes" class="stack">
+    <label>Current password
+      <input type="password" name="password" autocomplete="current-password" required>
+      {{with .Codes.Errors.password}}<span class="field-error">{{.}}</span>{{end}}
+    </label>
+    <button type="submit" class="secondary">Make new recovery codes</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Turn off two-factor login</h2>
+  <p>Logging in will need only your password.</p>
+  <form method="post" action="/account/two-factor/disable" class="stack">
+    <label>Current password
+      <input type="password" name="password" autocomplete="current-password" required>
+      {{with .Disable.Errors.password}}<span class="field-error">{{.}}</span>{{end}}
+    </label>
+    <button type="submit" class="danger">Turn off two-factor login</button>
+  </form>
+</section>
+{{else}}
+<p>Two-factor login asks for a code from an app on your phone as well as your password, so a stolen password isn't enough to get in. Any authenticator app works, such as Google Authenticator, Microsoft Authenticator or 1Password.</p>
+
+<section class="card">
+  <h2>1. Add your account to the app</h2>
+  <p>Scan this QR code with the app:</p>
+  <img src="{{.QR}}" alt="QR code to scan with your authenticator app" width="200" height="200">
+  <p>Or type in this key: <code>{{.Setup.Secret}}</code></p>
+</section>
+
+<section class="card">
+  <h2>2. Enter a code from the app</h2>
+  <form method="post" action="/account/two-factor/enable" class="stack">
+    <input type="hidden" name="secret" value="{{.Setup.Secret}}">
+    <label>Code
+      <input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" required>
+      {{with .Enable.Errors.code}}<span class="field-error">{{.}}</span>{{end}}
+    </label>
+    <label>Current password
+      <input type="password" name="password" autocomplete="current-password" required>
+      {{with .Enable.Errors.password}}<span class="field-error">{{.}}</span>{{end}}
+    </label>
+    <button type="submit">Turn on two-factor login</button>
+  </form>
+</section>
+{{end}}
+{{end}}
+{{end}}

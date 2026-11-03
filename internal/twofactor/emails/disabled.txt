@@ -1,0 +1,9 @@
+Subject: Two-factor login is off
+
+Hello{{with .Name}} {{.}}{{end}},
+
+Two-factor login is now off for your {{.AppName}} account, so logging in
+needs only your password. You can turn it on again from your account page.
+
+If you didn't turn it off, someone else may have your password: reset it,
+then turn two-factor login on again.

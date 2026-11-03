@@ -10,13 +10,21 @@ import (
 	"github.com/ukharwa/readysetgo/internal/auth"
 )
 
-const userUsage = "usage: user invite | promote | demote | disable | enable | delete EMAIL"
+const userUsage = "usage: user invite | promote | demote | disable | enable | delete" +
+	// readysetgo:begin module=twofactor
+	" | reset-two-factor" +
+	// readysetgo:end
+	" EMAIL"
 
 // user changes an account from the command line. invite emails an address
 // a link to sign up (the way in when REGISTRATION=invite); promote is how
 // the first admin is made, so the app never needs a default admin password;
 // disable also logs the user out everywhere; delete removes the account and
 // everything that belongs to it.
+// readysetgo:begin module=twofactor
+// reset-two-factor turns two-factor login off for someone who lost both
+// their phone and their recovery codes; check it's really them first.
+// readysetgo:end
 func user(ctx context.Context, args []string, getenv func(string) string, stdout io.Writer) error {
 	fs := flag.NewFlagSet("user", flag.ContinueOnError)
 	if err := fs.Parse(args); err != nil {
@@ -64,6 +72,10 @@ func user(ctx context.Context, args []string, getenv func(string) string, stdout
 		err = accounts.SetDisabled(ctx, u.ID, false)
 	case "delete":
 		err = accounts.DeleteUser(ctx, u.ID)
+	// readysetgo:begin module=twofactor
+	case "reset-two-factor":
+		err = svc.twoFactor.Reset(ctx, u.ID)
+	// readysetgo:end
 	default:
 		return errors.New(userUsage)
 	}

@@ -1,0 +1,11 @@
+Subject: Two-factor login is on
+
+Hello{{with .Name}} {{.}}{{end}},
+
+Two-factor login is now on for your {{.AppName}} account: logging in asks
+for a code from your authenticator app as well as your password. Keep your
+recovery codes somewhere safe; each one logs you in once if you lose your
+phone.
+
+If you didn't turn it on, someone else may have your password. Reset it,
+and ask us to turn two-factor login off for you.

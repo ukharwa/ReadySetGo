@@ -129,6 +129,9 @@ type Service struct {
 	events    []EventHook
 
 	signupChecks []SignupCheck
+	// readysetgo:begin module=twofactor
+	secondFactor SecondFactor
+	// readysetgo:end
 }
 
 // Hook lets another feature act when an account is created or deleted,
@@ -189,9 +192,10 @@ type EventHook func(ctx context.Context, tx *sql.Tx, e Event) error
 // OnEvent adds a hook that runs for every security event.
 func (s *Service) OnEvent(h EventHook) { s.events = append(s.events, h) }
 
-// record logs an event and passes it to the event hooks, in tx or, if tx
-// is nil, in a transaction of its own.
-func (s *Service) record(ctx context.Context, tx *sql.Tx, e Event) error {
+// Record logs an event and passes it to the event hooks, in tx or, if tx
+// is nil, in a transaction of its own. Features record their own security
+// events with it too.
+func (s *Service) Record(ctx context.Context, tx *sql.Tx, e Event) error {
 	e.At, e.RequestID = s.now(), logging.RequestID(ctx)
 	if u, ok := UserFrom(ctx); ok {
 		e.ActorID = u.ID
@@ -411,7 +415,7 @@ func (s *Service) Register(ctx context.Context, in Registration) error {
 		if err := runHooks(ctx, tx, s.created, toUser(user)); err != nil {
 			return err
 		}
-		if err := s.record(ctx, tx, Event{Name: EventUserCreated, UserID: user.ID}); err != nil {
+		if err := s.Record(ctx, tx, Event{Name: EventUserCreated, UserID: user.ID}); err != nil {
 			return err
 		}
 		if invited {
@@ -473,16 +477,32 @@ func (s *Service) Login(ctx context.Context, address, password string, client Cl
 			s.logger.WarnContext(ctx, "re-hash password", "err", err)
 		}
 	}
-	token, err := s.startSession(ctx, u.ID, client, life)
+	// readysetgo:begin module=twofactor
+	if s.secondFactor != nil {
+		challenge, err := s.secondFactor.Challenge(ctx, u.ID)
+		if err != nil {
+			return "", err
+		}
+		if challenge != "" {
+			return "", &CodeRequiredError{Challenge: challenge}
+		}
+	}
+	// readysetgo:end
+	return s.loggedIn(ctx, u.ID, client, life)
+}
+
+// loggedIn starts a session for userID and records the login.
+func (s *Service) loggedIn(ctx context.Context, userID uuid.UUID, client Client, life Lifetime) (string, error) {
+	token, err := s.startSession(ctx, userID, client, life)
 	if err != nil {
 		return "", err
 	}
-	return token, s.record(ctx, nil, Event{Name: EventLogin, UserID: u.ID, IP: ip})
+	return token, s.Record(ctx, nil, Event{Name: EventLogin, UserID: userID, IP: client.IP})
 }
 
 // loginFailed records a failed login and returns ErrInvalidCredentials.
 func (s *Service) loginFailed(ctx context.Context, userID uuid.UUID, ip, why string) error {
-	if err := s.record(ctx, nil, Event{Name: EventLoginFailed, UserID: userID, IP: ip, Detail: why}); err != nil {
+	if err := s.Record(ctx, nil, Event{Name: EventLoginFailed, UserID: userID, IP: ip, Detail: why}); err != nil {
 		return err
 	}
 	return ErrInvalidCredentials
@@ -610,7 +630,7 @@ func (s *Service) RequestPasswordReset(ctx context.Context, address string) erro
 		if err != nil {
 			return err
 		}
-		if err := s.record(ctx, tx, Event{Name: EventPasswordResetRequested, UserID: u.ID}); err != nil {
+		if err := s.Record(ctx, tx, Event{Name: EventPasswordResetRequested, UserID: u.ID}); err != nil {
 			return err
 		}
 		return s.sendEmail(ctx, tx, "reset_password.txt", address, map[string]any{
@@ -645,7 +665,7 @@ func (s *Service) ResetPassword(ctx context.Context, token, password string) err
 		if err := q.DeleteUserTokens(ctx, store.DeleteUserTokensParams{UserID: t.UserID, Purpose: "reset_password"}); err != nil {
 			return err
 		}
-		return s.record(ctx, tx, Event{Name: EventPasswordReset, UserID: t.UserID})
+		return s.Record(ctx, tx, Event{Name: EventPasswordReset, UserID: t.UserID})
 	})
 	if err != nil {
 		return err
@@ -661,9 +681,9 @@ func (s *Service) setPassword(ctx context.Context, q *store.Queries, userID uuid
 	return q.UpdatePasswordHash(ctx, store.UpdatePasswordHashParams{ID: userID, PasswordHash: hash, UpdatedAt: s.now()})
 }
 
-// checkCurrentPassword returns validate.Errors for field if password isn't
+// CheckCurrentPassword returns validate.Errors for field if password isn't
 // u's.
-func (s *Service) checkCurrentPassword(ctx context.Context, u User, field, password string) error {
+func (s *Service) CheckCurrentPassword(ctx context.Context, u User, field, password string) error {
 	row, err := store.New(s.db.Write).GetUserByID(ctx, u.ID)
 	if err != nil {
 		return db.Err(err)
@@ -684,14 +704,14 @@ func (s *Service) ChangePassword(ctx context.Context, u User, currentToken, curr
 	if errs := s.checkPassword("new_password", password); errs != nil {
 		return errs
 	}
-	if err := s.checkCurrentPassword(ctx, u, "current_password", current); err != nil {
+	if err := s.CheckCurrentPassword(ctx, u, "current_password", current); err != nil {
 		return err
 	}
 	err := s.db.InTx(ctx, func(tx *sql.Tx) error {
 		if err := s.setPassword(ctx, store.New(tx), u.ID, password); err != nil {
 			return err
 		}
-		return s.record(ctx, tx, Event{Name: EventPasswordChanged, UserID: u.ID})
+		return s.Record(ctx, tx, Event{Name: EventPasswordChanged, UserID: u.ID})
 	})
 	if err != nil {
 		return err
@@ -710,7 +730,7 @@ func (s *Service) RequestEmailChange(ctx context.Context, u User, password, newA
 	case newAddress == u.Email:
 		return validate.Errors{"email": "That is already your email address."}
 	}
-	if err := s.checkCurrentPassword(ctx, u, "password", password); err != nil {
+	if err := s.CheckCurrentPassword(ctx, u, "password", password); err != nil {
 		return err
 	}
 	return s.db.InTx(ctx, func(tx *sql.Tx) error {
@@ -757,7 +777,7 @@ func (s *Service) ConfirmEmailChange(ctx context.Context, token string) error {
 		}); err != nil {
 			return db.Err(err)
 		}
-		if err := s.record(ctx, tx, Event{Name: EventEmailChanged, UserID: t.UserID}); err != nil {
+		if err := s.Record(ctx, tx, Event{Name: EventEmailChanged, UserID: t.UserID}); err != nil {
 			return err
 		}
 		return s.sendEmail(ctx, tx, "email_changed.txt", old.Email, map[string]any{"Name": old.Name, "NewEmail": t.Email})
@@ -767,7 +787,7 @@ func (s *Service) ConfirmEmailChange(ctx context.Context, token string) error {
 // DeleteAccount deletes u and everything that belongs to them, after
 // checking their password.
 func (s *Service) DeleteAccount(ctx context.Context, u User, password string) error {
-	if err := s.checkCurrentPassword(ctx, u, "password", password); err != nil {
+	if err := s.CheckCurrentPassword(ctx, u, "password", password); err != nil {
 		return err
 	}
 	return s.DeleteUser(ctx, u.ID)
@@ -790,7 +810,7 @@ func (s *Service) DeleteUser(ctx context.Context, userID uuid.UUID) error {
 		}
 		// Recorded before the delete, so what a hook keeps can point at
 		// the user until the database clears the reference.
-		if err := s.record(ctx, tx, Event{Name: EventUserDeleted, UserID: userID}); err != nil {
+		if err := s.Record(ctx, tx, Event{Name: EventUserDeleted, UserID: userID}); err != nil {
 			return err
 		}
 		return q.DeleteUser(ctx, userID)
@@ -830,7 +850,7 @@ func (s *Service) CreateUser(ctx context.Context, address, password, role string
 		if err := runHooks(ctx, tx, s.created, u); err != nil {
 			return err
 		}
-		return s.record(ctx, tx, Event{Name: EventUserCreated, UserID: u.ID})
+		return s.Record(ctx, tx, Event{Name: EventUserCreated, UserID: u.ID})
 	})
 	return u, err
 }
@@ -868,7 +888,7 @@ func (s *Service) SetRole(ctx context.Context, userID uuid.UUID, role string) er
 		if n == 0 {
 			return ErrUserNotFound
 		}
-		return s.record(ctx, tx, Event{Name: EventRoleChanged, UserID: userID, Detail: role})
+		return s.Record(ctx, tx, Event{Name: EventRoleChanged, UserID: userID, Detail: role})
 	})
 }
 
@@ -889,7 +909,7 @@ func (s *Service) SetDisabled(ctx context.Context, userID uuid.UUID, disabled bo
 		if n == 0 {
 			return ErrUserNotFound
 		}
-		return s.record(ctx, tx, Event{Name: event, UserID: userID})
+		return s.Record(ctx, tx, Event{Name: event, UserID: userID})
 	})
 	if err != nil || !disabled {
 		return err

@@ -17,6 +17,10 @@ import (
 
 	"github.com/ukharwa/readysetgo/internal/auth"
 	"github.com/ukharwa/readysetgo/internal/db/dbtest"
+
+	// readysetgo:begin module=twofactor
+	"github.com/ukharwa/readysetgo/internal/twofactor"
+	// readysetgo:end
 )
 
 // testEnv returns the settings a command runs with in a test: dev mode, a
@@ -148,6 +152,11 @@ func TestUserCommand(t *testing.T) {
 	if err := user("invite", "admin@example.com"); err == nil || !strings.Contains(err.Error(), "already has an account") {
 		t.Errorf("inviting a user: err = %v", err)
 	}
+	// readysetgo:begin module=twofactor
+	if err := user("reset-two-factor", "admin@example.com"); !errors.Is(err, twofactor.ErrNotOn) {
+		t.Errorf("resetting two-factor login that's off: err = %v, want ErrNotOn", err)
+	}
+	// readysetgo:end
 	if err := user("rename", "admin@example.com"); err == nil || !strings.Contains(err.Error(), "usage") {
 		t.Errorf("unknown action: err = %v, want the usage", err)
 	}

@@ -414,11 +414,10 @@ the flow differ from every other sign-up.
 default password. **Considered:** full role-based permissions (RBAC), which apps
 this size don't need yet.
 
-### Left out: two-factor login and social login
+### Left out: social login and passkeys
 
-Most of these apps don't need them, and neither is small. **Considered:** an
-authenticator-app (TOTP) module, passkeys, and a "Sign in with Google" style
-module.
+Most of these apps don't need them, and neither is small. **Considered:** a
+"Sign in with Google" style module, and passkeys.
 
 ## Security
 
@@ -862,6 +861,37 @@ passwords are stripped.
 
 **Considered:** logs plus an uptime monitor only, and reporting from the
 recovery middleware and the 500 path, which would miss failed jobs.
+<!-- readysetgo:end -->
+
+<!-- readysetgo:begin module=twofactor -->
+### Two-factor login: authenticator apps and recovery codes
+
+Added 2026-11-03. After their password, people who turn it on give a
+6-digit code from any authenticator app (TOTP, RFC 6238, written with the
+standard library), or one of 10 single-use recovery codes.
+- Login asks the module through one seam (`auth.Service.UseSecondFactor`),
+  so sessions, rate limits and security events stay in the account
+  service. Wrong codes are limited per account (5 per 15 minutes), however
+  many times the password is entered, since whoever sends them has it.
+- Secrets are encrypted (AES-GCM) with `TWO_FACTOR_KEY`, so a copy of the
+  database or a backup alone can't produce codes. Recovery codes are
+  hashed, like emailed tokens. Each code works once: the time step of the
+  last one used is stored.
+- The second step needs no table: its challenge is the user's ID and an
+  expiry, encrypted with the same key, valid for 10 minutes.
+- Turning it on needs a code from the app and the password, and signs out
+  the user's other devices. Turning it off, or making new recovery codes,
+  needs the password. Turning it on or off, and every use of a recovery
+  code, is emailed to the user.
+- Someone who lost both their phone and their codes is reset from the
+  command line (`user reset-two-factor`), once someone has checked who
+  they are; a password reset leaves two-factor login on.
+- Pages draw the QR code with `rsc.io/qr`, which has no dependencies of its
+  own; the API returns the `otpauth://` link for the frontend to draw.
+
+**Considered:** storing secrets unencrypted, as many libraries do; codes by
+SMS or email, which are weaker and cost money; "remember this device";
+requiring it for admins; and passkeys.
 <!-- readysetgo:end -->
 
 <!-- example:begin -->

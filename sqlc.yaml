@@ -78,6 +78,11 @@ sql:
     queries: [internal/metrics/metrics.sql]
     gen: {go: {<<: *go, out: internal/metrics/store}}
   # readysetgo:end
+  # readysetgo:begin module=twofactor
+  - <<: *sqlc
+    queries: [internal/twofactor/twofactor.sql]
+    gen: {go: {<<: *go, out: internal/twofactor/store}}
+  # readysetgo:end
   # readysetgo:end
   # readysetgo:begin db=postgres
   - &sqlc
@@ -121,5 +126,10 @@ sql:
   - <<: *sqlc
     queries: [internal/metrics/metrics.sql]
     gen: {go: {<<: *go, out: internal/metrics/store/postgres}}
+  # readysetgo:end
+  # readysetgo:begin module=twofactor
+  - <<: *sqlc
+    queries: [internal/twofactor/twofactor.sql]
+    gen: {go: {<<: *go, out: internal/twofactor/store/postgres}}
   # readysetgo:end
   # readysetgo:end
