@@ -34,18 +34,27 @@ DELETE FROM users WHERE id = @id;
 -- Sessions
 
 -- name: CreateSession :exec
-INSERT INTO sessions (token_hash, user_id, created_at, last_seen_at, idle_expires_at, expires_at)
-VALUES (@token_hash, @user_id, @created_at, @last_seen_at, @idle_expires_at, @expires_at);
+INSERT INTO sessions (token_hash, id, user_id, user_agent, ip, created_at, last_seen_at, idle_expires_at, expires_at)
+VALUES (@token_hash, @id, @user_id, @user_agent, @ip, @created_at, @last_seen_at, @idle_expires_at, @expires_at);
 
 -- name: GetSession :one
 SELECT * FROM sessions WHERE token_hash = @token_hash;
 
+-- name: ListUserSessions :many
+-- A user's sessions that haven't expired, most recently used first.
+SELECT * FROM sessions
+WHERE user_id = @user_id AND expires_at > @now AND idle_expires_at > @now
+ORDER BY last_seen_at DESC, id;
+
 -- name: TouchSession :exec
-UPDATE sessions SET last_seen_at = @last_seen_at, idle_expires_at = @idle_expires_at
+UPDATE sessions SET last_seen_at = @last_seen_at, idle_expires_at = @idle_expires_at, ip = @ip
 WHERE token_hash = @token_hash;
 
 -- name: DeleteSession :exec
 DELETE FROM sessions WHERE token_hash = @token_hash;
+
+-- name: DeleteUserSession :execrows
+DELETE FROM sessions WHERE user_id = @user_id AND id = @id;
 
 -- name: DeleteUserSessions :exec
 -- Deletes all of a user's sessions except the one whose hash is @keep.

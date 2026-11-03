@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/ukharwa/readysetgo/internal/httpx"
 	"github.com/ukharwa/readysetgo/internal/ratelimit"
 	"github.com/ukharwa/readysetgo/internal/web"
@@ -60,6 +62,8 @@ func (h *Web) Routes(mux *http.ServeMux) {
 	mux.Handle("POST /account/password", RequireUser(http.HandlerFunc(h.changePassword)))
 	mux.Handle("POST /account/email", RequireUser(http.HandlerFunc(h.changeEmail)))
 	mux.Handle("POST /account/delete", RequireUser(http.HandlerFunc(h.deleteAccount)))
+	mux.Handle("POST /account/devices/{id}/sign-out", RequireUser(http.HandlerFunc(h.signOutDevice)))
+	mux.Handle("POST /account/devices/sign-out-others", RequireUser(http.HandlerFunc(h.signOutOtherDevices)))
 }
 
 // redirectToLogin sends a logged-out page request to the login page, which
@@ -146,8 +150,7 @@ func (h *Web) login(w http.ResponseWriter, r *http.Request) {
 	if remember {
 		life = RememberedSession
 	}
-	ip := httpx.ClientIP(r.Context()).String()
-	token, err := h.svc.Login(r.Context(), form.Get("email"), form.Get("password"), ip, life)
+	token, err := h.svc.Login(r.Context(), form.Get("email"), form.Get("password"), ClientOf(r), life)
 	if err != nil {
 		h.fail(w, r, "login.html", formPage{Form: form, Next: form.Get("next")}, err)
 		return
@@ -210,6 +213,7 @@ func (h *Web) confirmEmail(w http.ResponseWriter, r *http.Request) {
 // accountPage is the data for the account page, which holds several forms.
 type accountPage struct {
 	User     User
+	Devices  []Device
 	Email    web.Form
 	Password web.Form
 	Delete   web.Form
@@ -217,7 +221,17 @@ type accountPage struct {
 
 func (h *Web) accountPage(w http.ResponseWriter, r *http.Request) {
 	u, _ := UserFrom(r.Context())
-	h.pages.Render(w, r, http.StatusOK, "account.html", accountPage{User: u})
+	h.renderAccount(w, r, http.StatusOK, &accountPage{User: u})
+}
+
+// renderAccount renders the account page, adding the device list.
+func (h *Web) renderAccount(w http.ResponseWriter, r *http.Request, status int, page *accountPage) {
+	var err error
+	if page.Devices, err = h.svc.Devices(r.Context(), page.User, tokenFrom(r.Context())); err != nil {
+		h.fail(w, r, "account.html", formPage{}, err)
+		return
+	}
+	h.pages.Render(w, r, status, "account.html", page)
 }
 
 // accountFail re-renders the account page with err shown on form, one of
@@ -227,7 +241,7 @@ func (h *Web) accountFail(w http.ResponseWriter, r *http.Request, page *accountP
 		h.fail(w, r, "account.html", formPage{}, err)
 		return
 	}
-	h.pages.Render(w, r, http.StatusUnprocessableEntity, "account.html", page)
+	h.renderAccount(w, r, http.StatusUnprocessableEntity, page)
 }
 
 func (h *Web) resendVerification(w http.ResponseWriter, r *http.Request) {
@@ -274,6 +288,35 @@ func (h *Web) deleteAccount(w http.ResponseWriter, r *http.Request) {
 	clearSessionCookie(w)
 	web.SetFlash(w, "Your account is deleted.")
 	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func (h *Web) signOutDevice(w http.ResponseWriter, r *http.Request) {
+	u, _ := UserFrom(r.Context())
+	id, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		httpx.Error(w, r, http.StatusNotFound)
+		return
+	}
+	switch err := h.svc.SignOutDevice(r.Context(), u, id); {
+	case errors.Is(err, ErrDeviceNotFound):
+		web.SetFlash(w, "That device was already signed out.")
+	case err != nil:
+		h.fail(w, r, "account.html", formPage{}, err)
+		return
+	default:
+		web.SetFlash(w, "That device is signed out.")
+	}
+	http.Redirect(w, r, "/account", http.StatusSeeOther)
+}
+
+func (h *Web) signOutOtherDevices(w http.ResponseWriter, r *http.Request) {
+	u, _ := UserFrom(r.Context())
+	if err := h.svc.SignOutOtherDevices(r.Context(), u, tokenFrom(r.Context())); err != nil {
+		h.fail(w, r, "account.html", formPage{}, err)
+		return
+	}
+	web.SetFlash(w, "Every other device is signed out.")
+	http.Redirect(w, r, "/account", http.StatusSeeOther)
 }
 
 // postForm returns the submitted form fields. A malformed or oversized body

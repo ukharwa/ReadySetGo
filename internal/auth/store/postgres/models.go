@@ -13,7 +13,10 @@ import (
 
 type Session struct {
 	TokenHash     string
+	ID            uuid.UUID
 	UserID        uuid.UUID
+	UserAgent     string
+	Ip            string
 	CreatedAt     time.Time
 	LastSeenAt    time.Time
 	IdleExpiresAt time.Time

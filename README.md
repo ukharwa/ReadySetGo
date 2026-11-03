@@ -19,8 +19,8 @@ well-maintained libraries, and no framework to learn.
 ## What you get
 
 - 🔐 **Accounts done right.** Sign-up, login with "remember me", email
-  verification, password reset, email and password changes, and account
-  deletion. Argon2id hashing, database-backed sessions, and bearer tokens
+  verification, password reset, email and password changes, a list of
+  signed-in devices to sign out, and account deletion. Argon2id hashing, database-backed sessions, and bearer tokens
   for API clients.
 - 🗄️ **SQLite or PostgreSQL.** Typed queries with sqlc, migrations with
   goose, UUIDv7 keys, and backups for either (Litestream or `pg_dump`).
@@ -172,8 +172,8 @@ grows.
 ## What's included
 
 - **Accounts:** registration, login with "remember me", logout, email
-  verification, password reset, changing email and password, and account
-  deletion. Passwords are hashed with argon2id; sessions live in the
+  verification, password reset, changing email and password, signing out
+  other devices, and account deletion. Passwords are hashed with argon2id; sessions live in the
   database.
 <!-- readysetgo:begin ui=api -->
   Browsers use a session cookie; other clients get a bearer token from

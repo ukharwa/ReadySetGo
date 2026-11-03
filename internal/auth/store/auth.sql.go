@@ -15,13 +15,16 @@ import (
 
 const createSession = `-- name: CreateSession :exec
 
-INSERT INTO sessions (token_hash, user_id, created_at, last_seen_at, idle_expires_at, expires_at)
-VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+INSERT INTO sessions (token_hash, id, user_id, user_agent, ip, created_at, last_seen_at, idle_expires_at, expires_at)
+VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
 `
 
 type CreateSessionParams struct {
 	TokenHash     string
+	ID            uuid.UUID
 	UserID        uuid.UUID
+	UserAgent     string
+	Ip            string
 	CreatedAt     time.Time
 	LastSeenAt    time.Time
 	IdleExpiresAt time.Time
@@ -32,7 +35,10 @@ type CreateSessionParams struct {
 func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) error {
 	_, err := q.db.ExecContext(ctx, createSession,
 		arg.TokenHash,
+		arg.ID,
 		arg.UserID,
+		arg.UserAgent,
+		arg.Ip,
 		arg.CreatedAt,
 		arg.LastSeenAt,
 		arg.IdleExpiresAt,
@@ -153,6 +159,23 @@ func (q *Queries) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+const deleteUserSession = `-- name: DeleteUserSession :execrows
+DELETE FROM sessions WHERE user_id = ?1 AND id = ?2
+`
+
+type DeleteUserSessionParams struct {
+	UserID uuid.UUID
+	ID     uuid.UUID
+}
+
+func (q *Queries) DeleteUserSession(ctx context.Context, arg DeleteUserSessionParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteUserSession, arg.UserID, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const deleteUserSessions = `-- name: DeleteUserSessions :exec
 DELETE FROM sessions WHERE user_id = ?1 AND token_hash <> ?2
 `
@@ -183,7 +206,7 @@ func (q *Queries) DeleteUserTokens(ctx context.Context, arg DeleteUserTokensPara
 }
 
 const getSession = `-- name: GetSession :one
-SELECT token_hash, user_id, created_at, last_seen_at, idle_expires_at, expires_at FROM sessions WHERE token_hash = ?1
+SELECT token_hash, id, user_id, user_agent, ip, created_at, last_seen_at, idle_expires_at, expires_at FROM sessions WHERE token_hash = ?1
 `
 
 func (q *Queries) GetSession(ctx context.Context, tokenHash string) (Session, error) {
@@ -191,7 +214,10 @@ func (q *Queries) GetSession(ctx context.Context, tokenHash string) (Session, er
 	var i Session
 	err := row.Scan(
 		&i.TokenHash,
+		&i.ID,
 		&i.UserID,
+		&i.UserAgent,
+		&i.Ip,
 		&i.CreatedAt,
 		&i.LastSeenAt,
 		&i.IdleExpiresAt,
@@ -238,6 +264,51 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const listUserSessions = `-- name: ListUserSessions :many
+SELECT token_hash, id, user_id, user_agent, ip, created_at, last_seen_at, idle_expires_at, expires_at FROM sessions
+WHERE user_id = ?1 AND expires_at > ?2 AND idle_expires_at > ?2
+ORDER BY last_seen_at DESC, id
+`
+
+type ListUserSessionsParams struct {
+	UserID uuid.UUID
+	Now    time.Time
+}
+
+// A user's sessions that haven't expired, most recently used first.
+func (q *Queries) ListUserSessions(ctx context.Context, arg ListUserSessionsParams) ([]Session, error) {
+	rows, err := q.db.QueryContext(ctx, listUserSessions, arg.UserID, arg.Now)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Session
+	for rows.Next() {
+		var i Session
+		if err := rows.Scan(
+			&i.TokenHash,
+			&i.ID,
+			&i.UserID,
+			&i.UserAgent,
+			&i.Ip,
+			&i.CreatedAt,
+			&i.LastSeenAt,
+			&i.IdleExpiresAt,
+			&i.ExpiresAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const markEmailVerified = `-- name: MarkEmailVerified :execrows
@@ -322,18 +393,24 @@ func (q *Queries) TakeUserToken(ctx context.Context, arg TakeUserTokenParams) (U
 }
 
 const touchSession = `-- name: TouchSession :exec
-UPDATE sessions SET last_seen_at = ?1, idle_expires_at = ?2
-WHERE token_hash = ?3
+UPDATE sessions SET last_seen_at = ?1, idle_expires_at = ?2, ip = ?3
+WHERE token_hash = ?4
 `
 
 type TouchSessionParams struct {
 	LastSeenAt    time.Time
 	IdleExpiresAt time.Time
+	Ip            string
 	TokenHash     string
 }
 
 func (q *Queries) TouchSession(ctx context.Context, arg TouchSessionParams) error {
-	_, err := q.db.ExecContext(ctx, touchSession, arg.LastSeenAt, arg.IdleExpiresAt, arg.TokenHash)
+	_, err := q.db.ExecContext(ctx, touchSession,
+		arg.LastSeenAt,
+		arg.IdleExpiresAt,
+		arg.Ip,
+		arg.TokenHash,
+	)
 	return err
 }
 

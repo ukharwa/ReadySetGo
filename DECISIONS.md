@@ -308,8 +308,14 @@ SHA-256 hash, so a leaked database or backup can't be used to log in.
 Sessions expire after inactivity and after a fixed maximum age: a browser
 session after 24 idle hours or 7 days, a "remember me" session after 30
 days. Every login issues a new token, logout deletes the session, and
-password changes log out other sessions. "Last seen" is written at most
-every 5 minutes. The `SessionStore` interface in the auth package is the
+password changes log out other sessions. "Last seen" (with the address it
+came from) is written at most every 5 minutes. Each session also keeps the
+User-Agent it started with and an ID of its own, so the account page can
+list signed-in devices and sign out any of them without exposing the token
+hash; devices are named from the User-Agent ("Firefox on Windows") by a
+short list of known browsers, not a parsing library. **Considered:** a
+rough location for each device, which needs a GeoIP database with its own
+download and licence; the IP address is shown instead. The `SessionStore` interface in the auth package is the
 seam; its default keeps sessions in the database and reads them from the
 primary, never a replica, so a new session is found straight away.
 

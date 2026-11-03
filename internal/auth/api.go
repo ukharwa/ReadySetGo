@@ -50,6 +50,9 @@ func (h *API) Routes(mux *http.ServeMux) {
 	mux.Handle("POST /api/auth/change-email", RequireUser(http.HandlerFunc(h.changeEmail)))
 	mux.Handle("POST /api/auth/confirm-email", limit(h.confirmEmail))
 	mux.Handle("POST /api/auth/delete-account", RequireUser(http.HandlerFunc(h.deleteAccount)))
+	mux.Handle("GET /api/auth/devices", RequireUser(http.HandlerFunc(h.devices)))
+	mux.Handle("DELETE /api/auth/devices/{id}", RequireUser(http.HandlerFunc(h.signOutDevice)))
+	mux.Handle("POST /api/auth/devices/sign-out-others", RequireUser(http.HandlerFunc(h.signOutOtherDevices)))
 }
 
 // bearerToken returns the token from an "Authorization: Bearer" header.
@@ -112,7 +115,7 @@ func (h *API) login(w http.ResponseWriter, r *http.Request) {
 	if in.Remember {
 		life = RememberedSession
 	}
-	token, err := h.svc.Login(r.Context(), in.Email, in.Password, httpx.ClientIP(r.Context()).String(), life)
+	token, err := h.svc.Login(r.Context(), in.Email, in.Password, ClientOf(r), life)
 	if err != nil {
 		h.fail(w, r, err)
 		return
@@ -128,7 +131,7 @@ func (h *API) token(w http.ResponseWriter, r *http.Request) {
 	if !httpx.ReadJSON(w, r, &in) {
 		return
 	}
-	token, err := h.svc.Login(r.Context(), in.Email, in.Password, httpx.ClientIP(r.Context()).String(), APIToken)
+	token, err := h.svc.Login(r.Context(), in.Email, in.Password, ClientOf(r), APIToken)
 	if err != nil {
 		h.fail(w, r, err)
 		return
@@ -259,5 +262,55 @@ func (h *API) deleteAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	clearSessionCookie(w)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+type deviceJSON struct {
+	ID         uuid.UUID `json:"id"`
+	Name       string    `json:"name"`
+	IP         string    `json:"ip"`
+	CreatedAt  time.Time `json:"created_at"`
+	LastSeenAt time.Time `json:"last_seen_at"`
+	Current    bool      `json:"current"`
+}
+
+// devices lists the user's signed-in browsers and tokens.
+func (h *API) devices(w http.ResponseWriter, r *http.Request) {
+	u, _ := UserFrom(r.Context())
+	devices, err := h.svc.Devices(r.Context(), u, tokenFrom(r.Context()))
+	if err != nil {
+		h.fail(w, r, err)
+		return
+	}
+	out := make([]deviceJSON, len(devices))
+	for i, d := range devices {
+		out[i] = deviceJSON(d)
+	}
+	httpx.WriteJSON(w, http.StatusOK, out)
+}
+
+func (h *API) signOutDevice(w http.ResponseWriter, r *http.Request) {
+	u, _ := UserFrom(r.Context())
+	id, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		httpx.Error(w, r, http.StatusNotFound)
+		return
+	}
+	switch err := h.svc.SignOutDevice(r.Context(), u, id); {
+	case err == nil:
+		w.WriteHeader(http.StatusNoContent)
+	case errors.Is(err, ErrDeviceNotFound):
+		httpx.Error(w, r, http.StatusNotFound)
+	default:
+		h.fail(w, r, err)
+	}
+}
+
+func (h *API) signOutOtherDevices(w http.ResponseWriter, r *http.Request) {
+	u, _ := UserFrom(r.Context())
+	if err := h.svc.SignOutOtherDevices(r.Context(), u, tokenFrom(r.Context())); err != nil {
+		h.fail(w, r, err)
+		return
+	}
 	w.WriteHeader(http.StatusNoContent)
 }

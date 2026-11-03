@@ -138,3 +138,56 @@ func TestAPIResetAndDelete(t *testing.T) {
 		t.Errorf("me after deleting the account: %d", r.Status)
 	}
 }
+
+type device struct {
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Current bool   `json:"current"`
+}
+
+func TestAPIDevices(t *testing.T) {
+	t.Parallel()
+	a := newAPIApp(t)
+	browser := a.Client()
+	a.SignIn(browser, "ada@example.com")
+	var issued struct{ Token string }
+	a.Decode(a.JSON(a.Client(), "POST", "/api/auth/token", "", map[string]string{"email": "ada@example.com", "password": apiPassword}), &issued)
+
+	var devices []device
+	a.Decode(a.JSON(a.Client(), "GET", "/api/auth/devices", issued.Token, nil), &devices)
+	if len(devices) != 2 || devices[0].Current == devices[1].Current {
+		t.Fatalf("devices = %+v, want the browser and the token, one current", devices)
+	}
+	browserID := devices[0].ID
+	if devices[0].Current {
+		browserID = devices[1].ID
+	}
+
+	// Someone else gets 404 for Ada's browser.
+	bob := a.Client()
+	a.SignIn(bob, "bob@example.com")
+	if r := a.JSON(bob, "DELETE", "/api/auth/devices/"+browserID, "", nil); r.Status != http.StatusNotFound {
+		t.Errorf("another user signing out Ada's browser: %d, want 404", r.Status)
+	}
+
+	if r := a.JSON(a.Client(), "DELETE", "/api/auth/devices/"+browserID, issued.Token, nil); r.Status != http.StatusNoContent {
+		t.Fatalf("sign out the browser: %d %s", r.Status, r.Body)
+	}
+	if r := a.JSON(browser, "GET", "/api/auth/me", "", nil); r.Status != http.StatusUnauthorized {
+		t.Errorf("signed-out browser: %d, want 401", r.Status)
+	}
+	if r := a.JSON(a.Client(), "DELETE", "/api/auth/devices/"+browserID, issued.Token, nil); r.Status != http.StatusNotFound {
+		t.Errorf("signing out twice: %d, want 404", r.Status)
+	}
+
+	a.SignIn(browser, "carol@example.com") // a fresh session, for a check that it's untouched
+	if r := a.JSON(a.Client(), "POST", "/api/auth/devices/sign-out-others", issued.Token, nil); r.Status != http.StatusNoContent {
+		t.Fatalf("sign out the others: %d %s", r.Status, r.Body)
+	}
+	if r := a.JSON(a.Client(), "GET", "/api/auth/me", issued.Token, nil); r.Status != http.StatusOK {
+		t.Errorf("the token itself was signed out: %d", r.Status)
+	}
+	if r := a.JSON(browser, "GET", "/api/auth/me", "", nil); r.Status != http.StatusOK {
+		t.Errorf("another user's session was signed out: %d", r.Status)
+	}
+}

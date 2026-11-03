@@ -92,7 +92,7 @@ func (a *App) SignIn(c *http.Client, address string) auth.User {
 	if err != nil {
 		a.t.Fatalf("create %s: %v", address, err)
 	}
-	token, err := a.Accounts.Login(a.t.Context(), address, Password, "192.0.2.1", auth.BrowserSession)
+	token, err := a.Accounts.Login(a.t.Context(), address, Password, auth.Client{IP: "192.0.2.1"}, auth.BrowserSession)
 	if err != nil {
 		a.t.Fatalf("log in %s: %v", address, err)
 	}

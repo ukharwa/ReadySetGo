@@ -45,6 +45,36 @@
 </section>
 
 <section class="card">
+  <h2>Signed-in devices</h2>
+  <p>Sign out any you don't recognise, then change your password.</p>
+  <div class="table-scroll">
+  <table>
+    <thead>
+      <tr><th>Device</th><th>IP address</th><th>Last active</th><th></th></tr>
+    </thead>
+    <tbody>
+      {{range .Data.Devices}}
+      <tr>
+        <td>{{.Name}}</td>
+        <td>{{.IP}}</td>
+        <td>{{.LastSeenAt.Format "2 Jan 2006 15:04"}} UTC</td>
+        <td>{{if .Current}}This device{{else}}
+          <form method="post" action="/account/devices/{{.ID}}/sign-out" class="inline">
+            <button type="submit" class="link">Sign out</button>
+          </form>{{end}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  </div>
+  {{if gt (len .Data.Devices) 1}}
+  <form method="post" action="/account/devices/sign-out-others" class="inline">
+    <button type="submit" class="secondary">Sign out all other devices</button>
+  </form>
+  {{end}}
+</section>
+
+<section class="card">
   <h2>Delete your account</h2>
   <p>This deletes your account and everything in it, straight away. It can't be undone.</p>
   {{with .Data.Delete.Errors.account}}<p class="error-summary" role="alert">{{.}}</p>{{end}}

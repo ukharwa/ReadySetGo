@@ -359,7 +359,8 @@ README.md ("Removing a module") explains taking a module out.
   `internal/<feature>/store/`: the Go sqlc generates from them. Never edit
   the generated code.
 - `internal/auth/`: accounts. `auth.go` is the `Service` with every flow and
-  no HTTP; `sessions.go` the session-store seam; `middleware.go` loads the
+  no HTTP; `sessions.go` the session-store seam; `devices.go` lists a
+  user's sessions as signed-in devices; `middleware.go` loads the
   user and guards routes; `emails/` holds the email templates.
   <!-- readysetgo:begin ui=html -->
   `web.go` and `templates/` are the account pages.

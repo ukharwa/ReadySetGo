@@ -69,7 +69,7 @@ func TestWebManageUser(t *testing.T) {
 		t.Errorf("disabled Bob's session still works: %d", p.Status)
 	}
 	a.Post(admin, page+"/enable", nil)
-	if _, err := a.Accounts.Login(t.Context(), "bob@example.com", apptest.Password, "192.0.2.1", auth.BrowserSession); err != nil {
+	if _, err := a.Accounts.Login(t.Context(), "bob@example.com", apptest.Password, auth.Client{IP: "192.0.2.1"}, auth.BrowserSession); err != nil {
 		t.Errorf("log in after enabling: %v", err)
 	}
 

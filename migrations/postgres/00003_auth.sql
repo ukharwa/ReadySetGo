@@ -3,7 +3,10 @@
 -- leaked database can't be used to log in.
 CREATE TABLE sessions (
     token_hash      text PRIMARY KEY,
+    id              uuid NOT NULL UNIQUE, -- names the session in the device list
     user_id         uuid NOT NULL,
+    user_agent      text NOT NULL,
+    ip              text NOT NULL,        -- the address it was last seen from
     created_at      timestamptz NOT NULL,
     last_seen_at    timestamptz NOT NULL,
     idle_expires_at timestamptz NOT NULL,

@@ -3,6 +3,7 @@ package auth_test
 import (
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -265,5 +266,69 @@ func TestWebPagesRender(t *testing.T) {
 	signUp(t, a, c, "ada@example.com")
 	if p := a.Get(c, "/account"); p.Status != http.StatusOK || !strings.Contains(p.Body, "</html>") {
 		t.Errorf("/account: status %d", p.Status)
+	}
+}
+
+var deviceLink = regexp.MustCompile(`/account/devices/([0-9a-f-]{36})/sign-out`)
+
+// otherDevices returns the IDs of the devices c's account page offers to
+// sign out: every one but c's own.
+func otherDevices(t *testing.T, a *apptest.App, c *http.Client) []string {
+	t.Helper()
+	p := a.Get(c, "/account")
+	if strings.Count(p.Body, "This device") != 1 {
+		t.Fatalf("account page doesn't mark this device once:\n%s", p.Body)
+	}
+	var ids []string
+	for _, m := range deviceLink.FindAllStringSubmatch(p.Body, -1) {
+		ids = append(ids, m[1])
+	}
+	return ids
+}
+
+func TestWebDevices(t *testing.T) {
+	t.Parallel()
+	a := newWebApp(t)
+	here, phone, laptop := a.Client(), a.Client(), a.Client()
+	signUp(t, a, here, "ada@example.com")
+	logIn(t, a, phone, "ada@example.com", password)
+
+	others := otherDevices(t, a, here)
+	if len(others) != 1 {
+		t.Fatalf("other devices: %v, want the phone's", others)
+	}
+	phoneID := others[0]
+
+	// Someone else can't sign out Ada's phone.
+	bob := a.Client()
+	signUp(t, a, bob, "bob@example.com")
+	a.Post(bob, "/account/devices/"+phoneID+"/sign-out", nil)
+	if !loggedIn(t, a, phone) {
+		t.Fatal("another user signed out Ada's phone")
+	}
+
+	if p := a.Post(here, "/account/devices/"+phoneID+"/sign-out", nil); p.Status != http.StatusSeeOther {
+		t.Fatalf("sign out the phone: status %d\n%s", p.Status, p.Body)
+	}
+	if loggedIn(t, a, phone) || !loggedIn(t, a, here) {
+		t.Fatal("want the phone signed out and this device kept")
+	}
+	if p := a.Post(here, "/account/devices/"+phoneID+"/sign-out", nil); p.Status != http.StatusSeeOther {
+		t.Errorf("signing out a device twice: status %d", p.Status)
+	}
+	if p := a.Post(here, "/account/devices/not-an-id/sign-out", nil); p.Status != http.StatusNotFound {
+		t.Errorf("malformed device ID: status %d, want 404", p.Status)
+	}
+
+	logIn(t, a, phone, "ada@example.com", password)
+	logIn(t, a, laptop, "ada@example.com", password)
+	if p := a.Post(here, "/account/devices/sign-out-others", nil); p.Status != http.StatusSeeOther {
+		t.Fatalf("sign out the others: status %d\n%s", p.Status, p.Body)
+	}
+	if loggedIn(t, a, phone) || loggedIn(t, a, laptop) || !loggedIn(t, a, here) {
+		t.Error("want every other device signed out and this one kept")
+	}
+	if others := otherDevices(t, a, here); len(others) != 0 {
+		t.Errorf("devices left besides this one: %v", others)
 	}
 }

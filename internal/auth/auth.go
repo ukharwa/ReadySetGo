@@ -157,6 +157,7 @@ const (
 	EventPasswordReset          = "auth.password_reset"
 	EventPasswordChanged        = "auth.password_changed"
 	EventEmailChanged           = "auth.email_changed"
+	EventDeviceSignedOut        = "auth.device_signed_out"
 )
 
 // Event is a security-relevant change to an account, or attempt at one.
@@ -371,16 +372,17 @@ func (s *Service) Register(ctx context.Context, address, password string) error 
 	})
 }
 
-// Login checks an email and password and starts a session with lifetime life,
-// returning its token. Wrong details return ErrInvalidCredentials, whether or
+// Login checks an email and password and starts a session with lifetime life
+// for client, returning its token. Wrong details return ErrInvalidCredentials, whether or
 // not the account exists; too many attempts return *RateLimitedError.
 //
 // Attempts are limited per account and IP address (5 per 15 minutes) and per
 // account (50 an hour). Both counts reset after a successful login, so only
 // consecutive failures count, and a stranger elsewhere can't lock anyone
 // out.
-func (s *Service) Login(ctx context.Context, address, password, ip string, life Lifetime) (string, error) {
+func (s *Service) Login(ctx context.Context, address, password string, client Client, life Lifetime) (string, error) {
 	address, _ = validate.Email(address)
+	ip := client.IP
 	keys := []string{"login:account-ip:" + address + "|" + ip, "login:account:" + address}
 	if err := s.allow(ctx, keys[0], 5, 15*time.Minute); err != nil {
 		return "", err
@@ -416,7 +418,7 @@ func (s *Service) Login(ctx context.Context, address, password, ip string, life 
 			s.logger.WarnContext(ctx, "re-hash password", "err", err)
 		}
 	}
-	token, err := s.startSession(ctx, u.ID, life)
+	token, err := s.startSession(ctx, u.ID, client, life)
 	if err != nil {
 		return "", err
 	}
@@ -431,12 +433,12 @@ func (s *Service) loginFailed(ctx context.Context, userID uuid.UUID, ip, why str
 	return ErrInvalidCredentials
 }
 
-func (s *Service) startSession(ctx context.Context, userID uuid.UUID, life Lifetime) (string, error) {
+func (s *Service) startSession(ctx context.Context, userID uuid.UUID, client Client, life Lifetime) (string, error) {
 	token, hash := newToken()
 	now := s.now()
 	err := s.sessions.Create(ctx, Session{
-		TokenHash: hash, UserID: userID, CreatedAt: now, LastSeenAt: now,
-		IdleExpiresAt: now.Add(life.Idle), ExpiresAt: now.Add(life.Max),
+		TokenHash: hash, ID: db.NewID(), UserID: userID, UserAgent: client.userAgent(), IP: client.IP,
+		CreatedAt: now, LastSeenAt: now, IdleExpiresAt: now.Add(life.Idle), ExpiresAt: now.Add(life.Max),
 	})
 	if err != nil {
 		return "", fmt.Errorf("create session: %w", err)
@@ -466,7 +468,11 @@ func (s *Service) Authenticate(ctx context.Context, token string) (User, error) 
 		if idleExpires.After(sess.ExpiresAt) {
 			idleExpires = sess.ExpiresAt
 		}
-		if err := s.sessions.Touch(ctx, sess.TokenHash, now, idleExpires); err != nil {
+		ip := sess.IP
+		if addr := httpx.ClientIP(ctx); addr.IsValid() {
+			ip = addr.String()
+		}
+		if err := s.sessions.Touch(ctx, sess.TokenHash, now, idleExpires, ip); err != nil {
 			s.logger.WarnContext(ctx, "touch session", "err", err)
 		}
 	}

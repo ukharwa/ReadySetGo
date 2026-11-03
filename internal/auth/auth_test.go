@@ -67,7 +67,7 @@ func TestSessionExpiry(t *testing.T) {
 	if _, err := s.CreateUser(ctx, "ada@example.com", "correct horse battery", RoleUser, true); err != nil {
 		t.Fatal(err)
 	}
-	token, err := s.Login(ctx, "ada@example.com", "correct horse battery", "192.0.2.1", BrowserSession)
+	token, err := s.Login(ctx, "ada@example.com", "correct horse battery", Client{IP: "192.0.2.1"}, BrowserSession)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,7 +89,7 @@ func TestSessionExpiry(t *testing.T) {
 		t.Error("session outlived its 7-day maximum")
 	}
 
-	token, _ = s.Login(ctx, "ada@example.com", "correct horse battery", "192.0.2.1", BrowserSession)
+	token, _ = s.Login(ctx, "ada@example.com", "correct horse battery", Client{IP: "192.0.2.1"}, BrowserSession)
 	*now = now.Add(25 * time.Hour)
 	if authenticated() {
 		t.Error("session survived 25 idle hours")
@@ -104,7 +104,7 @@ func TestDisabledUserLosesSessions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	token, err := s.Login(ctx, "ada@example.com", "correct horse battery", "192.0.2.1", BrowserSession)
+	token, err := s.Login(ctx, "ada@example.com", "correct horse battery", Client{IP: "192.0.2.1"}, BrowserSession)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +114,7 @@ func TestDisabledUserLosesSessions(t *testing.T) {
 	if _, err := s.Authenticate(ctx, token); err == nil {
 		t.Error("disabled user still authenticated")
 	}
-	if _, err := s.Login(ctx, "ada@example.com", "correct horse battery", "192.0.2.1", BrowserSession); !errors.Is(err, ErrInvalidCredentials) {
+	if _, err := s.Login(ctx, "ada@example.com", "correct horse battery", Client{IP: "192.0.2.1"}, BrowserSession); !errors.Is(err, ErrInvalidCredentials) {
 		t.Errorf("disabled user login: err = %v, want ErrInvalidCredentials", err)
 	}
 	if err := s.SetDisabled(ctx, uuid.New(), true); !errors.Is(err, ErrUserNotFound) {
@@ -145,9 +145,9 @@ func TestEvents(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, _ = s.Login(ctx, "nobody@example.com", "correct horse battery", "192.0.2.1", BrowserSession)
-	_, _ = s.Login(ctx, "ada@example.com", "wrong horse battery", "192.0.2.1", BrowserSession)
-	if _, err := s.Login(ctx, "ada@example.com", "correct horse battery", "192.0.2.1", BrowserSession); err != nil {
+	_, _ = s.Login(ctx, "nobody@example.com", "correct horse battery", Client{IP: "192.0.2.1"}, BrowserSession)
+	_, _ = s.Login(ctx, "ada@example.com", "wrong horse battery", Client{IP: "192.0.2.1"}, BrowserSession)
+	if _, err := s.Login(ctx, "ada@example.com", "correct horse battery", Client{IP: "192.0.2.1"}, BrowserSession); err != nil {
 		t.Fatal(err)
 	}
 	if err := s.SetRole(ctx, ada.ID, RoleAdmin); err != nil {
@@ -193,7 +193,7 @@ func TestCleanup(t *testing.T) {
 	if _, err := s.CreateUser(ctx, "ada@example.com", "correct horse battery", RoleUser, false); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.Login(ctx, "ada@example.com", "correct horse battery", "192.0.2.1", BrowserSession); err != nil {
+	if _, err := s.Login(ctx, "ada@example.com", "correct horse battery", Client{IP: "192.0.2.1"}, BrowserSession); err != nil {
 		t.Fatal(err)
 	}
 	*now = now.Add(8 * 24 * time.Hour)
