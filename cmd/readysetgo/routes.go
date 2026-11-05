@@ -57,7 +57,7 @@ func routes(cfg config.Config, logger *slog.Logger, health *httpx.Health, svc *s
 	}
 	// readysetgo:end
 	// readysetgo:begin ui=api
-	auth.NewAPI(svc.accounts, svc.limiter).Routes(app)
+	auth.NewAPI(svc.accounts).Routes(app)
 	// example:begin
 	notes.NewAPI(svc.notes).Routes(app)
 	// example:end
@@ -74,10 +74,10 @@ func routes(cfg config.Config, logger *slog.Logger, health *httpx.Health, svc *s
 	uploads.NewAPI(svc.uploads).Routes(app)
 	// readysetgo:end
 	// readysetgo:begin module=twofactor
-	twofactor.NewAPI(svc.twoFactor, svc.limiter).Routes(app)
+	twofactor.NewAPI(svc.twoFactor).Routes(app)
 	// readysetgo:end
 	// readysetgo:begin module=social
-	social.NewAPI(svc.social, svc.limiter).Routes(app)
+	social.NewAPI(svc.social).Routes(app)
 	// readysetgo:end
 	// readysetgo:end
 

@@ -60,7 +60,7 @@ func mountPages(cfg config.Config, logger *slog.Logger, root, app *http.ServeMux
 	}
 	app.Handle("GET /{$}", home)
 
-	accountPages, err := auth.NewWeb(svc.accounts, pages, svc.limiter)
+	accountPages, err := auth.NewWeb(svc.accounts, pages)
 	if err != nil {
 		return err
 	}
@@ -102,14 +102,14 @@ func mountPages(cfg config.Config, logger *slog.Logger, root, app *http.ServeMux
 	uploadPages.Routes(app)
 	// readysetgo:end
 	// readysetgo:begin module=twofactor
-	twoFactorPages, err := twofactor.NewWeb(svc.twoFactor, pages, svc.limiter)
+	twoFactorPages, err := twofactor.NewWeb(svc.twoFactor, pages)
 	if err != nil {
 		return err
 	}
 	twoFactorPages.Routes(app)
 	// readysetgo:end
 	// readysetgo:begin module=social
-	socialPages, err := social.NewWeb(svc.social, pages, svc.limiter)
+	socialPages, err := social.NewWeb(svc.social, pages)
 	if err != nil {
 		return err
 	}

@@ -5,8 +5,6 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/google/uuid"
-
 	"github.com/ukharwa/readysetgo/internal/auth"
 	"github.com/ukharwa/readysetgo/internal/httpx"
 )
@@ -21,8 +19,8 @@ type contextKey struct{}
 func (s *Service) Require(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user, _ := auth.UserFrom(r.Context())
-		id, err := uuid.Parse(r.PathValue("workspaceID"))
-		if err != nil {
+		id, ok := httpx.PathID(r, "workspaceID")
+		if !ok {
 			httpx.Error(w, r, http.StatusNotFound)
 			return
 		}
@@ -45,10 +43,4 @@ func (s *Service) Require(next http.Handler) http.Handler {
 func From(ctx context.Context) Workspace {
 	ws, _ := ctx.Value(contextKey{}).(Workspace)
 	return ws
-}
-
-// pathID parses a UUID path value, such as a member's {userID}.
-func pathID(r *http.Request, name string) (uuid.UUID, bool) {
-	id, err := uuid.Parse(r.PathValue(name))
-	return id, err == nil
 }

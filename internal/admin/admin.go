@@ -11,7 +11,6 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"net/http"
 	"strings"
 	"time"
 
@@ -194,10 +193,4 @@ func (s *Service) RetryJob(ctx context.Context, id uuid.UUID) error {
 	}
 	s.logger.InfoContext(ctx, "failed job retried", "job_id", id)
 	return nil
-}
-
-// pathID parses the UUID in the path parameter name.
-func pathID(r *http.Request, name string) (uuid.UUID, bool) {
-	id, err := uuid.Parse(r.PathValue(name))
-	return id, err == nil
 }

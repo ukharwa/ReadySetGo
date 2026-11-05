@@ -15,7 +15,7 @@ const apiPassword = "correct horse battery"
 func newAPIApp(t *testing.T) *apptest.App {
 	t.Helper()
 	a := apptest.New(t)
-	auth.NewAPI(a.Accounts, a.Limiter).Routes(a.Mux)
+	auth.NewAPI(a.Accounts).Routes(a.Mux)
 	return a
 }
 
@@ -226,7 +226,7 @@ func TestAPIProfile(t *testing.T) {
 func TestAPIInvitation(t *testing.T) {
 	t.Parallel()
 	a := apptest.New(t, func(o *auth.Options) { o.InviteOnly = true })
-	auth.NewAPI(a.Accounts, a.Limiter).Routes(a.Mux)
+	auth.NewAPI(a.Accounts).Routes(a.Mux)
 	c := a.Client()
 	body := map[string]string{"email": "ada@example.com", "password": apiPassword}
 	if r := a.JSON(c, "POST", "/api/auth/register", "", body); r.Status != http.StatusAccepted || strings.Contains(string(r.Body), "ready") {

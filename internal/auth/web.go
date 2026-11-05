@@ -8,9 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
-
-	"github.com/google/uuid"
 
 	"github.com/ukharwa/readysetgo/internal/httpx"
 	"github.com/ukharwa/readysetgo/internal/ratelimit"
@@ -22,19 +19,18 @@ var templateFS embed.FS
 
 // Web serves the account pages.
 type Web struct {
-	svc     *Service
-	pages   *web.Pages
-	limiter ratelimit.Limiter
+	svc   *Service
+	pages *web.Pages
 }
 
 // NewWeb returns the account pages' handlers.
-func NewWeb(svc *Service, rd *web.Renderer, limiter ratelimit.Limiter) (*Web, error) {
+func NewWeb(svc *Service, rd *web.Renderer) (*Web, error) {
 	files, _ := fs.Sub(templateFS, "templates")
 	pages, err := rd.Pages(files, "internal/auth/templates")
 	if err != nil {
 		return nil, err
 	}
-	return &Web{svc: svc, pages: pages, limiter: limiter}, nil
+	return &Web{svc: svc, pages: pages}, nil
 }
 
 // Routes registers the account pages on mux.
@@ -42,7 +38,7 @@ func (h *Web) Routes(mux *http.ServeMux) {
 	// One budget per IP address across every form that checks a password or
 	// sends email.
 	limit := func(f http.HandlerFunc) http.Handler {
-		return ratelimit.PerIP(h.limiter, "auth", 20, time.Minute)(f)
+		return h.svc.RateLimit(f)
 	}
 	mux.HandleFunc("GET /register", h.registerPage)
 	mux.Handle("POST /register", limit(h.register))
@@ -122,7 +118,7 @@ func (h *Web) fail(w http.ResponseWriter, r *http.Request, page string, data for
 	// readysetgo:end
 	default:
 		if limited, ok := errors.AsType[*RateLimitedError](err); ok {
-			w.Header().Set("Retry-After", fmt.Sprint(int(limited.RetryAfter.Seconds())))
+			ratelimit.SetRetryAfter(w, limited.RetryAfter)
 			status = http.StatusTooManyRequests
 			data.Error = fmt.Sprintf("Too many attempts. Try again in %d minutes.", int(limited.RetryAfter.Minutes())+1)
 			break
@@ -155,7 +151,7 @@ func (h *Web) registerPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Web) register(w http.ResponseWriter, r *http.Request) {
-	form := web.Form{Values: postForm(r)}
+	form := web.Form{Values: web.PostForm(r)}
 	reg := Registration{
 		Email: form.Get("email"), Password: form.Get("password"), Name: form.Get("name"),
 		TimeZone: form.Get("time_zone"), Invite: form.Get("token"),
@@ -181,7 +177,7 @@ func (h *Web) loginPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Web) login(w http.ResponseWriter, r *http.Request) {
-	form := web.Form{Values: postForm(r)}
+	form := web.Form{Values: web.PostForm(r)}
 	remember := form.Get("remember") != ""
 	life := BrowserSession
 	if remember {
@@ -206,7 +202,7 @@ func (h *Web) login(w http.ResponseWriter, r *http.Request) {
 // loginCode is the second step of logging in, for users who turned
 // two-factor login on: the login page asked for a code after the password.
 func (h *Web) loginCode(w http.ResponseWriter, r *http.Request) {
-	form := web.Form{Values: postForm(r)}
+	form := web.Form{Values: web.PostForm(r)}
 	remember := form.Get("remember") != ""
 	life := BrowserSession
 	if remember {
@@ -239,7 +235,7 @@ func (h *Web) logout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Web) forgotPassword(w http.ResponseWriter, r *http.Request) {
-	form := web.Form{Values: postForm(r)}
+	form := web.Form{Values: web.PostForm(r)}
 	if err := h.svc.RequestPasswordReset(r.Context(), form.Get("email")); err != nil {
 		h.fail(w, r, "forgot_password.html", formPage{Form: form}, err)
 		return
@@ -249,7 +245,7 @@ func (h *Web) forgotPassword(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Web) resetPassword(w http.ResponseWriter, r *http.Request) {
-	form := web.Form{Values: postForm(r)}
+	form := web.Form{Values: web.PostForm(r)}
 	if err := h.svc.ResetPassword(r.Context(), form.Get("token"), form.Get("password")); err != nil {
 		h.fail(w, r, "reset_password.html", formPage{Form: form, Token: form.Get("token")}, err)
 		return
@@ -259,7 +255,7 @@ func (h *Web) resetPassword(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Web) verifyEmail(w http.ResponseWriter, r *http.Request) {
-	form := web.Form{Values: postForm(r)}
+	form := web.Form{Values: web.PostForm(r)}
 	if err := h.svc.VerifyEmail(r.Context(), form.Get("token")); err != nil {
 		h.fail(w, r, "verify_email.html", formPage{Form: form}, err)
 		return
@@ -269,7 +265,7 @@ func (h *Web) verifyEmail(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Web) confirmEmail(w http.ResponseWriter, r *http.Request) {
-	form := web.Form{Values: postForm(r)}
+	form := web.Form{Values: web.PostForm(r)}
 	if err := h.svc.ConfirmEmailChange(r.Context(), form.Get("token")); err != nil {
 		h.fail(w, r, "confirm_email.html", formPage{Form: form}, err)
 		return
@@ -319,7 +315,7 @@ func (h *Web) accountFail(w http.ResponseWriter, r *http.Request, page *accountP
 
 func (h *Web) updateProfile(w http.ResponseWriter, r *http.Request) {
 	u, _ := UserFrom(r.Context())
-	page := accountPage{User: u, Profile: web.Form{Values: postForm(r)}}
+	page := accountPage{User: u, Profile: web.Form{Values: web.PostForm(r)}}
 	if _, err := h.svc.UpdateProfile(r.Context(), u, page.Profile.Get("name"), page.Profile.Get("time_zone")); err != nil {
 		h.accountFail(w, r, &page, &page.Profile, err)
 		return
@@ -340,7 +336,7 @@ func (h *Web) resendVerification(w http.ResponseWriter, r *http.Request) {
 
 func (h *Web) changePassword(w http.ResponseWriter, r *http.Request) {
 	u, _ := UserFrom(r.Context())
-	page := accountPage{User: u, Password: web.Form{Values: postForm(r)}}
+	page := accountPage{User: u, Password: web.Form{Values: web.PostForm(r)}}
 	err := h.svc.ChangePassword(r.Context(), u, SessionToken(r.Context()),
 		page.Password.Get("current_password"), page.Password.Get("new_password"))
 	if err != nil {
@@ -353,7 +349,7 @@ func (h *Web) changePassword(w http.ResponseWriter, r *http.Request) {
 
 func (h *Web) changeEmail(w http.ResponseWriter, r *http.Request) {
 	u, _ := UserFrom(r.Context())
-	page := accountPage{User: u, Email: web.Form{Values: postForm(r)}}
+	page := accountPage{User: u, Email: web.Form{Values: web.PostForm(r)}}
 	if err := h.svc.RequestEmailChange(r.Context(), u, page.Email.Get("password"), page.Email.Get("email")); err != nil {
 		h.accountFail(w, r, &page, &page.Email, err)
 		return
@@ -364,7 +360,7 @@ func (h *Web) changeEmail(w http.ResponseWriter, r *http.Request) {
 
 func (h *Web) deleteAccount(w http.ResponseWriter, r *http.Request) {
 	u, _ := UserFrom(r.Context())
-	page := accountPage{User: u, Delete: web.Form{Values: postForm(r)}}
+	page := accountPage{User: u, Delete: web.Form{Values: web.PostForm(r)}}
 	if err := h.svc.DeleteAccount(r.Context(), u, page.Delete.Get("password")); err != nil {
 		h.accountFail(w, r, &page, &page.Delete, err)
 		return
@@ -376,8 +372,8 @@ func (h *Web) deleteAccount(w http.ResponseWriter, r *http.Request) {
 
 func (h *Web) signOutDevice(w http.ResponseWriter, r *http.Request) {
 	u, _ := UserFrom(r.Context())
-	id, err := uuid.Parse(r.PathValue("id"))
-	if err != nil {
+	id, ok := httpx.PathID(r, "id")
+	if !ok {
 		httpx.Error(w, r, http.StatusNotFound)
 		return
 	}
@@ -401,11 +397,4 @@ func (h *Web) signOutOtherDevices(w http.ResponseWriter, r *http.Request) {
 	}
 	web.SetFlash(w, "Every other device is signed out.")
 	http.Redirect(w, r, "/account", http.StatusSeeOther)
-}
-
-// postForm returns the submitted form fields. A malformed or oversized body
-// yields an empty form, which then fails validation like any empty form.
-func postForm(r *http.Request) url.Values {
-	_ = r.ParseForm()
-	return r.PostForm
 }

@@ -12,8 +12,8 @@ import (
 func newAPIApp(t *testing.T) (*apptest.App, *Service) {
 	t.Helper()
 	a, svc := newApp(t)
-	auth.NewAPI(a.Accounts, a.Limiter).Routes(a.Mux)
-	NewAPI(svc, a.Limiter).Routes(a.Mux)
+	auth.NewAPI(a.Accounts).Routes(a.Mux)
+	NewAPI(svc).Routes(a.Mux)
 	return a, svc
 }
 

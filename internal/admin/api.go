@@ -88,7 +88,7 @@ func (h *API) users(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *API) user(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathID(r, "userID")
+	id, ok := httpx.PathID(r, "userID")
 	if !ok {
 		httpx.Error(w, r, http.StatusNotFound)
 		return
@@ -104,7 +104,7 @@ func (h *API) user(w http.ResponseWriter, r *http.Request) {
 // update changes the fields given: {"role": "admin"}, {"disabled": true},
 // or both. It responds with the user as they now are.
 func (h *API) update(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathID(r, "userID")
+	id, ok := httpx.PathID(r, "userID")
 	var in struct {
 		Role     *string
 		Disabled *bool
@@ -133,7 +133,7 @@ func (h *API) update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *API) delete(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathID(r, "userID")
+	id, ok := httpx.PathID(r, "userID")
 	if !ok {
 		httpx.Error(w, r, http.StatusNotFound)
 		return
@@ -162,7 +162,7 @@ func (h *API) invite(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *API) resendVerification(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathID(r, "userID")
+	id, ok := httpx.PathID(r, "userID")
 	if !ok {
 		httpx.Error(w, r, http.StatusNotFound)
 		return
@@ -188,7 +188,7 @@ func (h *API) jobs(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *API) retryJob(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathID(r, "jobID")
+	id, ok := httpx.PathID(r, "jobID")
 	if !ok {
 		httpx.Error(w, r, http.StatusNotFound)
 		return

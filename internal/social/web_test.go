@@ -28,12 +28,12 @@ func newWebApp(t *testing.T) (*apptest.App, *Service, *fakeProvider) {
 	t.Helper()
 	a, svc, f := newApp(t)
 	rd := a.Renderer(func(o *web.Options) { o.Providers = []web.Provider{{ID: "google", Name: "Google"}} })
-	accountPages, err := auth.NewWeb(a.Accounts, rd, a.Limiter)
+	accountPages, err := auth.NewWeb(a.Accounts, rd)
 	if err != nil {
 		t.Fatal(err)
 	}
 	accountPages.Routes(a.Mux)
-	pages, err := NewWeb(svc, rd, a.Limiter)
+	pages, err := NewWeb(svc, rd)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -243,6 +243,13 @@ type Form struct {
 // Get returns a submitted value.
 func (f Form) Get(field string) string { return f.Values.Get(field) }
 
+// PostForm returns the submitted form fields. A malformed or oversized body
+// yields an empty form, which then fails validation like any empty form.
+func PostForm(r *http.Request) url.Values {
+	_ = r.ParseForm()
+	return r.PostForm
+}
+
 const flashCookie = "__Host-flash"
 
 // SetFlash shows message on the next page this browser renders, typically

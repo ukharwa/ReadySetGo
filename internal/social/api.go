@@ -11,7 +11,6 @@ import (
 
 	"github.com/ukharwa/readysetgo/internal/auth"
 	"github.com/ukharwa/readysetgo/internal/httpx"
-	"github.com/ukharwa/readysetgo/internal/ratelimit"
 )
 
 // apiPrefix is where providers send people back to: /api/auth/social/google/callback.
@@ -22,19 +21,18 @@ const apiPrefix = "/api/auth/social/"
 // /api/auth/social/{provider}?next=/path&time_zone=…; it comes back to next
 // logged in, or with ?error=… saying why not.
 type API struct {
-	svc     *Service
-	limiter ratelimit.Limiter
+	svc *Service
 }
 
 // NewAPI returns the social login endpoints' handlers.
-func NewAPI(svc *Service, limiter ratelimit.Limiter) *API {
-	return &API{svc: svc, limiter: limiter}
+func NewAPI(svc *Service) *API {
+	return &API{svc: svc}
 }
 
 // Routes registers the social login endpoints on mux.
 func (h *API) Routes(mux *http.ServeMux) {
 	limit := func(f http.HandlerFunc) http.Handler {
-		return ratelimit.PerIP(h.limiter, "auth", 20, time.Minute)(f)
+		return h.svc.accounts.RateLimit(f)
 	}
 	mux.HandleFunc("GET /api/auth/social", h.providers)
 	mux.Handle("GET /api/auth/social/{provider}", limit(h.begin))

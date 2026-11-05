@@ -7,14 +7,11 @@ import (
 	"html/template"
 	"io/fs"
 	"net/http"
-	"net/url"
-	"time"
 
 	"rsc.io/qr"
 
 	"github.com/ukharwa/readysetgo/internal/auth"
 	"github.com/ukharwa/readysetgo/internal/httpx"
-	"github.com/ukharwa/readysetgo/internal/ratelimit"
 	"github.com/ukharwa/readysetgo/internal/web"
 )
 
@@ -24,19 +21,18 @@ var templateFS embed.FS
 // Web serves the two-factor login settings page, linked from the account
 // page. The code step of logging in is auth's login page.
 type Web struct {
-	svc     *Service
-	pages   *web.Pages
-	limiter ratelimit.Limiter
+	svc   *Service
+	pages *web.Pages
 }
 
 // NewWeb returns the two-factor pages' handlers.
-func NewWeb(svc *Service, rd *web.Renderer, limiter ratelimit.Limiter) (*Web, error) {
+func NewWeb(svc *Service, rd *web.Renderer) (*Web, error) {
 	files, _ := fs.Sub(templateFS, "templates")
 	pages, err := rd.Pages(files, "internal/twofactor/templates")
 	if err != nil {
 		return nil, err
 	}
-	return &Web{svc: svc, pages: pages, limiter: limiter}, nil
+	return &Web{svc: svc, pages: pages}, nil
 }
 
 // Routes registers the two-factor pages on mux.
@@ -44,7 +40,7 @@ func (h *Web) Routes(mux *http.ServeMux) {
 	// Each form checks a password, so they share the account pages' budget
 	// per IP address.
 	form := func(f http.HandlerFunc) http.Handler {
-		return auth.RequireUser(ratelimit.PerIP(h.limiter, "auth", 20, time.Minute)(f))
+		return auth.RequireUser(h.svc.accounts.RateLimit(f))
 	}
 	mux.Handle("GET /account/two-factor", auth.RequireUser(http.HandlerFunc(h.show)))
 	mux.Handle("POST /account/two-factor/enable", form(h.enable))
@@ -99,7 +95,7 @@ func qrCode(text string) (template.URL, error) {
 
 func (h *Web) enable(w http.ResponseWriter, r *http.Request) {
 	u, _ := auth.UserFrom(r.Context())
-	form := web.Form{Values: postForm(r)}
+	form := web.Form{Values: web.PostForm(r)}
 	codes, err := h.svc.Enable(r.Context(), u, form.Get("secret"), form.Get("code"), form.Get("password"))
 	switch {
 	case errors.As(err, &form.Errors):
@@ -119,7 +115,7 @@ func (h *Web) enable(w http.ResponseWriter, r *http.Request) {
 
 func (h *Web) newRecoveryCodes(w http.ResponseWriter, r *http.Request) {
 	u, _ := auth.UserFrom(r.Context())
-	form := web.Form{Values: postForm(r)}
+	form := web.Form{Values: web.PostForm(r)}
 	codes, err := h.svc.NewRecoveryCodes(r.Context(), u, form.Get("password"))
 	switch {
 	case errors.As(err, &form.Errors):
@@ -135,7 +131,7 @@ func (h *Web) newRecoveryCodes(w http.ResponseWriter, r *http.Request) {
 
 func (h *Web) disable(w http.ResponseWriter, r *http.Request) {
 	u, _ := auth.UserFrom(r.Context())
-	form := web.Form{Values: postForm(r)}
+	form := web.Form{Values: web.PostForm(r)}
 	err := h.svc.Disable(r.Context(), u, form.Get("password"))
 	switch {
 	case errors.As(err, &form.Errors):
@@ -151,11 +147,4 @@ func (h *Web) disable(w http.ResponseWriter, r *http.Request) {
 func (h *Web) serverError(w http.ResponseWriter, r *http.Request, err error) {
 	h.svc.logger.ErrorContext(r.Context(), "two-factor page", "err", err)
 	httpx.Error(w, r, http.StatusInternalServerError)
-}
-
-// postForm returns the submitted form fields; a malformed body gives an
-// empty form, which fails validation.
-func postForm(r *http.Request) url.Values {
-	_ = r.ParseForm()
-	return r.PostForm
 }

@@ -16,7 +16,7 @@ func newWebApp(t *testing.T) *apptest.App {
 	a := apptest.New(t)
 	svc := audit.NewService(a.DB, a.Accounts, a.Logger)
 	rd := a.Renderer()
-	accountPages, err := auth.NewWeb(a.Accounts, rd, a.Limiter)
+	accountPages, err := auth.NewWeb(a.Accounts, rd)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -3,11 +3,9 @@ package twofactor
 import (
 	"errors"
 	"net/http"
-	"time"
 
 	"github.com/ukharwa/readysetgo/internal/auth"
 	"github.com/ukharwa/readysetgo/internal/httpx"
-	"github.com/ukharwa/readysetgo/internal/ratelimit"
 	"github.com/ukharwa/readysetgo/internal/validate"
 )
 
@@ -15,13 +13,12 @@ import (
 // code step of logging in is auth's: /api/auth/login and /api/auth/token
 // answer 202 with a challenge, and take it back with the code.
 type API struct {
-	svc     *Service
-	limiter ratelimit.Limiter
+	svc *Service
 }
 
 // NewAPI returns the two-factor endpoints' handlers.
-func NewAPI(svc *Service, limiter ratelimit.Limiter) *API {
-	return &API{svc: svc, limiter: limiter}
+func NewAPI(svc *Service) *API {
+	return &API{svc: svc}
 }
 
 // Routes registers the two-factor endpoints on mux.
@@ -29,7 +26,7 @@ func (h *API) Routes(mux *http.ServeMux) {
 	// Each change checks a password, so they share the account endpoints'
 	// budget per IP address.
 	limit := func(f http.HandlerFunc) http.Handler {
-		return auth.RequireUser(ratelimit.PerIP(h.limiter, "auth", 20, time.Minute)(f))
+		return auth.RequireUser(h.svc.accounts.RateLimit(f))
 	}
 	mux.Handle("GET /api/auth/two-factor", auth.RequireUser(http.HandlerFunc(h.status)))
 	mux.Handle("GET /api/auth/two-factor/setup", auth.RequireUser(http.HandlerFunc(h.setup)))

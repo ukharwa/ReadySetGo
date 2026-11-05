@@ -148,7 +148,7 @@ func (h *API) members(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *API) setRole(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathID(r, "userID")
+	id, ok := httpx.PathID(r, "userID")
 	var in struct{ Role string }
 	if !ok {
 		httpx.Error(w, r, http.StatusNotFound)
@@ -165,7 +165,7 @@ func (h *API) setRole(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *API) remove(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathID(r, "userID")
+	id, ok := httpx.PathID(r, "userID")
 	if !ok {
 		httpx.Error(w, r, http.StatusNotFound)
 		return
@@ -212,7 +212,7 @@ func (h *API) invite(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *API) revoke(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathID(r, "invitationID")
+	id, ok := httpx.PathID(r, "invitationID")
 	if !ok {
 		httpx.Error(w, r, http.StatusNotFound)
 		return

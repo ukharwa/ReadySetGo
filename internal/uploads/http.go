@@ -10,8 +10,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/google/uuid"
-
 	"github.com/ukharwa/readysetgo/internal/httpx"
 	"github.com/ukharwa/readysetgo/internal/validate"
 )
@@ -80,10 +78,4 @@ func (s *Service) serveFile(w http.ResponseWriter, r *http.Request, u Upload) {
 	if _, err := io.Copy(w, f); err != nil {
 		s.logger.WarnContext(r.Context(), "send upload", "err", err)
 	}
-}
-
-// pathID parses the UUID in the path parameter name.
-func pathID(r *http.Request, name string) (uuid.UUID, bool) {
-	id, err := uuid.Parse(r.PathValue(name))
-	return id, err == nil
 }

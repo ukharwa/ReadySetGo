@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io/fs"
 	"net/http"
-	"net/url"
 
 	"github.com/google/uuid"
 
@@ -74,7 +73,7 @@ func (h *Web) renderList(w http.ResponseWriter, r *http.Request, status int, cre
 
 func (h *Web) create(w http.ResponseWriter, r *http.Request) {
 	u, _ := auth.UserFrom(r.Context())
-	form := web.Form{Values: postForm(r)}
+	form := web.Form{Values: web.PostForm(r)}
 	ws, err := h.svc.Create(r.Context(), u, form.Get("name"))
 	if errors.As(err, &form.Errors) {
 		h.renderList(w, r, http.StatusUnprocessableEntity, form)
@@ -143,7 +142,7 @@ func (h *Web) fail(w http.ResponseWriter, r *http.Request, page settingsPage, fo
 }
 
 func (h *Web) rename(w http.ResponseWriter, r *http.Request) {
-	page := settingsPage{Rename: web.Form{Values: postForm(r)}}
+	page := settingsPage{Rename: web.Form{Values: web.PostForm(r)}}
 	if err := h.svc.Rename(r.Context(), From(r.Context()), page.Rename.Get("name")); err != nil {
 		h.fail(w, r, page, &page.Rename, err)
 		return
@@ -153,7 +152,7 @@ func (h *Web) rename(w http.ResponseWriter, r *http.Request) {
 
 func (h *Web) invite(w http.ResponseWriter, r *http.Request) {
 	u, _ := auth.UserFrom(r.Context())
-	page := settingsPage{Invite: web.Form{Values: postForm(r)}}
+	page := settingsPage{Invite: web.Form{Values: web.PostForm(r)}}
 	if err := h.svc.Invite(r.Context(), From(r.Context()), u, page.Invite.Get("email"), page.Invite.Get("role")); err != nil {
 		h.fail(w, r, page, &page.Invite, err)
 		return
@@ -162,7 +161,7 @@ func (h *Web) invite(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Web) revoke(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathID(r, "invitationID")
+	id, ok := httpx.PathID(r, "invitationID")
 	if !ok {
 		httpx.Error(w, r, http.StatusNotFound)
 		return
@@ -175,12 +174,12 @@ func (h *Web) revoke(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Web) setRole(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathID(r, "userID")
+	id, ok := httpx.PathID(r, "userID")
 	if !ok {
 		httpx.Error(w, r, http.StatusNotFound)
 		return
 	}
-	if err := h.svc.SetRole(r.Context(), From(r.Context()), id, postForm(r).Get("role")); err != nil {
+	if err := h.svc.SetRole(r.Context(), From(r.Context()), id, web.PostForm(r).Get("role")); err != nil {
 		h.fail(w, r, settingsPage{}, nil, err)
 		return
 	}
@@ -189,7 +188,7 @@ func (h *Web) setRole(w http.ResponseWriter, r *http.Request) {
 
 func (h *Web) remove(w http.ResponseWriter, r *http.Request) {
 	u, _ := auth.UserFrom(r.Context())
-	id, ok := pathID(r, "userID")
+	id, ok := httpx.PathID(r, "userID")
 	if !ok {
 		httpx.Error(w, r, http.StatusNotFound)
 		return
@@ -238,7 +237,7 @@ func (h *Web) acceptPage(w http.ResponseWriter, r *http.Request) {
 
 func (h *Web) accept(w http.ResponseWriter, r *http.Request) {
 	u, _ := auth.UserFrom(r.Context())
-	token := postForm(r).Get("token")
+	token := web.PostForm(r).Get("token")
 	ws, err := h.svc.Accept(r.Context(), u, token)
 	var wrong *WrongAddressError
 	switch {
@@ -261,11 +260,4 @@ func (h *Web) accept(w http.ResponseWriter, r *http.Request) {
 func (h *Web) serverError(w http.ResponseWriter, r *http.Request, err error) {
 	h.svc.logger.ErrorContext(r.Context(), "workspace page", "err", err)
 	httpx.Error(w, r, http.StatusInternalServerError)
-}
-
-// postForm returns the submitted form fields; a malformed body gives an
-// empty form, which then fails validation.
-func postForm(r *http.Request) url.Values {
-	_ = r.ParseForm()
-	return r.PostForm
 }

@@ -11,8 +11,8 @@ import (
 func TestAPI(t *testing.T) {
 	t.Parallel()
 	a, svc, f := newApp(t)
-	auth.NewAPI(a.Accounts, a.Limiter).Routes(a.Mux)
-	NewAPI(svc, a.Limiter).Routes(a.Mux)
+	auth.NewAPI(a.Accounts).Routes(a.Mux)
+	NewAPI(svc).Routes(a.Mux)
 
 	var list struct{ Providers []providerJSON }
 	a.Decode(a.JSON(a.Client(), "GET", "/api/auth/social", "", nil), &list)
