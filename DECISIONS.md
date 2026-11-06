@@ -450,9 +450,11 @@ pages known to be private (easy to forget on a new one).
 
 ### Rate limiting, no hard lockout
 
-Per IP (20 a minute across auth endpoints), per email and IP together (5
-failed logins per 15 minutes), per email alone (50 failed logins an hour),
-and per address emailed (3 an hour), answered with `429` and `Retry-After`.
+Per IP (20 a minute across auth endpoints; an IPv6 client by its /64
+network, since one machine usually has all of it), per email and IP
+together (5 failed logins per 15 minutes), per email alone (50 failed
+logins an hour), and per address emailed (3 an hour), answered with `429`
+and `Retry-After`.
 Failed-login counters reset after a successful login, so only consecutive
 failures count. If the counter store fails, requests are refused (`503`)
 rather than let through. No hard lockout, which would let anyone lock out
