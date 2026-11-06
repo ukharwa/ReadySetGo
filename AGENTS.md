@@ -63,7 +63,7 @@ still open, recommending an answer for each.
 
 | Option | Values | Default | Notes |
 |---|---|---|---|
-| `NAME` | lowercase letters, digits and hyphens, starting with a letter | none | Names the command (`cmd/NAME`), containers, database and image. Use the user's; propose the repository's name for them to confirm, never pick one silently. Init refuses `readysetgo`. |
+| `NAME` | lowercase letters, digits and hyphens, starting with a letter | none | Names the command (`cmd/NAME`), containers, database and image. Use the name the user gives; propose the repository's for them to confirm, never pick one silently. Init refuses `readysetgo`. |
 | `MODULE` | a Go module path | none: required | Take it from `origin` when there is one: `git@github.com:OWNER/REPO.git` means `github.com/OWNER/REPO`. Otherwise ask; propose `github.com/OWNER/NAME` for them to confirm. Off GitHub, the image is plain `NAME` and `APP_IMAGE` must be set for deploys. |
 | `DB` | `sqlite`, `postgres` | `sqlite` | Below. |
 | `UI` | `html`, `api` | `html` | Below. |
@@ -290,9 +290,9 @@ README.md ("Removing a module") explains taking a module out.
   <!-- readysetgo:begin db=postgres -->
   (Postgres 5432)
   <!-- readysetgo:end -->
-  in development. When another project already holds one (`ss -ltn`,
-  `docker ps`), move it in `.env`, taking the next free port, rather than
-  stopping that project. These settings move together:
+  in development. When another project already holds one (`ss -ltn` or
+  `lsof -i`, and `docker ps`), move it in `.env`, taking the next free
+  port, rather than stopping that project. These settings move together:
   - the app: `HTTP_ADDR` and `APP_URL`
   - Mailpit: `MAILPIT_SMTP_PORT` with `SMTP_PORT`, and `MAILPIT_PORT` (its
     inbox)
@@ -388,9 +388,9 @@ README.md ("Removing a module") explains taking a module out.
   <!-- readysetgo:end -->
   Other features react to accounts through `OnUserCreated` and
   `OnUserDeleting` hooks, and to security events (failed logins, role
-  changes, …) through `OnEvent`; all run inside the same transaction. A
-  feature with invitations of its own lets their addresses sign up when it
-  needs an invitation through `AllowSignup`.
+  changes, …) through `OnEvent`; all run inside the same transaction.
+  `AllowSignup` lets a feature's own invitations count when sign-up needs
+  one.
 <!-- readysetgo:begin module=workspaces -->
 - `internal/workspaces/`: workspaces, their members (owner, admin, member)
   and email invitations. `middleware.go` resolves `{workspaceID}` and
@@ -589,8 +589,9 @@ handlers and a link table from the feature's rows to `uploads(id)`.
   - Guard routes with `auth.RequireUser`, then `auth.RequireVerified` or
     `auth.RequireRole(auth.RoleAdmin)` as needed; read the user with
     `auth.UserFrom(ctx)`, and an ID in the path with `httpx.PathID`. Wrap
-    routes that check passwords or send email in `auth.Service.RateLimit`,
-    the per-IP budget they all share.
+    routes that check a password or sign someone in with
+    `auth.Service.RateLimit`, the per-IP budget account routes share; give
+    other routes that send email a `ratelimit.PerIP` limit of their own.
   - Services return `validate.Errors` for bad input and named errors for
     other expected failures; handlers turn them into responses.
   <!-- readysetgo:begin ui=html -->
@@ -613,8 +614,7 @@ handlers and a link table from the feature's rows to `uploads(id)`.
     error details and adds the request ID to 5xx responses.
   - Use `httpx.ClientIP(ctx)` for the client's address, never `RemoteAddr`
     or `X-Forwarded-For` directly.
-  - Raise one route's body limit by wrapping it in `httpx.MaxBytes(n)`;
-    limit requests with `ratelimit.PerIP` or a `ratelimit.Limiter`.
+  - Raise one route's body limit by wrapping it in `httpx.MaxBytes(n)`.
 - **Linting:** fix findings rather than silencing them. When one is
   deliberate, add `//nolint:<linter> // <reason>` on that line.
 - **Upgrading Go:** change the `go` line in `go.mod` and the `golang` image

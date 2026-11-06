@@ -78,9 +78,10 @@ func (s *Service) LoadUser(next http.Handler) http.Handler {
 	})
 }
 
-// RateLimit is middleware for routes that check a password or send email.
-// Each client IP gets 20 requests a minute across every such route, in
-// every feature, so spreading attempts over routes gains nothing.
+// RateLimit is middleware for account routes: those that check a password,
+// sign someone in or send an account email. Each client IP gets 20 requests
+// a minute across all of them, whichever feature serves them, so spreading
+// attempts over routes gains nothing.
 func (s *Service) RateLimit(next http.Handler) http.Handler {
 	return ratelimit.PerIP(s.limiter, "auth", 20, time.Minute)(next)
 }
