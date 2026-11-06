@@ -150,7 +150,7 @@ func (h *Web) change(w http.ResponseWriter, r *http.Request, message, next strin
 	case errors.Is(err, ErrNotFound):
 		httpx.Error(w, r, http.StatusNotFound)
 	case errors.Is(err, ErrOwnAccount):
-		h.renderUser(w, r, http.StatusForbidden, err.Error())
+		h.renderUser(w, r, http.StatusForbidden, httpx.Sentence(err))
 	case errors.As(err, &errs):
 		h.renderUser(w, r, http.StatusUnprocessableEntity, strings.Join(slices.Sorted(maps.Values(errs)), " "))
 	case err != nil:

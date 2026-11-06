@@ -147,15 +147,20 @@ func (s *Service) hasInvitation(ctx context.Context, tx *sql.Tx, address string)
 }
 
 // createPersonal gives a new user a workspace of their own, unless an
-// invitation to someone else's is waiting for them.
+// invitation to someone else's is waiting for them. It is named after them:
+// their display name if they gave one that fits, or else their address.
 func (s *Service) createPersonal(ctx context.Context, tx *sql.Tx, u auth.User) error {
 	q := store.New(tx)
 	pending, err := q.CountPendingInvitations(ctx, store.CountPendingInvitationsParams{Email: u.Email, Now: s.now()})
 	if err != nil || pending > 0 {
 		return err
 	}
-	name, _, _ := strings.Cut(u.Email, "@")
-	_, err = s.create(ctx, q, u.ID, name+"'s workspace")
+	local, _, _ := strings.Cut(u.Email, "@")
+	name := local + "'s workspace"
+	if named := u.Name + "'s workspace"; u.Name != "" && validate.Length(named, 1, 100) {
+		name = named
+	}
+	_, err = s.create(ctx, q, u.ID, name)
 	return err
 }
 

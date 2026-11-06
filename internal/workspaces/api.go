@@ -64,7 +64,7 @@ func (h *API) fail(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.Is(err, ErrNotFound):
 		httpx.Error(w, r, http.StatusNotFound)
 	case errors.Is(err, ErrForbidden), errors.Is(err, ErrLastOwner):
-		httpx.ErrorMessage(w, r, http.StatusForbidden, err.Error())
+		httpx.ErrorMessage(w, r, http.StatusForbidden, httpx.Sentence(err))
 	case errors.Is(err, ErrInvalidInvitation):
 		httpx.ErrorMessage(w, r, http.StatusBadRequest, "This invitation is invalid or has expired.")
 	case errors.As(err, &wrong):
