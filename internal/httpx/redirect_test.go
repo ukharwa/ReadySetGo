@@ -5,9 +5,9 @@ import "testing"
 func TestSafeRedirect(t *testing.T) {
 	t.Parallel()
 	tests := map[string]string{
-		"/notes/1?tab=edit":    "/notes/1?tab=edit",
+		"/account?tab=email":   "/account?tab=email",
 		"":                     "/",
-		"notes":                "/",
+		"account":              "/",
 		"https://evil.example": "/",
 		"//evil.example":       "/",
 		`/\evil.example`:       "/",
