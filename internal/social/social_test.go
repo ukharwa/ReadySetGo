@@ -160,8 +160,16 @@ func TestSignIn(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		// They also asked to move the account to an address of their own.
+		if err := a.Accounts.RequestEmailChange(ctx, u, apptest.Password, "mallory@example.com"); err != nil {
+			t.Fatal(err)
+		}
+		change := a.TokenFrom("mallory@example.com", "/confirm-email")
 		if id, err := svc.SignIn(ctx, "google", ada, ""); err != nil || id != u.ID {
 			t.Fatalf("SignIn = %v, %v; want %v", id, err, u.ID)
+		}
+		if err := a.Accounts.ConfirmEmailChange(ctx, change); !errors.Is(err, auth.ErrInvalidToken) {
+			t.Errorf("their email change still works: %v", err)
 		}
 		if _, err := a.Accounts.Authenticate(ctx, token); !errors.Is(err, auth.ErrUnauthenticated) {
 			t.Errorf("whoever made the account is still logged in: %v", err)
@@ -223,6 +231,16 @@ func TestConnectAndDisconnect(t *testing.T) {
 	}
 	if err := svc.Connect(ctx, carol, "google", ada); !errors.Is(err, ErrLinkedElsewhere) {
 		t.Errorf("someone else's: err = %v, want ErrLinkedElsewhere", err)
+	}
+	// An account whose address isn't confirmed can't connect one: whoever
+	// made it may not own the address, and would keep the way in once the
+	// address's owner claimed the account.
+	eve, err := a.Accounts.CreateUser(ctx, "eve@example.com", apptest.Password, auth.RoleUser, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.Connect(ctx, eve, "google", Account{Subject: "g-eve", Email: "eve@gmail.com", EmailVerified: true}); !errors.Is(err, ErrUnconfirmedAddress) {
+		t.Errorf("an unconfirmed account: err = %v, want ErrUnconfirmedAddress", err)
 	}
 	if ids, err := svc.Identities(ctx, bob); err != nil || len(ids) != 1 || ids[0].Email != ada.Email || ids[0].Provider.Name != "Google" {
 		t.Errorf("identities = %+v, %v", ids, err)

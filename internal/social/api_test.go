@@ -2,6 +2,7 @@ package social
 
 import (
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -48,6 +49,17 @@ func TestAPI(t *testing.T) {
 	// Failures come back to next with an error.
 	if r := a.JSON(a.Client(), "GET", callback, "", nil); r.Header.Get("Location") != "/?error=expired" {
 		t.Errorf("callback without the cookie: %q", r.Header.Get("Location"))
+	}
+
+	// next stays on this site, even written so a browser, which drops tabs
+	// and newlines from URLs, would read it as another site's address.
+	for _, next := range []string{"https://evil.example", "//evil.example", `/\evil.example`, "/\t/evil.example", "/\n/evil.example"} {
+		c := a.Client()
+		start := a.JSON(c, "GET", "/api/auth/social/google?"+url.Values{"next": {next}}.Encode(), "", nil)
+		callback := strings.TrimPrefix(f.approve(t, start.Header.Get("Location"), ada), a.Server.URL)
+		if r := a.JSON(c, "GET", callback, "", nil); r.Header.Get("Location") != "/" {
+			t.Errorf("next %q: sent to %q, want /", next, r.Header.Get("Location"))
+		}
 	}
 
 	var ids struct {

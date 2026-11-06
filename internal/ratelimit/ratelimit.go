@@ -94,10 +94,18 @@ func (m *Memory) sweep(now time.Time) {
 // PerIP is middleware that allows each client IP limit requests per window
 // across the routes it wraps, answering the rest with 429 Too Many Requests
 // and a Retry-After header. name keeps different limits' counters apart.
+// An IPv6 client is counted by its /64 network: one machine usually has all
+// of it, so counting each address apart would set no limit at all.
 func PerIP(l Limiter, name string, limit int, window time.Duration) httpx.Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			key := fmt.Sprintf("%s:ip:%s", name, httpx.ClientIP(r.Context()))
+			ip := httpx.ClientIP(r.Context())
+			client := ip.String()
+			if ip.Is6() {
+				network, _ := ip.Prefix(64) // never fails for 64 bits of IPv6
+				client = network.String()
+			}
+			key := fmt.Sprintf("%s:ip:%s", name, client)
 			ok, retryAfter, err := l.Allow(r.Context(), key, limit, window)
 			if err != nil {
 				// Fail closed: an attacker shouldn't gain unlimited attempts

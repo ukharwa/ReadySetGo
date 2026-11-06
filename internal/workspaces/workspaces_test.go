@@ -6,6 +6,7 @@ import (
 
 	"github.com/ukharwa/readysetgo/internal/apptest"
 	"github.com/ukharwa/readysetgo/internal/auth"
+	"github.com/ukharwa/readysetgo/internal/validate"
 	"github.com/ukharwa/readysetgo/internal/workspaces"
 	"github.com/ukharwa/readysetgo/internal/workspaces/workspacestest"
 )
@@ -29,5 +30,30 @@ func TestInvitationAllowsSignup(t *testing.T) {
 	}
 	if _, err := a.Accounts.UserByEmail(t.Context(), "carol@example.com"); !errors.Is(err, auth.ErrUserNotFound) {
 		t.Errorf("carol, never invited, signed up: err = %v", err)
+	}
+}
+
+// TestUnconfirmedCantInvite checks that someone whose address isn't
+// confirmed can't invite anyone. The email names them by an address they
+// may not own, and whoever they let in would stay once the address's owner
+// took the account over with a password reset.
+func TestUnconfirmedCantInvite(t *testing.T) {
+	t.Parallel()
+	ctx := t.Context()
+	a, svc := workspacestest.New(t)
+	u, err := a.Accounts.CreateUser(ctx, "ada@example.com", apptest.Password, auth.RoleUser, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	all, err := svc.ForUser(ctx, u)
+	if err != nil || len(all) != 1 {
+		t.Fatalf("workspaces = %v, %v", all, err)
+	}
+	err = svc.Invite(ctx, all[0], u, "bob@example.com", workspaces.RoleMember)
+	if errs, ok := errors.AsType[validate.Errors](err); !ok || errs["email"] == "" {
+		t.Errorf("err = %v, want a message for email", err)
+	}
+	if sent := a.SentTo("bob@example.com"); len(sent) != 0 {
+		t.Errorf("%d invitations sent", len(sent))
 	}
 }

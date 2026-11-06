@@ -92,7 +92,7 @@ func (h *Web) callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	auth.SetSessionCookie(w, token)
-	http.Redirect(w, r, web.SafeRedirect(f.Get("next"), "/"), http.StatusSeeOther) //nolint:gosec // SafeRedirect keeps it on this site
+	http.Redirect(w, r, httpx.SafeRedirect(f.Get("next"), "/"), http.StatusSeeOther) //nolint:gosec // SafeRedirect keeps it on this site
 }
 
 // readysetgo:begin module=twofactor
@@ -108,7 +108,7 @@ func (h *Web) failed(w http.ResponseWriter, r *http.Request, to string, err erro
 	message := "Something went wrong there. Try again."
 	switch {
 	case errors.Is(err, ErrStale), errors.Is(err, ErrCancelled), errors.Is(err, ErrUnverifiedEmail),
-		errors.Is(err, ErrLinkedElsewhere), errors.Is(err, ErrAlreadyConnected):
+		errors.Is(err, ErrLinkedElsewhere), errors.Is(err, ErrAlreadyConnected), errors.Is(err, ErrUnconfirmedAddress):
 		message = sentence(err)
 	case errors.Is(err, auth.ErrInvitationNeeded):
 		message = "Signing up needs an invitation."

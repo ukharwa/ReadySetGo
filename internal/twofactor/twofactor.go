@@ -148,8 +148,12 @@ func (s *Service) setup(u auth.User, secret string) Setup {
 // Enable turns two-factor login on for u with setup's secret, once code
 // shows their app has it, and returns their recovery codes to show once. It
 // signs out u's other devices, so a session someone stole doesn't outlive
-// the change.
+// the change. u's address must be confirmed: whoever made an account may not
+// own its address, and would lock the owner out of it.
 func (s *Service) Enable(ctx context.Context, u auth.User, secret, code, password string) ([]string, error) {
+	if !u.EmailVerified {
+		return nil, validate.Errors{"code": "Confirm your email address first. Your account page can resend the link."}
+	}
 	if err := s.accounts.CheckCurrentPassword(ctx, u, "password", password); err != nil {
 		return nil, err
 	}

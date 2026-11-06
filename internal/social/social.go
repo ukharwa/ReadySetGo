@@ -43,11 +43,12 @@ const (
 
 // Errors returned by Service. Their messages are safe to show users.
 var (
-	ErrUnknownProvider  = errors.New("there's no such way to log in")
-	ErrUnverifiedEmail  = errors.New("that account's email address isn't verified, so it can't be used here")
-	ErrLinkedElsewhere  = errors.New("that account is connected to someone else here")
-	ErrAlreadyConnected = errors.New("you've already connected an account from there: disconnect it first")
-	ErrLastWayIn        = errors.New("that's your only way to log in: set a password first")
+	ErrUnknownProvider    = errors.New("there's no such way to log in")
+	ErrUnverifiedEmail    = errors.New("that account's email address isn't verified, so it can't be used here")
+	ErrLinkedElsewhere    = errors.New("that account is connected to someone else here")
+	ErrAlreadyConnected   = errors.New("you've already connected an account from there: disconnect it first")
+	ErrLastWayIn          = errors.New("that's your only way to log in: set a password first")
+	ErrUnconfirmedAddress = errors.New("confirm your email address before connecting another way to log in")
 )
 
 // Options configures a Service.
@@ -190,11 +191,16 @@ func (s *Service) SignIn(ctx context.Context, id string, acct Account, zone stri
 	}
 }
 
-// Connect links acct at provider id to u, who is logged in.
+// Connect links acct at provider id to u, who is logged in. An account
+// whose address isn't confirmed can't: whoever made it may not own the
+// address, and would keep this way in after its owner claimed the account.
 func (s *Service) Connect(ctx context.Context, u auth.User, id string, acct Account) error {
 	p, err := s.provider(id)
 	if err != nil {
 		return err
+	}
+	if !u.EmailVerified {
+		return ErrUnconfirmedAddress
 	}
 	ident, err := store.New(s.db.Write).GetIdentity(ctx, store.GetIdentityParams{Provider: p.id, Subject: acct.Subject})
 	switch {

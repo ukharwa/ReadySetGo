@@ -4,7 +4,6 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -66,10 +65,7 @@ func (h *API) begin(w http.ResponseWriter, r *http.Request) {
 func (h *API) callback(w http.ResponseWriter, r *http.Request) {
 	ctx, id := r.Context(), r.PathValue("provider")
 	acct, f, err := finish(w, r, h.svc, apiPrefix)
-	next := f.Get("next")
-	if !strings.HasPrefix(next, "/") || strings.HasPrefix(next, "//") || strings.Contains(next, `\`) {
-		next = "/"
-	}
+	next := httpx.SafeRedirect(f.Get("next"), "/")
 	if u, ok := auth.UserFrom(ctx); ok {
 		if err == nil {
 			err = h.svc.Connect(ctx, u, id, acct)
@@ -115,6 +111,8 @@ func (h *API) back(w http.ResponseWriter, r *http.Request, next string, err erro
 			code = "linked_elsewhere"
 		case errors.Is(err, ErrAlreadyConnected):
 			code = "already_connected"
+		case errors.Is(err, ErrUnconfirmedAddress):
+			code = "unconfirmed_address"
 		case errors.Is(err, auth.ErrInvitationNeeded):
 			code = "invitation_needed"
 		case errors.Is(err, auth.ErrInvalidCredentials):

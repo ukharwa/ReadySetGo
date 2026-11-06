@@ -327,10 +327,15 @@ func checkOwners(ctx context.Context, q *store.Queries, w uuid.UUID) error {
 
 // Invite emails address a link to join w with role (admin or member).
 // Inviting the same address again replaces the earlier link. Owners and
-// admins only.
+// admins only, once their own address is confirmed: the email names them
+// by it, and whoever they let in would stay if the address's real owner
+// took the account over.
 func (s *Service) Invite(ctx context.Context, w Workspace, inviter auth.User, address, role string) error {
 	if !w.CanManage() {
 		return ErrForbidden
+	}
+	if !inviter.EmailVerified {
+		return validate.Errors{"email": "Confirm your own email address first. Your account page can resend the link."}
 	}
 	address, ok := validate.Email(address)
 	errs := validate.Errors{}

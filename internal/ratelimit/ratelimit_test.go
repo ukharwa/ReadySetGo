@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"sync"
 	"testing"
 	"time"
@@ -107,7 +108,7 @@ func TestPerIP(t *testing.T) {
 
 	request := func(ip string) *httptest.ResponseRecorder {
 		r := httptest.NewRequest(http.MethodPost, "/login", nil)
-		r.RemoteAddr = ip + ":1234"
+		r.RemoteAddr = netip.AddrPortFrom(netip.MustParseAddr(ip), 1234).String()
 		rec := httptest.NewRecorder()
 		h.ServeHTTP(rec, r)
 		return rec
@@ -120,5 +121,16 @@ func TestPerIP(t *testing.T) {
 	}
 	if rec := request("203.0.113.2"); rec.Code != http.StatusOK {
 		t.Errorf("another IP: status %d, want 200", rec.Code)
+	}
+
+	// One IPv6 network (a /64) is one client: a single machine usually has
+	// all of it, so counting each address apart would set no limit.
+	request("2001:db8:1:1::1")
+	request("2001:db8:1:1::2")
+	if rec := request("2001:db8:1:1::3"); rec.Code != http.StatusTooManyRequests {
+		t.Errorf("3rd request from one /64: status %d, want 429", rec.Code)
+	}
+	if rec := request("2001:db8:1:2::1"); rec.Code != http.StatusOK {
+		t.Errorf("another /64: status %d, want 200", rec.Code)
 	}
 }

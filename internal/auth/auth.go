@@ -673,12 +673,23 @@ func (s *Service) ResetPassword(ctx context.Context, token, password string) err
 		if err := q.DeleteUserTokens(ctx, store.DeleteUserTokensParams{UserID: t.UserID, Purpose: "reset_password"}); err != nil {
 			return err
 		}
+		if err := cancelEmailChange(ctx, q, t.UserID); err != nil {
+			return err
+		}
 		return s.Record(ctx, tx, Event{Name: EventPasswordReset, UserID: t.UserID})
 	})
 	if err != nil {
 		return err
 	}
 	return s.sessions.DeleteForUser(ctx, userID, "")
+}
+
+// cancelEmailChange cancels userID's email change waiting for
+// confirmation. Asking for one needed the password, so it goes when the
+// password does: otherwise whoever learned the old one could still move the
+// account to their own address after its owner replaced it.
+func cancelEmailChange(ctx context.Context, q *store.Queries, userID uuid.UUID) error {
+	return q.DeleteUserTokens(ctx, store.DeleteUserTokensParams{UserID: userID, Purpose: "change_email"})
 }
 
 func (s *Service) setPassword(ctx context.Context, q *store.Queries, userID uuid.UUID, password string) error {
@@ -721,7 +732,11 @@ func (s *Service) ChangePassword(ctx context.Context, u User, currentToken, curr
 		return err
 	}
 	err := s.db.InTx(ctx, func(tx *sql.Tx) error {
-		if err := s.setPassword(ctx, store.New(tx), u.ID, password); err != nil {
+		q := store.New(tx)
+		if err := s.setPassword(ctx, q, u.ID, password); err != nil {
+			return err
+		}
+		if err := cancelEmailChange(ctx, q, u.ID); err != nil {
 			return err
 		}
 		return s.Record(ctx, tx, Event{Name: EventPasswordChanged, UserID: u.ID})

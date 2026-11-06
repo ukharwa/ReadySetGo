@@ -166,7 +166,7 @@ func (h *Web) register(w http.ResponseWriter, r *http.Request) {
 	}
 	web.SetFlash(w, h.svc.registeredMessage(reg))
 	login := "/login"
-	if next := web.SafeRedirect(form.Get("next"), ""); next != "" {
+	if next := httpx.SafeRedirect(form.Get("next"), ""); next != "" {
 		login += "?" + url.Values{"next": {next}}.Encode()
 	}
 	http.Redirect(w, r, login, http.StatusSeeOther)
@@ -195,7 +195,7 @@ func (h *Web) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	setSessionCookie(w, token, life, remember)
-	http.Redirect(w, r, web.SafeRedirect(form.Get("next"), "/"), http.StatusSeeOther)
+	http.Redirect(w, r, httpx.SafeRedirect(form.Get("next"), "/"), http.StatusSeeOther)
 }
 
 // readysetgo:begin module=twofactor
@@ -218,7 +218,7 @@ func (h *Web) loginCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	setSessionCookie(w, token, life, remember)
-	http.Redirect(w, r, web.SafeRedirect(form.Get("next"), "/"), http.StatusSeeOther)
+	http.Redirect(w, r, httpx.SafeRedirect(form.Get("next"), "/"), http.StatusSeeOther)
 }
 
 // readysetgo:end
