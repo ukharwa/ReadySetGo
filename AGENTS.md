@@ -8,14 +8,13 @@ as it grows.
 <!-- readysetgo:begin template -->
 ## Read first: this is the uninitialised template
 
-This repository is the ReadySetGo template, not yet an app. It stays that
-way until `make init` runs, which deletes `tools/readysetgo/`: while that
-folder exists, you are in the template. A user who opens a session here and
-describes an app ("set this up with Postgres and an API") is starting a new
-project, so follow "Starting a new project" below before anything else.
-Don't build features, hand-edit files to switch the database or UI, or
-delete folders yourself: init does all of that, consistently. If the user
-wants to change the template itself, skip to "Working on the template
+This repository is the ReadySetGo template, not yet an app: while
+`tools/readysetgo/` exists (`make init` deletes it), you are in the
+template. A user who describes an app here ("set this up with Postgres and
+an API") is starting a new project: follow "Starting a new project" below
+before anything else. Don't build features, hand-edit files to switch the
+database or UI, or delete folders yourself: init does all of that,
+consistently. To change the template itself, see "Working on the template
 itself".
 
 ## Starting a new project
@@ -38,7 +37,7 @@ Run these; don't assume.
     clone.
   - An empty repository that this checkout's `origin` is pointed at. Once
     the user gives its URL, run `git remote set-url origin URL` yourself
-    and check `git ls-remote origin` lists nothing (it must be empty).
+    and check `git ls-remote origin` lists nothing.
     Quicker, but the project keeps the template's history.
 
   No `origin` at all is fine.
@@ -49,13 +48,11 @@ Run these; don't assume.
   plugin runs the development services, Postgres's tests and the
   production stack.
 - `cc --version`: `make tools` builds sqlc, which needs a C compiler.
-- Whether the ports the new project uses in development are free:
-  `ss -ltn` (or `lsof -i`) for 8080 (the app), 5432 (Postgres, if
-  chosen), 1025 and 8025 (Mailpit), and `docker ps` to see what holds
-  them. Another project's dev services often do, the template's own
-  included. Recommend the next free ports, moved in the new project's
-  `.env` (step 5); stop someone else's containers only if the user says
-  so.
+- Whether the development ports are free: 8080 (the app), 5432 (Postgres,
+  if chosen), 1025 and 8025 (Mailpit). Another project's dev services, the
+  template's own included, often hold them. "Local ports" under "Commands"
+  says how to check and what moves; recommend the next free ports for
+  step 5.
 
 If something required is missing, say what to install before going on.
 
@@ -66,7 +63,7 @@ still open, recommending an answer for each.
 
 | Option | Values | Default | Notes |
 |---|---|---|---|
-| `NAME` | lowercase letters, digits and hyphens, starting with a letter | none | Names the command (`cmd/NAME`), containers, database and image. Use the user's name for it; proposing the repository's name for them to confirm is fine, picking one silently isn't. Init refuses `readysetgo`, the template's own name. |
+| `NAME` | lowercase letters, digits and hyphens, starting with a letter | none | Names the command (`cmd/NAME`), containers, database and image. Use the name the user gives; propose the repository's for them to confirm, never pick one silently. Init refuses `readysetgo`. |
 | `MODULE` | a Go module path | none: required | Take it from `origin` when there is one: `git@github.com:OWNER/REPO.git` means `github.com/OWNER/REPO`. Otherwise ask; propose `github.com/OWNER/NAME` for them to confirm. Off GitHub, the image is plain `NAME` and `APP_IMAGE` must be set for deploys. |
 | `DB` | `sqlite`, `postgres` | `sqlite` | Below. |
 | `UI` | `html`, `api` | `html` | Below. |
@@ -104,10 +101,10 @@ How requests map:
 A database the user named is the one to use; mention a mismatch only when
 there's a real one (SQLite for an app that must run on several servers).
 When they didn't name one, recommend SQLite unless the app needs more than
-one server or heavy concurrent writes (README.md, "Which database should I
-pick?"). Recommend only the modules the description calls for, and list
-the rest in a line so the user can add any: init runs once, so modules
-can't be added by running it again.
+one server or heavy concurrent writes (README.md, "Which database?").
+Recommend only the modules the description calls for, and list the rest
+in a line so the user can add any: init runs once, so modules can't be
+added by running it again.
 
 ### 3. Correct what the template doesn't do
 
@@ -118,8 +115,7 @@ Say so in the same message, with what the template does instead
   PostgreSQL. MariaDB was dropped on purpose. PostgreSQL is the nearest
   match; mention SQLite too if the app is small and nothing requires a
   database server.
-- **Both pages and a JSON API in one project:** one UI mode per project. A
-  browser frontend goes with `UI=api`.
+- **Both pages and a JSON API in one project:** one UI mode per project.
 - **A React (or other SPA) frontend:** init doesn't create it. It lives in
   its own folder (say `frontend/`) or repository and talks to `/api/` on
   the same domain, so there's no CORS setup. In development, run its dev
@@ -149,10 +145,9 @@ Say so in the same message, with what the template does instead
 - **Another framework, an ORM, GraphQL, gRPC, templ or Tailwind:** not part
   of the template, whose conventions assume its own stack. Point out the
   cost; it's the user's call.
-- **Changing an option later:** init runs once and deletes itself, so the
-  database, UI mode and modules are fixed by this step. Moving from SQLite
-  to PostgreSQL later is a documented job (SCALING.md); adding a module
-  means copying it across from a fresh copy of the template.
+- **Changing an option later:** init runs once and deletes itself; a later
+  change follows "Changing what init chose" below, and moving data from
+  SQLite to PostgreSQL is a step in SCALING.md.
 
 If a request rests on a misunderstanding, say so plainly. If the user
 still wants something unsupported, explain what it would take and let them
@@ -183,18 +178,14 @@ make tools
 make check
 ```
 
-`make services` starts Mailpit, and Postgres for a Postgres project, whose
-tests need it. `make tools` installs the pinned linters and sqlc into
-`bin/`, and `make check` runs everything CI runs (it downloads the
-vulnerability checker). If a step fails, stop and report it: nothing is
-committed yet, so `git status` shows what init changed and git can undo
-it.
+"Commands" below explains each. If a step fails, stop and report it:
+nothing is committed yet, so `git status` shows what init changed and git
+can undo it.
 
 If the user wants to see the app, also run `make seed` and `make run`
 (leave it running in the background), check `http://localhost:8080/readyz`
 (or the moved port) answers, and give them the addresses (with any moved
-ports), the seed logins (`admin@example.com` and `user@example.com`,
-password `dev-password-123`) and Mailpit's inbox.
+ports), the seed logins (`make seed` under "Commands") and Mailpit's inbox.
 
 ### 6. Hand over
 
@@ -299,9 +290,9 @@ README.md ("Removing a module") explains taking a module out.
   <!-- readysetgo:begin db=postgres -->
   (Postgres 5432)
   <!-- readysetgo:end -->
-  in development. When another project already holds one (`ss -ltn`,
-  `docker ps`), move it in `.env`, taking the next free port, rather than
-  stopping that project. These settings move together:
+  in development. When another project already holds one (`ss -ltn` or
+  `lsof -i`, and `docker ps`), move it in `.env`, taking the next free
+  port, rather than stopping that project. These settings move together:
   - the app: `HTTP_ADDR` and `APP_URL`
   - Mailpit: `MAILPIT_SMTP_PORT` with `SMTP_PORT`, and `MAILPIT_PORT` (its
     inbox)
@@ -397,9 +388,9 @@ README.md ("Removing a module") explains taking a module out.
   <!-- readysetgo:end -->
   Other features react to accounts through `OnUserCreated` and
   `OnUserDeleting` hooks, and to security events (failed logins, role
-  changes, …) through `OnEvent`; all run inside the same transaction. A
-  feature with invitations of its own lets their addresses sign up when it
-  needs an invitation through `AllowSignup`.
+  changes, …) through `OnEvent`; all run inside the same transaction.
+  `AllowSignup` lets a feature's own invitations count when sign-up needs
+  one.
 <!-- readysetgo:begin module=workspaces -->
 - `internal/workspaces/`: workspaces, their members (owner, admin, member)
   and email invitations. `middleware.go` resolves `{workspaceID}` and
@@ -407,14 +398,14 @@ README.md ("Removing a module") explains taking a module out.
   personal workspace for tests.
 <!-- readysetgo:end -->
 <!-- readysetgo:begin module=admin -->
-<!-- readysetgo:begin ui=html -->
-- `internal/admin/`: the admin pages under `/admin/`: users (role,
-  disabling, deleting, verification links) and failed jobs to retry.
-<!-- readysetgo:end -->
-<!-- readysetgo:begin ui=api -->
-- `internal/admin/`: the admin endpoints under `/api/admin/`: users (role,
-  disabling, deleting, verification links) and failed jobs to retry.
-<!-- readysetgo:end -->
+- `internal/admin/`: users (role, disabling, deleting, verification links)
+  and failed jobs to retry,
+  <!-- readysetgo:begin ui=html -->
+  as pages under `/admin/`.
+  <!-- readysetgo:end -->
+  <!-- readysetgo:begin ui=api -->
+  as endpoints under `/api/admin/`.
+  <!-- readysetgo:end -->
   Account changes go through `auth.Service`, like the CLI's; admins can't
   change their own account there.
 <!-- readysetgo:end -->
@@ -598,8 +589,9 @@ handlers and a link table from the feature's rows to `uploads(id)`.
   - Guard routes with `auth.RequireUser`, then `auth.RequireVerified` or
     `auth.RequireRole(auth.RoleAdmin)` as needed; read the user with
     `auth.UserFrom(ctx)`, and an ID in the path with `httpx.PathID`. Wrap
-    routes that check passwords or send email in `auth.Service.RateLimit`,
-    the per-IP budget they all share.
+    routes that check a password or sign someone in with
+    `auth.Service.RateLimit`, the per-IP budget account routes share; give
+    other routes that send email a `ratelimit.PerIP` limit of their own.
   - Services return `validate.Errors` for bad input and named errors for
     other expected failures; handlers turn them into responses.
   <!-- readysetgo:begin ui=html -->
@@ -622,8 +614,7 @@ handlers and a link table from the feature's rows to `uploads(id)`.
     error details and adds the request ID to 5xx responses.
   - Use `httpx.ClientIP(ctx)` for the client's address, never `RemoteAddr`
     or `X-Forwarded-For` directly.
-  - Raise one route's body limit by wrapping it in `httpx.MaxBytes(n)`;
-    limit requests with `ratelimit.PerIP` or a `ratelimit.Limiter`.
+  - Raise one route's body limit by wrapping it in `httpx.MaxBytes(n)`.
 - **Linting:** fix findings rather than silencing them. When one is
   deliberate, add `//nolint:<linter> // <reason>` on that line.
 - **Upgrading Go:** change the `go` line in `go.mod` and the `golang` image

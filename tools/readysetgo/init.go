@@ -475,8 +475,6 @@ func dropRedundantAliases(text string) string {
 	})
 }
 
-// rewrite updates references to paths that moved and to the template's name.
-// DECISIONS.md keeps the template's name: there it names the template itself.
 // command is the make init command that produces o.
 func (o options) command() string {
 	modules := cmp.Or(strings.Join(o.modules, ","), "none")
@@ -490,6 +488,8 @@ func recordInit(text string, o options) string {
 	return strings.NewReplacer("INIT_COMMAND", o.command(), "INIT_COMMIT", cmp.Or(o.commit, "unknown")).Replace(text)
 }
 
+// rewrite updates references to paths that moved and to the template's name.
+// DECISIONS.md keeps the template's name: there it names the template itself.
 func rewrite(rel, text string, o options) string {
 	for _, d := range o.dialectDirs {
 		text = regexp.MustCompile(regexp.QuoteMeta(d)+`\b`).ReplaceAllLiteralString(text, path.Dir(d))

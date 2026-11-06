@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
@@ -251,5 +252,20 @@ func TestValidateRejectsTemplateName(t *testing.T) {
 	o := options{name: "readysetgo", db: "sqlite", ui: "html"}
 	if err := o.validate(); err == nil || !strings.Contains(err.Error(), "template's own name") {
 		t.Errorf("err = %v", err)
+	}
+}
+
+// TestAgentsFileFitsCodex keeps the template's AGENTS.md within the 32 KiB
+// that OpenAI Codex reads by default; past that, the end of the file is cut
+// off. Notes for maintaining the template belong in this folder's README.
+func TestAgentsFileFitsCodex(t *testing.T) {
+	t.Parallel()
+	info, err := os.Stat("../../AGENTS.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	const limit = 32 << 10
+	if info.Size() > limit {
+		t.Errorf("AGENTS.md is %d bytes, over the %d Codex reads: shorten it, or move notes for template maintainers to tools/readysetgo/README.md", info.Size(), limit)
 	}
 }

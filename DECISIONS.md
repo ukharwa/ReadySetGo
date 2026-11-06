@@ -674,7 +674,7 @@ there is one copy to keep accurate.
 <!-- readysetgo:begin template -->
 The notes on maintaining the template live in `tools/readysetgo/README.md`,
 which keeps the template's `AGENTS.md` under Codex's default 32 KiB limit
-for instruction files.
+for instruction files; a test there fails if the file grows past it.
 <!-- readysetgo:end -->
 **Considered:** two copies, which drift apart, and a symlink, which some
 tools and Windows checkouts don't follow.
