@@ -7,7 +7,6 @@ import (
 	"io/fs"
 	"maps"
 	"net/http"
-	"net/url"
 	"slices"
 	"strconv"
 	"strings"
@@ -118,7 +117,7 @@ func (h *Web) user(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Web) renderUser(w http.ResponseWriter, r *http.Request, status int, message string) {
-	id, ok := pathID(r, "userID")
+	id, ok := httpx.PathID(r, "userID")
 	if !ok {
 		httpx.Error(w, r, http.StatusNotFound)
 		return
@@ -139,7 +138,7 @@ func (h *Web) renderUser(w http.ResponseWriter, r *http.Request, status int, mes
 // redirects to next (the user's page if empty) with message, or shows the
 // user's page with why the action was refused.
 func (h *Web) change(w http.ResponseWriter, r *http.Request, message, next string, action func(me auth.User, id uuid.UUID) error) {
-	id, ok := pathID(r, "userID")
+	id, ok := httpx.PathID(r, "userID")
 	if !ok {
 		httpx.Error(w, r, http.StatusNotFound)
 		return
@@ -163,7 +162,7 @@ func (h *Web) change(w http.ResponseWriter, r *http.Request, message, next strin
 }
 
 func (h *Web) setRole(w http.ResponseWriter, r *http.Request) {
-	role := postForm(r).Get("role")
+	role := web.PostForm(r).Get("role")
 	h.change(w, r, "The role is changed.", "", func(me auth.User, id uuid.UUID) error {
 		return h.svc.SetRole(r.Context(), me, id, role)
 	})
@@ -203,7 +202,7 @@ func (h *Web) jobs(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Web) retryJob(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathID(r, "jobID")
+	id, ok := httpx.PathID(r, "jobID")
 	if !ok {
 		httpx.Error(w, r, http.StatusNotFound)
 		return
@@ -223,11 +222,4 @@ func (h *Web) retryJob(w http.ResponseWriter, r *http.Request) {
 func (h *Web) serverError(w http.ResponseWriter, r *http.Request, err error) {
 	h.svc.logger.ErrorContext(r.Context(), "admin page", "err", err)
 	httpx.Error(w, r, http.StatusInternalServerError)
-}
-
-// postForm returns the submitted form fields; a malformed body gives an
-// empty form, which then fails validation.
-func postForm(r *http.Request) url.Values {
-	_ = r.ParseForm()
-	return r.PostForm
 }

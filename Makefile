@@ -41,8 +41,8 @@ test: ## run all tests with the race detector
 	go test -race ./...
 
 .PHONY: fmt
-fmt: ## format all Go code
-	gofmt -w .
+fmt: ## format all Go code with the formatters lint checks (gofmt, goimports)
+	$(LINT) fmt
 
 .PHONY: vet
 vet: ## run go vet

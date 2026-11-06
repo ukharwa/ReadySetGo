@@ -94,7 +94,7 @@ func (h *API) upload(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *API) download(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathID(r, "uploadID")
+	id, ok := httpx.PathID(r, "uploadID")
 	if !ok {
 		httpx.Error(w, r, http.StatusNotFound)
 		return
@@ -109,7 +109,7 @@ func (h *API) download(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *API) delete(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathID(r, "uploadID")
+	id, ok := httpx.PathID(r, "uploadID")
 	if !ok {
 		httpx.Error(w, r, http.StatusNotFound)
 		return

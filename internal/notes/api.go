@@ -88,7 +88,7 @@ func (h *API) create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *API) get(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathID(r, "noteID")
+	id, ok := httpx.PathID(r, "noteID")
 	if !ok {
 		httpx.Error(w, r, http.StatusNotFound)
 		return
@@ -103,7 +103,7 @@ func (h *API) get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *API) update(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathID(r, "noteID")
+	id, ok := httpx.PathID(r, "noteID")
 	var in noteInput
 	if !ok {
 		httpx.Error(w, r, http.StatusNotFound)
@@ -122,7 +122,7 @@ func (h *API) update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *API) delete(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathID(r, "noteID")
+	id, ok := httpx.PathID(r, "noteID")
 	if !ok {
 		httpx.Error(w, r, http.StatusNotFound)
 		return

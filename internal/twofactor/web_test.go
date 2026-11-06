@@ -16,12 +16,12 @@ func newWebApp(t *testing.T) (*apptest.App, *Service) {
 	t.Helper()
 	a, svc := newApp(t)
 	rd := a.Renderer()
-	accountPages, err := auth.NewWeb(a.Accounts, rd, a.Limiter)
+	accountPages, err := auth.NewWeb(a.Accounts, rd)
 	if err != nil {
 		t.Fatal(err)
 	}
 	accountPages.Routes(a.Mux)
-	pages, err := NewWeb(svc, rd, a.Limiter)
+	pages, err := NewWeb(svc, rd)
 	if err != nil {
 		t.Fatal(err)
 	}

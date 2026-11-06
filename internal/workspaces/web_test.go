@@ -16,7 +16,7 @@ func newWebApp(t *testing.T) (*apptest.App, *workspaces.Service) {
 	t.Helper()
 	a, svc := workspacestest.New(t)
 	rd := a.Renderer()
-	accountPages, err := auth.NewWeb(a.Accounts, rd, a.Limiter)
+	accountPages, err := auth.NewWeb(a.Accounts, rd)
 	if err != nil {
 		t.Fatal(err)
 	}

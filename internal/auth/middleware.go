@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ukharwa/readysetgo/internal/httpx"
+	"github.com/ukharwa/readysetgo/internal/ratelimit"
 )
 
 // SessionCookie is the session cookie's name. The __Host- prefix makes
@@ -75,6 +76,13 @@ func (s *Service) LoadUser(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// RateLimit is middleware for routes that check a password or send email.
+// Each client IP gets 20 requests a minute across every such route, in
+// every feature, so spreading attempts over routes gains nothing.
+func (s *Service) RateLimit(next http.Handler) http.Handler {
+	return ratelimit.PerIP(s.limiter, "auth", 20, time.Minute)(next)
 }
 
 // RequireUser is middleware that lets only logged-in requests through.

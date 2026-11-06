@@ -17,7 +17,7 @@ const password = "correct horse battery"
 func newWebApp(t *testing.T, options ...func(*auth.Options)) *apptest.App {
 	t.Helper()
 	a := apptest.New(t, options...)
-	pages, err := auth.NewWeb(a.Accounts, a.Renderer(), a.Limiter)
+	pages, err := auth.NewWeb(a.Accounts, a.Renderer())
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -10,7 +10,6 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"net/http"
 	"strings"
 	"time"
 
@@ -134,10 +133,4 @@ func (s *Service) Delete(ctx context.Context, owner, id uuid.UUID) error {
 		return ErrNotFound
 	}
 	return nil
-}
-
-// pathID parses the UUID in the path parameter name.
-func pathID(r *http.Request, name string) (uuid.UUID, bool) {
-	id, err := uuid.Parse(r.PathValue(name))
-	return id, err == nil
 }

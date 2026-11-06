@@ -74,7 +74,7 @@ func (h *Web) newForm(w http.ResponseWriter, r *http.Request) {
 
 func (h *Web) create(w http.ResponseWriter, r *http.Request) {
 	me, _ := auth.UserFrom(r.Context())
-	form := web.Form{Values: postForm(r)}
+	form := web.Form{Values: web.PostForm(r)}
 	note, err := h.svc.Create(r.Context(), me.ID, form.Get("title"), form.Get("body"))
 	if errors.As(err, &form.Errors) {
 		h.pages.Render(w, r, http.StatusUnprocessableEntity, "form.html", newPage(form))
@@ -89,7 +89,7 @@ func (h *Web) create(w http.ResponseWriter, r *http.Request) {
 
 // note loads the note in the URL, answering 404 itself if there is none.
 func (h *Web) note(w http.ResponseWriter, r *http.Request) (Note, bool) {
-	id, ok := pathID(r, "noteID")
+	id, ok := httpx.PathID(r, "noteID")
 	if !ok {
 		httpx.Error(w, r, http.StatusNotFound)
 		return Note{}, false
@@ -127,7 +127,7 @@ func (h *Web) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	me, _ := auth.UserFrom(r.Context())
-	form := web.Form{Values: postForm(r)}
+	form := web.Form{Values: web.PostForm(r)}
 	_, err := h.svc.Update(r.Context(), me.ID, note.ID, form.Get("title"), form.Get("body"))
 	switch {
 	case errors.As(err, &form.Errors):
@@ -146,7 +146,7 @@ func (h *Web) update(w http.ResponseWriter, r *http.Request) {
 // response that replaces the note's row; a plain form post is redirected
 // to the list.
 func (h *Web) delete(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathID(r, "noteID")
+	id, ok := httpx.PathID(r, "noteID")
 	if !ok {
 		httpx.Error(w, r, http.StatusNotFound)
 		return
@@ -169,11 +169,4 @@ func (h *Web) delete(w http.ResponseWriter, r *http.Request) {
 func (h *Web) serverError(w http.ResponseWriter, r *http.Request, err error) {
 	h.svc.logger.ErrorContext(r.Context(), "notes page", "err", err)
 	httpx.Error(w, r, http.StatusInternalServerError)
-}
-
-// postForm returns the submitted form fields; a malformed body gives an
-// empty form, which then fails validation.
-func postForm(r *http.Request) url.Values {
-	_ = r.ParseForm()
-	return r.PostForm
 }

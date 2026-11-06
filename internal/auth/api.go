@@ -2,7 +2,6 @@ package auth
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -21,13 +20,12 @@ import (
 // get a bearer token from /api/auth/token and send it as
 // "Authorization: Bearer <token>".
 type API struct {
-	svc     *Service
-	limiter ratelimit.Limiter
+	svc *Service
 }
 
 // NewAPI returns the account endpoints' handlers.
-func NewAPI(svc *Service, limiter ratelimit.Limiter) *API {
-	return &API{svc: svc, limiter: limiter}
+func NewAPI(svc *Service) *API {
+	return &API{svc: svc}
 }
 
 // Routes registers the account endpoints on mux.
@@ -35,7 +33,7 @@ func (h *API) Routes(mux *http.ServeMux) {
 	// One budget per IP address across every endpoint that checks a password
 	// or sends email.
 	limit := func(f http.HandlerFunc) http.Handler {
-		return ratelimit.PerIP(h.limiter, "auth", 20, time.Minute)(f)
+		return h.svc.RateLimit(f)
 	}
 	mux.Handle("POST /api/auth/register", limit(h.register))
 	mux.Handle("POST /api/auth/login", limit(h.login))
@@ -90,7 +88,7 @@ func (h *API) fail(w http.ResponseWriter, r *http.Request, err error) {
 	// readysetgo:end
 	default:
 		if limited, ok := errors.AsType[*RateLimitedError](err); ok {
-			w.Header().Set("Retry-After", fmt.Sprint(int(limited.RetryAfter.Seconds())))
+			ratelimit.SetRetryAfter(w, limited.RetryAfter)
 			httpx.ErrorMessage(w, r, http.StatusTooManyRequests, "Too many attempts. Try again later.")
 			return
 		}
@@ -355,8 +353,8 @@ func (h *API) devices(w http.ResponseWriter, r *http.Request) {
 
 func (h *API) signOutDevice(w http.ResponseWriter, r *http.Request) {
 	u, _ := UserFrom(r.Context())
-	id, err := uuid.Parse(r.PathValue("id"))
-	if err != nil {
+	id, ok := httpx.PathID(r, "id")
+	if !ok {
 		httpx.Error(w, r, http.StatusNotFound)
 		return
 	}

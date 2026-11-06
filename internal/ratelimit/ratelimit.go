@@ -106,11 +106,18 @@ func PerIP(l Limiter, name string, limit int, window time.Duration) httpx.Middle
 				return
 			}
 			if !ok {
-				w.Header().Set("Retry-After", strconv.Itoa(int(retryAfter.Round(time.Second).Seconds())))
+				SetRetryAfter(w, retryAfter)
 				httpx.Error(w, r, http.StatusTooManyRequests)
 				return
 			}
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+// SetRetryAfter tells the client, in the Retry-After header, to wait d
+// before trying again. It rounds up to whole seconds, so a client that waits
+// that long finds the limit reset.
+func SetRetryAfter(w http.ResponseWriter, d time.Duration) {
+	w.Header().Set("Retry-After", strconv.FormatInt(int64((d+time.Second-1)/time.Second), 10))
 }

@@ -597,16 +597,17 @@ handlers and a link table from the feature's rows to `uploads(id)`.
     then `LoadUser`.
   - Guard routes with `auth.RequireUser`, then `auth.RequireVerified` or
     `auth.RequireRole(auth.RoleAdmin)` as needed; read the user with
-    `auth.UserFrom(ctx)`. Wrap routes that check passwords or send email in
-    `ratelimit.PerIP`.
+    `auth.UserFrom(ctx)`, and an ID in the path with `httpx.PathID`. Wrap
+    routes that check passwords or send email in `auth.Service.RateLimit`,
+    the per-IP budget they all share.
   - Services return `validate.Errors` for bad input and named errors for
     other expected failures; handlers turn them into responses.
   <!-- readysetgo:begin ui=html -->
   - Pages: parse a feature's `templates/` with `renderer.Pages` and
-    `Render` them. Forms post, then redirect with `web.SetFlash`; on bad
-    input re-render with `web.Form` and status 422. Use
-    `web.SafeRedirect` for any `?next=`. Show times in the viewer's time
-    zone: `{{(.CreatedAt.In $.TimeZone).Format "2 Jan 2006 15:04"}}`.
+    `Render` them. Forms post (read with `web.PostForm`), then redirect with
+    `web.SetFlash`; on bad input re-render with `web.Form` and status 422.
+    Use `web.SafeRedirect` for any `?next=`. Show times in the viewer's
+    time zone: `{{(.CreatedAt.In $.TimeZone).Format "2 Jan 2006 15:04"}}`.
   <!-- readysetgo:end -->
   - JSON: decode with `httpx.ReadJSON`, respond with `httpx.WriteJSON`,
     `httpx.WriteInvalid` (422 with field errors) or `httpx.ErrorMessage`.

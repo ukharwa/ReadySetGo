@@ -6,13 +6,11 @@ import (
 	"io/fs"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/google/uuid"
 
 	"github.com/ukharwa/readysetgo/internal/auth"
 	"github.com/ukharwa/readysetgo/internal/httpx"
-	"github.com/ukharwa/readysetgo/internal/ratelimit"
 	"github.com/ukharwa/readysetgo/internal/web"
 )
 
@@ -26,25 +24,24 @@ const webPrefix = "/auth/"
 // Web serves logging in with providers (/auth/{provider}, linked from the
 // login and sign-up pages) and the page that connects and disconnects them.
 type Web struct {
-	svc     *Service
-	pages   *web.Pages
-	limiter ratelimit.Limiter
+	svc   *Service
+	pages *web.Pages
 }
 
 // NewWeb returns the social login pages' handlers.
-func NewWeb(svc *Service, rd *web.Renderer, limiter ratelimit.Limiter) (*Web, error) {
+func NewWeb(svc *Service, rd *web.Renderer) (*Web, error) {
 	files, _ := fs.Sub(templateFS, "templates")
 	pages, err := rd.Pages(files, "internal/social/templates")
 	if err != nil {
 		return nil, err
 	}
-	return &Web{svc: svc, pages: pages, limiter: limiter}, nil
+	return &Web{svc: svc, pages: pages}, nil
 }
 
 // Routes registers the social login pages on mux.
 func (h *Web) Routes(mux *http.ServeMux) {
 	limit := func(f http.HandlerFunc) http.Handler {
-		return ratelimit.PerIP(h.limiter, "auth", 20, time.Minute)(f)
+		return h.svc.accounts.RateLimit(f)
 	}
 	mux.Handle("GET /auth/{provider}", limit(h.begin))
 	mux.Handle("GET /auth/{provider}/callback", limit(h.callback))
