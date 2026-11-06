@@ -89,6 +89,17 @@ func TestEnable(t *testing.T) {
 		}
 	}
 
+	// Someone whose address isn't confirmed can't turn it on: whoever made
+	// the account may not own the address, and would lock its owner out.
+	eve, err := a.Accounts.CreateUser(t.Context(), "eve@example.com", apptest.Password, auth.RoleUser, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = svc.Enable(t.Context(), eve, s.Secret, codeFor(t, s.Secret, 0), apptest.Password)
+	if errs, ok := errors.AsType[validate.Errors](err); !ok || errs["code"] == "" {
+		t.Errorf("unconfirmed address: err = %v, want a message for code", err)
+	}
+
 	codes, err := svc.Enable(t.Context(), u, s.Secret, codeFor(t, s.Secret, 0), apptest.Password)
 	if err != nil {
 		t.Fatalf("enable: %v", err)

@@ -753,7 +753,8 @@ design is settled up front:
 - Invitations are single-use links valid for 7 days, tied to the invited
   email: only an account with that address can accept, and accepting
   verifies the address, since the link arrived there. Invitations don't
-  record who sent them; the email names the sender.
+  record who sent them; the email names the sender, so only someone whose
+  own address is confirmed can send one.
 - The workspace ID is in the URL (`/w/{workspaceID}/…` for pages,
   `/api/workspaces/{workspaceID}/…` for the API); middleware checks
   membership. Every workspace-owned table has a required `workspace_id`,
@@ -881,10 +882,11 @@ standard library), or one of 10 single-use recovery codes.
   last one used is stored.
 - The second step needs no table: its challenge is the user's ID and an
   expiry, encrypted with the same key, valid for 10 minutes.
-- Turning it on needs a code from the app and the password, and signs out
-  the user's other devices. Turning it off, or making new recovery codes,
-  needs the password. Turning it on or off, and every use of a recovery
-  code, is emailed to the user.
+- Turning it on needs a code from the app, the password and a confirmed
+  address (whoever made an account with someone else's address mustn't
+  lock its owner out), and signs out the user's other devices. Turning it
+  off, or making new recovery codes, needs the password. Turning it on or
+  off, and every use of a recovery code, is emailed to the user.
 - Someone who lost both their phone and their codes is reset from the
   command line (`user reset-two-factor`), once someone has checked who
   they are; a password reset leaves two-factor login on.
@@ -908,8 +910,10 @@ provider is on when its client ID and secret are set.
   otherwise a new account, which `REGISTRATION=invite` still limits to
   invited addresses.
 - Linking to an account that never confirmed its address first clears its
-  password and sessions: whoever made it may not own the address, and could
-  be waiting for the owner to link it (a known takeover).
+  password, sessions and any pending email change: whoever made it may not
+  own the address, and could be waiting for the owner to link it (a known
+  takeover). For the same reason, such an account can't connect a provider
+  of its own.
 - New accounts have no password (an empty hash, which never matches). They
   set one with a reset link, which anything asking for the current password
   points them to. Disconnecting a provider that is someone's only way in is

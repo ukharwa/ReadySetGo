@@ -232,6 +232,16 @@ func TestConnectAndDisconnect(t *testing.T) {
 	if err := svc.Connect(ctx, carol, "google", ada); !errors.Is(err, ErrLinkedElsewhere) {
 		t.Errorf("someone else's: err = %v, want ErrLinkedElsewhere", err)
 	}
+	// An account whose address isn't confirmed can't connect one: whoever
+	// made it may not own the address, and would keep the way in once the
+	// address's owner claimed the account.
+	eve, err := a.Accounts.CreateUser(ctx, "eve@example.com", apptest.Password, auth.RoleUser, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.Connect(ctx, eve, "google", Account{Subject: "g-eve", Email: "eve@gmail.com", EmailVerified: true}); !errors.Is(err, ErrUnconfirmedAddress) {
+		t.Errorf("an unconfirmed account: err = %v, want ErrUnconfirmedAddress", err)
+	}
 	if ids, err := svc.Identities(ctx, bob); err != nil || len(ids) != 1 || ids[0].Email != ada.Email || ids[0].Provider.Name != "Google" {
 		t.Errorf("identities = %+v, %v", ids, err)
 	}

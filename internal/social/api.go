@@ -111,6 +111,8 @@ func (h *API) back(w http.ResponseWriter, r *http.Request, next string, err erro
 			code = "linked_elsewhere"
 		case errors.Is(err, ErrAlreadyConnected):
 			code = "already_connected"
+		case errors.Is(err, ErrUnconfirmedAddress):
+			code = "unconfirmed_address"
 		case errors.Is(err, auth.ErrInvitationNeeded):
 			code = "invitation_needed"
 		case errors.Is(err, auth.ErrInvalidCredentials):
