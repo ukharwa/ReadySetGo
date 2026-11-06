@@ -17,8 +17,9 @@
       <button type="submit" class="link">Delete</button>
     </form>
   </li>
-  {{else}}
-  <li class="muted">No notes yet.</li>
   {{end}}
+  {{/* Shown only once it's the list's only row, so it also appears when
+       HTMX deletes the last note. */}}
+  <li class="muted empty">No notes yet.</li>
 </ul>
 {{end}}

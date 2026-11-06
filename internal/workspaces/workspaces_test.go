@@ -2,6 +2,7 @@ package workspaces_test
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/ukharwa/readysetgo/internal/apptest"
@@ -55,5 +56,31 @@ func TestUnconfirmedCantInvite(t *testing.T) {
 	}
 	if sent := a.SentTo("bob@example.com"); len(sent) != 0 {
 		t.Errorf("%d invitations sent", len(sent))
+	}
+}
+
+// TestPersonalWorkspaceName checks that a new person's workspace is named
+// after them, by their address when they gave no name or one too long.
+func TestPersonalWorkspaceName(t *testing.T) {
+	t.Parallel()
+	a, svc := workspacestest.New(t)
+	tests := []struct{ address, name, want string }{
+		{"sam@example.com", "Sam Smoke", "Sam Smoke's workspace"},
+		{"dan@example.com", "", "dan's workspace"},
+		{"lee@example.com", strings.Repeat("L", 95), "lee's workspace"},
+	}
+	for _, tt := range tests {
+		reg := auth.Registration{Email: tt.address, Password: apptest.Password, Name: tt.name}
+		if err := a.Accounts.Register(t.Context(), reg); err != nil {
+			t.Fatalf("register %s: %v", tt.address, err)
+		}
+		u, err := a.Accounts.UserByEmail(t.Context(), tt.address)
+		if err != nil {
+			t.Fatal(err)
+		}
+		mine, err := svc.ForUser(t.Context(), u)
+		if err != nil || len(mine) != 1 || mine[0].Name != tt.want {
+			t.Errorf("%s's workspaces: %+v (err %v), want one named %q", tt.address, mine, err, tt.want)
+		}
 	}
 }

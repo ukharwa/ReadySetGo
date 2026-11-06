@@ -66,7 +66,7 @@ func (h *API) fail(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.Is(err, ErrNotFound):
 		httpx.Error(w, r, http.StatusNotFound)
 	case errors.Is(err, ErrOwnAccount):
-		httpx.ErrorMessage(w, r, http.StatusForbidden, err.Error())
+		httpx.ErrorMessage(w, r, http.StatusForbidden, httpx.Sentence(err))
 	default:
 		h.svc.logger.ErrorContext(r.Context(), "admin endpoint", "path", r.URL.Path, "err", err)
 		httpx.Error(w, r, http.StatusInternalServerError)

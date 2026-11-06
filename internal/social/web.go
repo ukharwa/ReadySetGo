@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io/fs"
 	"net/http"
-	"strings"
 
 	"github.com/google/uuid"
 
@@ -109,7 +108,7 @@ func (h *Web) failed(w http.ResponseWriter, r *http.Request, to string, err erro
 	switch {
 	case errors.Is(err, ErrStale), errors.Is(err, ErrCancelled), errors.Is(err, ErrUnverifiedEmail),
 		errors.Is(err, ErrLinkedElsewhere), errors.Is(err, ErrAlreadyConnected), errors.Is(err, ErrUnconfirmedAddress):
-		message = sentence(err)
+		message = httpx.Sentence(err)
 	case errors.Is(err, auth.ErrInvitationNeeded):
 		message = "Signing up needs an invitation."
 	case errors.Is(err, auth.ErrInvalidCredentials):
@@ -119,12 +118,6 @@ func (h *Web) failed(w http.ResponseWriter, r *http.Request, to string, err erro
 	}
 	web.SetFlash(w, message)
 	http.Redirect(w, r, to, http.StatusSeeOther)
-}
-
-// sentence turns an error message into a sentence to show.
-func sentence(err error) string {
-	s := err.Error()
-	return strings.ToUpper(s[:1]) + s[1:] + "."
 }
 
 // signInPage lists the ways someone can log in.
@@ -160,7 +153,7 @@ func (h *Web) disconnect(w http.ResponseWriter, r *http.Request) {
 	err := h.svc.Disconnect(r.Context(), u, r.PathValue("provider"))
 	switch {
 	case errors.Is(err, ErrLastWayIn):
-		web.SetFlash(w, sentence(err))
+		web.SetFlash(w, httpx.Sentence(err))
 	case err != nil:
 		h.svc.logger.ErrorContext(r.Context(), "disconnect provider", "err", err)
 		httpx.Error(w, r, http.StatusInternalServerError)

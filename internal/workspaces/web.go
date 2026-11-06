@@ -132,7 +132,7 @@ func (h *Web) fail(w http.ResponseWriter, r *http.Request, page settingsPage, fo
 	case form != nil && errors.As(err, &form.Errors):
 		h.renderSettings(w, r, http.StatusUnprocessableEntity, page)
 	case errors.Is(err, ErrLastOwner), errors.Is(err, ErrForbidden):
-		page.Error = err.Error()
+		page.Error = httpx.Sentence(err)
 		h.renderSettings(w, r, http.StatusForbidden, page)
 	case errors.Is(err, ErrNotFound):
 		httpx.Error(w, r, http.StatusNotFound)

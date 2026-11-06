@@ -122,6 +122,8 @@ form.inline { display: inline; }
 
 ul.list { padding-left: 1.2rem; }
 ul.list li { margin: 0.4rem 0; }
+/* A list's "nothing yet" row shows only when it's the only row. */
+ul.list li.empty:not(:only-child) { display: none; }
 
 /* Tables and lists of records */
 .table-scroll { overflow-x: auto; margin: 1rem 0; }

@@ -342,7 +342,10 @@ start.
 
 1. Point the domain's DNS at the server and open ports 80 and 443 (TCP,
    and UDP 443 for HTTP/3).
-2. Install Docker Engine with the Compose plugin on the server.
+2. Install Docker Engine with the Compose plugin on the server, in its
+   standard (rootful) mode. Rootless Docker's default port forwarding hides
+   visitors' addresses, so Caddy would see them all as one, and they would
+   share one rate limit.
 3. Create the deployment folder (`/srv/readysetgo` by default) and in it a
    `.env` (`chmod 600`: it holds the secrets) with the production values of
    everything in `.env.example`: at least `APP_ENV=prod`, `APP_DOMAIN`, the
@@ -430,7 +433,9 @@ off the server, turn on Litestream: set `COMPOSE_PROFILES=litestream` and
 the `LITESTREAM_` settings in `.env`, and it streams every change to
 S3-compatible storage (Backblaze B2, Cloudflare R2, Hetzner, AWS S3).
 
-Restore a snapshot (it replaces the database):
+Restore a snapshot (it replaces the database). Each snapshot's file name is
+in `backup.log`, which the cron line writes, since the image has no shell to
+list `/data/backups`:
 
 ```bash
 docker compose stop app

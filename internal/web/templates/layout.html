@@ -4,6 +4,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+{{/* No icon yet: an empty one stops browsers asking for /favicon.ico. */ -}}
+<link rel="icon" href="data:,">
 {{/* HTMX settings that keep it within the Content-Security-Policy: no
      injected indicator styles and no eval (so no hx-on attributes). */ -}}
 <meta name="htmx-config" content='{"includeIndicatorStyles":false,"allowEval":false}'>

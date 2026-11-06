@@ -136,7 +136,7 @@ func TestWebRoles(t *testing.T) {
 		t.Errorf("member inviting: %d, want 403", p.Status)
 	}
 	// The only owner can't leave or step down.
-	if p := a.Post(alice.Client, wsPath(alice, "/members/"+alice.User.ID.String()+"/remove"), nil); p.Status != http.StatusForbidden || !strings.Contains(p.Body, "at least one owner") {
+	if p := a.Post(alice.Client, wsPath(alice, "/members/"+alice.User.ID.String()+"/remove"), nil); p.Status != http.StatusForbidden || !strings.Contains(p.Body, "A workspace needs at least one owner") {
 		t.Errorf("last owner leaving: %d", p.Status)
 	}
 	// Once Bob is an owner too, Alice can leave.

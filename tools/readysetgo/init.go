@@ -43,7 +43,9 @@ func runInit(args []string) error {
 	fmt.Println("\nDone. Review the result with `git status`, then:")
 	fmt.Println("  cp .env.example .env")
 	if o.db == "postgres" {
-		fmt.Println("  make services   # start Postgres")
+		fmt.Println("  make services   # start Mailpit, which catches email, and Postgres")
+	} else {
+		fmt.Println("  make services   # start Mailpit, which catches email")
 	}
 	fmt.Println("  make test")
 	fmt.Println("  make run")

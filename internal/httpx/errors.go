@@ -2,6 +2,8 @@ package httpx
 
 import (
 	"net/http"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/ukharwa/readysetgo/internal/logging"
 	"github.com/ukharwa/readysetgo/internal/validate"
@@ -24,6 +26,15 @@ func ErrorMessage(w http.ResponseWriter, r *http.Request, status int, message st
 	}
 	// readysetgo:end
 	writeProblem(w, r, status, message, nil)
+}
+
+// Sentence turns an error whose message is safe to show, such as a
+// service's named error, into a sentence: "you can't do that here" becomes
+// "You can't do that here.".
+func Sentence(err error) string {
+	s := err.Error()
+	r, n := utf8.DecodeRuneInString(s)
+	return string(unicode.ToUpper(r)) + s[n:] + "."
 }
 
 // Problem is a JSON error response in the RFC 9457 format
