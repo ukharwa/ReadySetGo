@@ -365,6 +365,8 @@ factor. A breached-password check (Have I Been Pwned) is skipped for now.
   or not the email exists, and every session logged out afterwards.
 - Change password, change email (confirmed at the new address, notice to the
   old), and delete account all ask for the current password again.
+- Resetting or changing the password cancels an email change waiting for
+  confirmation, since asking for one needed the old password.
 - Account deletion is a hard delete. **Considered:** soft delete, which
   means filtering deleted users out of every query forever.
 - Verification and reset tokens are random (128 bits), stored hashed,

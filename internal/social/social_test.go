@@ -160,8 +160,16 @@ func TestSignIn(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		// They also asked to move the account to an address of their own.
+		if err := a.Accounts.RequestEmailChange(ctx, u, apptest.Password, "mallory@example.com"); err != nil {
+			t.Fatal(err)
+		}
+		change := a.TokenFrom("mallory@example.com", "/confirm-email")
 		if id, err := svc.SignIn(ctx, "google", ada, ""); err != nil || id != u.ID {
 			t.Fatalf("SignIn = %v, %v; want %v", id, err, u.ID)
+		}
+		if err := a.Accounts.ConfirmEmailChange(ctx, change); !errors.Is(err, auth.ErrInvalidToken) {
+			t.Errorf("their email change still works: %v", err)
 		}
 		if _, err := a.Accounts.Authenticate(ctx, token); !errors.Is(err, auth.ErrUnauthenticated) {
 			t.Errorf("whoever made the account is still logged in: %v", err)

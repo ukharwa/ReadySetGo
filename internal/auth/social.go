@@ -76,7 +76,8 @@ func (s *Service) SignUpVerified(ctx context.Context, tx *sql.Tx, address, name,
 // ClaimAddress is for someone who proved, through another service, that
 // userID's address is theirs. If the address wasn't confirmed, whoever made
 // the account may not own it, and could be waiting to use its password: the
-// password and every session are cleared, then the address is confirmed.
+// password, any email change it asked for, and every session are cleared,
+// then the address is confirmed.
 func (s *Service) ClaimAddress(ctx context.Context, userID uuid.UUID) error {
 	var claimed bool
 	err := s.db.InTx(ctx, func(tx *sql.Tx) error {
@@ -87,6 +88,9 @@ func (s *Service) ClaimAddress(ctx context.Context, userID uuid.UUID) error {
 		}
 		claimed = true
 		if err := q.UpdatePasswordHash(ctx, store.UpdatePasswordHashParams{ID: u.ID, UpdatedAt: s.now()}); err != nil {
+			return err
+		}
+		if err := cancelEmailChange(ctx, q, u.ID); err != nil {
 			return err
 		}
 		if err := s.MarkEmailVerified(ctx, tx, u.ID, u.Email); err != nil {

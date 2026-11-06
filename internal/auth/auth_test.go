@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/ukharwa/readysetgo/internal/auth/store"
 	"github.com/ukharwa/readysetgo/internal/db"
 	"github.com/ukharwa/readysetgo/internal/db/dbtest"
 	"github.com/ukharwa/readysetgo/internal/ratelimit"
@@ -206,5 +207,44 @@ func TestCleanup(t *testing.T) {
 	}
 	if n != 0 {
 		t.Errorf("%d expired sessions left", n)
+	}
+}
+
+// TestPasswordChangesCancelEmailChanges checks that an email change waiting
+// for confirmation dies with the password it was asked for with. Otherwise
+// someone who learned the old password could still move the account to
+// their own address after its owner reset or changed it.
+func TestPasswordChangesCancelEmailChanges(t *testing.T) {
+	t.Parallel()
+	ctx := t.Context()
+	for _, how := range []string{"reset", "change"} {
+		t.Run(how, func(t *testing.T) {
+			t.Parallel()
+			s, _ := newTestService(t)
+			ada, err := s.CreateUser(ctx, "ada@example.com", "correct horse battery", RoleUser, true)
+			if err != nil {
+				t.Fatal(err)
+			}
+			q := store.New(s.db.Write)
+			change, err := createToken(ctx, q, ada.ID, "change_email", "mallory@example.com", changeEmailTokenTTL, s.now())
+			if err != nil {
+				t.Fatal(err)
+			}
+			reset, err := createToken(ctx, q, ada.ID, "reset_password", ada.Email, resetTokenTTL, s.now())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if how == "reset" {
+				err = s.ResetPassword(ctx, reset, "a brand new password")
+			} else {
+				err = s.ChangePassword(ctx, ada, "", "correct horse battery", "a brand new password")
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := s.ConfirmEmailChange(ctx, change); !errors.Is(err, ErrInvalidToken) {
+				t.Errorf("the email change still works: err = %v", err)
+			}
+		})
 	}
 }
