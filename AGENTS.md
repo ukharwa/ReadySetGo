@@ -598,7 +598,7 @@ handlers and a link table from the feature's rows to `uploads(id)`.
   - Pages: parse a feature's `templates/` with `renderer.Pages` and
     `Render` them. Forms post (read with `web.PostForm`), then redirect with
     `web.SetFlash`; on bad input re-render with `web.Form` and status 422.
-    Use `web.SafeRedirect` for any `?next=`. Show times in the viewer's
+    Use `httpx.SafeRedirect` for any `?next=`. Show times in the viewer's
     time zone: `{{(.CreatedAt.In $.TimeZone).Format "2 Jan 2006 15:04"}}`.
   <!-- readysetgo:end -->
   - JSON: decode with `httpx.ReadJSON`, respond with `httpx.WriteJSON`,

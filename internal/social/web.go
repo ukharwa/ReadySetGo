@@ -92,7 +92,7 @@ func (h *Web) callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	auth.SetSessionCookie(w, token)
-	http.Redirect(w, r, web.SafeRedirect(f.Get("next"), "/"), http.StatusSeeOther) //nolint:gosec // SafeRedirect keeps it on this site
+	http.Redirect(w, r, httpx.SafeRedirect(f.Get("next"), "/"), http.StatusSeeOther) //nolint:gosec // SafeRedirect keeps it on this site
 }
 
 // readysetgo:begin module=twofactor
