@@ -2,8 +2,8 @@
 // every combination of options still produces a working one. It exists only
 // in the template: init deletes it.
 //
-//	go run ./tools/readysetgo init -name myapp [-module path] [-db sqlite|postgres]
-//	go run ./tools/readysetgo check [-db sqlite|postgres] [-keep]
+//	go run ./tools/readysetgo init -name NAME -module PATH [-db sqlite|postgres] [-ui html|api] [-modules a,b|all]
+//	go run ./tools/readysetgo check [-db …] [-ui …] [-modules …] [-remove-example] [-keep]
 //
 // The Makefile's `init` and `template-check` targets wrap these.
 package main
