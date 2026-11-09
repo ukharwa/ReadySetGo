@@ -5,12 +5,12 @@ go 1.27.3
 require (
 	github.com/getsentry/sentry-go v0.50.0
 	github.com/google/uuid v1.6.0
-	github.com/jackc/pgx/v5 v5.11.0
+	github.com/jackc/pgx/v5 v5.12.0
 	github.com/pressly/goose/v3 v3.29.0
 	github.com/prometheus/client_golang v1.25.0
 	golang.org/x/crypto v0.58.0
 	golang.org/x/oauth2 v0.37.0
-	modernc.org/sqlite v1.61.0
+	modernc.org/sqlite v1.61.1
 	rsc.io/qr v0.2.0
 )
 
