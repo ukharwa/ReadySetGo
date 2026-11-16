@@ -46,7 +46,7 @@ services:
     stop_grace_period: 30s
 
   caddy:
-    image: caddy:2.11.7-alpine@sha256:e70b164da81ef698b3ad19af799ea6086ce6d9e48ed4079eb9fe26f6fbf14ee5
+    image: caddy:2.11.8-alpine@sha256:f6228111e5fafa1a5238258d0858e103f10599b8d1659a146e7726681a002bb9
     restart: unless-stopped
     ports:
       - "${HTTP_PORT:-80}:80"
@@ -80,7 +80,7 @@ services:
   # Continuous copies of the database to S3-compatible storage. Opt in with
   # COMPOSE_PROFILES=litestream in .env; see deploy/litestream.yml.
   litestream:
-    image: litestream/litestream:0.5.17@sha256:4b02b9859a6b6b4087d8b8944e15f7e984bd7957cba322bbeee38b0e27b9656a
+    image: litestream/litestream:0.5.18@sha256:513bff62a88fc0c86c73d27333c41c54c89fe890a7c32a551600adff9309b11b
     profiles: [litestream]
     restart: unless-stopped
     command: replicate
